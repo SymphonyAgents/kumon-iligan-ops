@@ -1,0 +1,13 @@
+# env files
+.env
+.env.local
+.env.*.local
+
+# build outputs
+dist/
+.next/
+node_modules/
+*.js.map
+
+# OS
+.DS_Store

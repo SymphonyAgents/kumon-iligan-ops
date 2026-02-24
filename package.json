@@ -1,0 +1,11 @@
+{
+  "name": "project-sneaker-doc",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter frontend dev",
+    "backend": "pnpm --filter backend start:dev",
+    "build": "pnpm --filter frontend build",
+    "build:backend": "pnpm --filter backend build",
+    "lint": "pnpm --filter frontend lint"
+  }
+}
