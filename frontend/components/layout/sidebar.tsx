@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -52,7 +53,14 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="px-5 py-4 border-t border-zinc-200">
+      <div className="px-5 py-5 border-t border-zinc-200 flex flex-col items-center gap-2">
+        <Image
+          src="/sneaker-doc-logo.png"
+          alt="SneakerDoc"
+          width={80}
+          height={80}
+          className="object-contain opacity-80"
+        />
         <p className="text-xs text-zinc-400">Philippine Peso (₱)</p>
       </div>
     </aside>

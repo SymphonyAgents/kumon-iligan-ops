@@ -23,6 +23,13 @@ export async function proxy(request: NextRequest) {
   const protectedRoutes = ['/dashboard', '/onboarding'];
   const authRoutes = ['/login'];
 
+  // Root "/" — redirect based on session
+  if (pathname === '/') {
+    return NextResponse.redirect(
+      new URL(session ? '/dashboard' : '/login', request.url),
+    );
+  }
+
   if (!session && protectedRoutes.some((r) => pathname.startsWith(r))) {
     return NextResponse.redirect(new URL('/login', request.url));
   }

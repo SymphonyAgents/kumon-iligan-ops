@@ -22,6 +22,14 @@
   border-color: var(--color-border);
 }
 
+button,
+a,
+[role="button"],
+select,
+label[for] {
+  cursor: pointer;
+}
+
 body {
   background-color: var(--color-background);
   color: var(--color-text);
