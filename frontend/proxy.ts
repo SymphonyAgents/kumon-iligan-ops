@@ -20,22 +20,22 @@ export async function proxy(request: NextRequest) {
 
   const { data: { session } } = await supabase.auth.getSession();
 
-  const protectedRoutes = ['/dashboard', '/onboarding'];
+  const protectedPrefixes = ['/transactions', '/services', '/promos', '/expenses', '/dashboard', '/audit', '/onboarding'];
   const authRoutes = ['/login'];
 
   // Root "/" — redirect based on session
   if (pathname === '/') {
     return NextResponse.redirect(
-      new URL(session ? '/dashboard' : '/login', request.url),
+      new URL(session ? '/transactions' : '/login', request.url),
     );
   }
 
-  if (!session && protectedRoutes.some((r) => pathname.startsWith(r))) {
+  if (!session && protectedPrefixes.some((r) => pathname.startsWith(r))) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
   if (session && authRoutes.includes(pathname)) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    return NextResponse.redirect(new URL('/transactions', request.url));
   }
 
   return response;

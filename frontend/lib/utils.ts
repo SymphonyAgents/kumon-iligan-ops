@@ -1,33 +1,30 @@
 import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
-  return clsx(inputs);
+  return twMerge(clsx(inputs));
 }
 
-export function formatPeso(amount: string | number): string {
-  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-  return new Intl.NumberFormat('en-PH', {
-    style: 'currency',
-    currency: 'PHP',
-    minimumFractionDigits: 2,
-  }).format(num);
+export function formatPeso(value: string | number): string {
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(num)) return '₱0.00';
+  return `₱${num.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export function formatDate(date: string | null | undefined): string {
-  if (!date) return '—';
-  return new Date(date).toLocaleDateString('en-PH', {
+export function formatDate(value?: string | null): string {
+  if (!value) return '—';
+  const d = new Date(value + 'T00:00:00');
+  return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+export function formatDatetime(value?: string | null): string {
+  if (!value) return '—';
+  const d = new Date(value);
+  return d.toLocaleString('en-PH', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  });
-}
-
-export function formatDatetime(date: string | null | undefined): string {
-  if (!date) return '—';
-  return new Date(date).toLocaleString('en-PH', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
+    hour: 'numeric',
     minute: '2-digit',
   });
 }
@@ -47,7 +44,7 @@ export const STATUS_COLORS: Record<string, string> = {
   pending: 'text-blue-600 bg-blue-50',
   in_progress: 'text-amber-600 bg-amber-50',
   done: 'text-emerald-600 bg-emerald-50',
-  claimed: 'text-zinc-500 bg-zinc-100',
+  claimed: 'text-zinc-400 bg-zinc-100',
 };
 
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {
@@ -56,3 +53,11 @@ export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   card: 'Card',
   bank_deposit: 'Bank Deposit',
 };
+
+export function statusLabel(status: string): string {
+  return STATUS_LABELS[status] ?? status;
+}
+
+export function statusColor(status: string): string {
+  return STATUS_COLORS[status] ?? 'text-zinc-500 bg-zinc-100';
+}

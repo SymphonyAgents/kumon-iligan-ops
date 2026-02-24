@@ -1,63 +1,48 @@
 'use client';
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { PlusIcon, TrashIcon, PencilSimpleIcon, CheckIcon, XIcon } from '@phosphor-icons/react';
-import { api } from '@/lib/api';
 import { formatPeso } from '@/lib/utils';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
-import { Input, Select } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ServiceForm } from '@/components/forms/service-form';
+import {
+  useServicesQuery,
+  useUpdateServiceMutation,
+  useToggleServiceMutation,
+  useDeleteServiceMutation,
+} from '@/hooks/useServicesQuery';
 import type { Service } from '@/lib/types';
 
-interface ServiceForm {
+interface EditForm {
   name: string;
   type: 'primary' | 'add_on';
   price: string;
 }
 
-const EMPTY_FORM: ServiceForm = { name: '', type: 'primary', price: '' };
+const EMPTY_EDIT: EditForm = { name: '', type: 'primary', price: '' };
 
 export default function ServicesPage() {
-  const qc = useQueryClient();
+  const searchParams = useSearchParams();
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState<ServiceForm>(EMPTY_FORM);
+  const [form, setForm] = useState<EditForm>(EMPTY_EDIT);
 
-  const { data: services = [], isLoading } = useQuery({
-    queryKey: ['services'],
-    queryFn: () => api.services.list(),
+  useEffect(() => {
+    if (searchParams.get('new') === '1') setShowForm(true);
+  }, [searchParams]);
+
+  const { data: services = [], isLoading } = useServicesQuery();
+
+  const updateMut = useUpdateServiceMutation(() => {
+    setEditId(null);
+    setForm(EMPTY_EDIT);
   });
 
-  const createMut = useMutation({
-    mutationFn: () => api.services.create(form),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['services'] });
-      setShowForm(false);
-      setForm(EMPTY_FORM);
-    },
-  });
-
-  const updateMut = useMutation({
-    mutationFn: () => api.services.update(editId!, form),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['services'] });
-      setEditId(null);
-      setForm(EMPTY_FORM);
-    },
-  });
-
-  const deleteMut = useMutation({
-    mutationFn: (id: number) => api.services.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['services'] }),
-  });
-
-  const toggleActive = useMutation({
-    mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
-      api.services.update(id, { isActive }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['services'] }),
-  });
+  const deleteMut = useDeleteServiceMutation();
+  const toggleActive = useToggleServiceMutation();
 
   const startEdit = (s: Service) => {
     setEditId(s.id);
@@ -67,7 +52,7 @@ export default function ServicesPage() {
 
   const cancelEdit = () => {
     setEditId(null);
-    setForm(EMPTY_FORM);
+    setForm(EMPTY_EDIT);
   };
 
   const primaryServices = (services as Service[]).filter((s) => s.type === 'primary');
@@ -114,7 +99,7 @@ export default function ServicesPage() {
                   <td className="px-4 py-2.5 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button
-                        onClick={() => updateMut.mutate()}
+                        onClick={() => updateMut.mutate({ id: editId!, form })}
                         className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
                       >
                         <CheckIcon size={14} weight="bold" />
@@ -190,41 +175,10 @@ export default function ServicesPage() {
       />
 
       {showForm && (
-        <div className="bg-white border border-zinc-200 rounded-lg p-5 mb-6">
-          <h3 className="text-sm font-semibold text-zinc-950 mb-4">New Service</h3>
-          <div className="grid grid-cols-3 gap-4">
-            <Input
-              label="Service Name"
-              placeholder="e.g. Basic Clean"
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            />
-            <Select
-              label="Type"
-              value={form.type}
-              onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as 'primary' | 'add_on' }))}
-            >
-              <option value="primary">Primary</option>
-              <option value="add_on">Add-on</option>
-            </Select>
-            <Input
-              label="Price (₱)"
-              type="number"
-              placeholder="0.00"
-              value={form.price}
-              onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
-              className="font-mono"
-            />
-          </div>
-          <div className="flex gap-2 mt-4">
-            <Button disabled={createMut.isPending || !form.name || !form.price} onClick={() => createMut.mutate()}>
-              {createMut.isPending ? 'Saving...' : 'Save Service'}
-            </Button>
-            <Button variant="ghost" onClick={() => { setShowForm(false); setForm(EMPTY_FORM); }}>
-              Cancel
-            </Button>
-          </div>
-        </div>
+        <ServiceForm
+          onSuccess={() => setShowForm(false)}
+          onCancel={() => setShowForm(false)}
+        />
       )}
 
       {isLoading ? (

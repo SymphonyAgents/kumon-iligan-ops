@@ -1,64 +1,34 @@
 'use client';
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { PlusIcon, TrashIcon } from '@phosphor-icons/react';
-import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PromoForm } from '@/components/forms/promo-form';
+import { usePromosQuery, useDeletePromoMutation } from '@/hooks/usePromosQuery';
 import type { Promo } from '@/lib/types';
 
-interface PromoForm {
-  name: string;
-  code: string;
-  percent: string;
-  dateFrom: string;
-  dateTo: string;
-}
-
-const EMPTY_FORM: PromoForm = { name: '', code: '', percent: '', dateFrom: '', dateTo: '' };
+const isPromoActive = (p: Promo) => {
+  if (!p.isActive) return false;
+  const today = new Date().toISOString().split('T')[0];
+  if (p.dateFrom && p.dateFrom > today) return false;
+  if (p.dateTo && p.dateTo < today) return false;
+  return true;
+};
 
 export default function PromosPage() {
-  const qc = useQueryClient();
+  const searchParams = useSearchParams();
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState<PromoForm>(EMPTY_FORM);
 
-  const { data: promos = [], isLoading } = useQuery({
-    queryKey: ['promos'],
-    queryFn: () => api.promos.list(),
-  });
+  useEffect(() => {
+    if (searchParams.get('new') === '1') setShowForm(true);
+  }, [searchParams]);
 
-  const createMut = useMutation({
-    mutationFn: () =>
-      api.promos.create({
-        name: form.name,
-        code: form.code,
-        percent: form.percent,
-        dateFrom: form.dateFrom || undefined,
-        dateTo: form.dateTo || undefined,
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['promos'] });
-      setShowForm(false);
-      setForm(EMPTY_FORM);
-    },
-  });
-
-  const deleteMut = useMutation({
-    mutationFn: (id: number) => api.promos.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['promos'] }),
-  });
-
-  const isPromoActive = (p: Promo) => {
-    if (!p.isActive) return false;
-    const today = new Date().toISOString().split('T')[0];
-    if (p.dateFrom && p.dateFrom > today) return false;
-    if (p.dateTo && p.dateTo < today) return false;
-    return true;
-  };
+  const { data: promos = [], isLoading } = usePromosQuery();
+  const deleteMut = useDeletePromoMutation();
 
   return (
     <div>
@@ -74,67 +44,13 @@ export default function PromosPage() {
       />
 
       {showForm && (
-        <div className="bg-white border border-zinc-200 rounded-lg p-5 mb-6">
-          <h3 className="text-sm font-semibold text-zinc-950 mb-4">New Promo</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Promo Name"
-              placeholder="e.g. Opening Month Special"
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            />
-            <Input
-              label="Code"
-              placeholder="SAVE20"
-              value={form.code}
-              onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
-              className="font-mono uppercase"
-            />
-            <Input
-              label="Discount %"
-              type="number"
-              min="0"
-              max="100"
-              step="0.5"
-              placeholder="20"
-              value={form.percent}
-              onChange={(e) => setForm((f) => ({ ...f, percent: e.target.value }))}
-            />
-            <div />
-            <Input
-              label="Valid From"
-              type="date"
-              value={form.dateFrom}
-              onChange={(e) => setForm((f) => ({ ...f, dateFrom: e.target.value }))}
-            />
-            <Input
-              label="Valid Until"
-              type="date"
-              value={form.dateTo}
-              onChange={(e) => setForm((f) => ({ ...f, dateTo: e.target.value }))}
-            />
-          </div>
-          <div className="flex gap-2 mt-4">
-            <Button
-              disabled={createMut.isPending || !form.name || !form.code || !form.percent}
-              onClick={() => createMut.mutate()}
-            >
-              {createMut.isPending ? 'Saving...' : 'Save Promo'}
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setShowForm(false);
-                setForm(EMPTY_FORM);
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
+        <PromoForm
+          onSuccess={() => setShowForm(false)}
+          onCancel={() => setShowForm(false)}
+        />
       )}
 
-      <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden">
+      <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-zinc-100 bg-zinc-50">

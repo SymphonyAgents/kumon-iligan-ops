@@ -1,8 +1,7 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
 import { formatDatetime } from '@/lib/utils';
+import { useAuditQuery } from '@/hooks/useAuditQuery';
 import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
 import type { AuditEntry } from '@/lib/types';
@@ -16,16 +15,13 @@ const ACTION_COLORS: Record<string, string> = {
 };
 
 export default function AuditPage() {
-  const { data: entries = [], isLoading } = useQuery({
-    queryKey: ['audit'],
-    queryFn: () => api.audit.list(),
-  });
+  const { data: entries = [], isLoading } = useAuditQuery();
 
   return (
     <div>
       <PageHeader title="Audit Log" subtitle="All system actions" />
 
-      <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden">
+      <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-zinc-100 bg-zinc-50">

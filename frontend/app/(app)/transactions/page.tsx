@@ -2,30 +2,21 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MagnifyingGlassIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react';
-import { api } from '@/lib/api';
 import { formatPeso, formatDate, formatDatetime, STATUS_LABELS, cn } from '@/lib/utils';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { EmptyState } from '@/components/ui/empty-state';
+import { useTransactionsQuery, useDeleteTransactionMutation } from '@/hooks/useTransactionsQuery';
 import type { Transaction } from '@/lib/types';
 
 export default function TransactionsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const qc = useQueryClient();
 
-  const { data: transactions = [], isLoading } = useQuery({
-    queryKey: ['transactions'],
-    queryFn: () => api.transactions.list({ limit: 200 }),
-  });
-
-  const deleteMut = useMutation({
-    mutationFn: (id: number) => api.transactions.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
-  });
+  const { data: transactions = [], isLoading } = useTransactionsQuery({ limit: '200' });
+  const deleteMut = useDeleteTransactionMutation();
 
   const filtered = transactions.filter((t) => {
     const matchesSearch =
@@ -56,7 +47,7 @@ export default function TransactionsPage() {
         title="Transactions"
         subtitle={`${transactions.length} total`}
         action={
-          <Link href="/dashboard/transactions/new">
+          <Link href="/transactions/new">
             <Button>
               <PlusIcon size={14} weight="bold" />
               New Transaction
@@ -101,7 +92,7 @@ export default function TransactionsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden">
+      <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-zinc-100">
@@ -163,7 +154,7 @@ export default function TransactionsPage() {
                   >
                     <td className="px-4 py-3">
                       <Link
-                        href={`/dashboard/transactions/${txn.id}`}
+                        href={`/transactions/${txn.id}`}
                         className="font-mono text-xs text-zinc-950 hover:text-blue-600 transition-colors"
                       >
                         #{txn.number}
@@ -171,7 +162,7 @@ export default function TransactionsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <Link
-                        href={`/dashboard/transactions/${txn.id}`}
+                        href={`/transactions/${txn.id}`}
                         className="block hover:text-blue-600 transition-colors"
                       >
                         <span className="font-medium text-zinc-950">

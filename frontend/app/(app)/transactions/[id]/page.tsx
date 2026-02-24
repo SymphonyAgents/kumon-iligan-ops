@@ -1,15 +1,19 @@
 'use client';
 
 import { use, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeftIcon, PlusIcon } from '@phosphor-icons/react';
 import Link from 'next/link';
-import { api } from '@/lib/api';
 import { formatPeso, formatDate, formatDatetime, PAYMENT_METHOD_LABELS, STATUS_LABELS } from '@/lib/utils';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Select } from '@/components/ui/input';
+import {
+  useTransactionDetailQuery,
+  useUpdateTransactionStatusMutation,
+  useUpdateItemStatusMutation,
+  useAddPaymentMutation,
+} from '@/hooks/useTransactionsQuery';
 import type { TransactionStatus, PaymentMethod } from '@/lib/types';
 
 const STATUSES: TransactionStatus[] = ['pending', 'in_progress', 'done', 'claimed'];
@@ -18,39 +22,16 @@ const PAYMENT_METHODS: PaymentMethod[] = ['cash', 'gcash', 'card', 'bank_deposit
 
 export default function TransactionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const qc = useQueryClient();
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [paymentAmount, setPaymentAmount] = useState('');
 
-  const { data: txn, isLoading } = useQuery({
-    queryKey: ['transaction', id],
-    queryFn: () => api.transactions.get(parseInt(id, 10)),
-  });
-
-  const updateStatusMut = useMutation({
-    mutationFn: (status: TransactionStatus) =>
-      api.transactions.update(parseInt(id, 10), { status }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['transaction', id] }),
-  });
-
-  const updateItemStatusMut = useMutation({
-    mutationFn: ({ itemId, status }: { itemId: number; status: string }) =>
-      api.transactions.updateItem(parseInt(id, 10), itemId, { status: status as 'pending' | 'in_progress' | 'done' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['transaction', id] }),
-  });
-
-  const addPaymentMut = useMutation({
-    mutationFn: () =>
-      api.transactions.addPayment(parseInt(id, 10), {
-        method: paymentMethod,
-        amount: paymentAmount,
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['transaction', id] });
-      setShowPaymentForm(false);
-      setPaymentAmount('');
-    },
+  const { data: txn, isLoading } = useTransactionDetailQuery(id);
+  const updateStatusMut = useUpdateTransactionStatusMutation(id);
+  const updateItemStatusMut = useUpdateItemStatusMutation(id);
+  const addPaymentMut = useAddPaymentMutation(id, () => {
+    setShowPaymentForm(false);
+    setPaymentAmount('');
   });
 
   if (isLoading) {
@@ -72,38 +53,37 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
       <PageHeader
         title={`Transaction #${txn.number}`}
         subtitle={`Created ${formatDatetime(txn.createdAt)}`}
+        backButton={
+          <Link href="/transactions">
+            <Button variant="ghost" size="sm">
+              <ArrowLeftIcon size={14} />
+            </Button>
+          </Link>
+        }
         action={
-          <div className="flex items-center gap-2">
-            <Select
-              value={txn.status}
-              onChange={(e) => updateStatusMut.mutate(e.target.value as TransactionStatus)}
-              className="w-40"
-            >
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_LABELS[s]}
-                </option>
-              ))}
-            </Select>
-            <Link href="/dashboard/transactions">
-              <Button variant="ghost" size="sm">
-                <ArrowLeftIcon size={14} />
-                Back
-              </Button>
-            </Link>
-          </div>
+          <Select
+            value={txn.status}
+            onChange={(e) => updateStatusMut.mutate(e.target.value as TransactionStatus)}
+            className="w-40"
+          >
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {STATUS_LABELS[s]}
+              </option>
+            ))}
+          </Select>
         }
       />
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: items */}
-        <div className="col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-4">
           {/* Customer */}
           <div className="bg-white border border-zinc-200 rounded-lg p-5">
             <h2 className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-3">
               Customer
             </h2>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <p className="text-xs text-zinc-400">Name</p>
                 <p className="text-sm font-medium text-zinc-950">{txn.customerName ?? '—'}</p>
@@ -153,7 +133,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                           onChange={(e) =>
                             updateItemStatusMut.mutate({
                               itemId: item.id,
-                              status: e.target.value,
+                              status: e.target.value as 'pending' | 'in_progress' | 'done',
                             })
                           }
                           className="text-xs bg-transparent border-0 text-zinc-700 focus:outline-none cursor-pointer"
@@ -243,7 +223,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                   size="sm"
                   className="w-full"
                   disabled={!paymentAmount || addPaymentMut.isPending}
-                  onClick={() => addPaymentMut.mutate()}
+                  onClick={() => addPaymentMut.mutate({ method: paymentMethod, amount: paymentAmount })}
                 >
                   {addPaymentMut.isPending ? 'Recording...' : 'Record Payment'}
                 </Button>

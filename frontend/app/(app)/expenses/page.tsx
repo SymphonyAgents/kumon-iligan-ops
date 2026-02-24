@@ -1,55 +1,32 @@
 'use client';
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { PlusIcon, TrashIcon } from '@phosphor-icons/react';
-import { api } from '@/lib/api';
 import { formatPeso, today } from '@/lib/utils';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ExpenseForm } from '@/components/forms/expense-form';
+import {
+  useExpensesQuery,
+  useExpensesSummaryQuery,
+  useDeleteExpenseMutation,
+} from '@/hooks/useExpensesQuery';
 import type { Expense } from '@/lib/types';
 
 export default function ExpensesPage() {
-  const qc = useQueryClient();
+  const searchParams = useSearchParams();
   const [selectedDate, setSelectedDate] = useState(today());
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ category: '', note: '', amount: '' });
 
-  const { data: expenses = [], isLoading } = useQuery({
-    queryKey: ['expenses', selectedDate],
-    queryFn: () => api.expenses.listByDate(selectedDate),
-  });
+  useEffect(() => {
+    if (searchParams.get('new') === '1') setShowForm(true);
+  }, [searchParams]);
 
-  const { data: summary } = useQuery({
-    queryKey: ['expenses-summary', selectedDate],
-    queryFn: () => api.expenses.summary(selectedDate),
-  });
-
-  const createMut = useMutation({
-    mutationFn: () =>
-      api.expenses.create({
-        dateKey: selectedDate,
-        category: form.category || undefined,
-        note: form.note || undefined,
-        amount: form.amount,
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['expenses', selectedDate] });
-      qc.invalidateQueries({ queryKey: ['expenses-summary', selectedDate] });
-      setShowForm(false);
-      setForm({ category: '', note: '', amount: '' });
-    },
-  });
-
-  const deleteMut = useMutation({
-    mutationFn: (id: number) => api.expenses.delete(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['expenses', selectedDate] });
-      qc.invalidateQueries({ queryKey: ['expenses-summary', selectedDate] });
-    },
-  });
+  const { data: expenses = [], isLoading } = useExpensesQuery(selectedDate);
+  const { data: summary } = useExpensesSummaryQuery(selectedDate);
+  const deleteMut = useDeleteExpenseMutation(selectedDate);
 
   return (
     <div>
@@ -82,50 +59,14 @@ export default function ExpensesPage() {
       </div>
 
       {showForm && (
-        <div className="bg-white border border-zinc-200 rounded-lg p-5 mb-6">
-          <h3 className="text-sm font-semibold text-zinc-950 mb-4">New Expense</h3>
-          <div className="grid grid-cols-3 gap-4">
-            <Input
-              label="Category"
-              placeholder="e.g. Supplies, Utilities"
-              value={form.category}
-              onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-            />
-            <Input
-              label="Note"
-              placeholder="Brief description"
-              value={form.note}
-              onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
-            />
-            <Input
-              label="Amount (₱)"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="0.00"
-              value={form.amount}
-              onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-              className="font-mono"
-            />
-          </div>
-          <div className="flex gap-2 mt-4">
-            <Button disabled={createMut.isPending || !form.amount} onClick={() => createMut.mutate()}>
-              {createMut.isPending ? 'Saving...' : 'Save Expense'}
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setShowForm(false);
-                setForm({ category: '', note: '', amount: '' });
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
+        <ExpenseForm
+          dateKey={selectedDate}
+          onSuccess={() => setShowForm(false)}
+          onCancel={() => setShowForm(false)}
+        />
       )}
 
-      <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden">
+      <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-zinc-100 bg-zinc-50">

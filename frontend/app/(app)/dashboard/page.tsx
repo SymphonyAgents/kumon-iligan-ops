@@ -1,11 +1,29 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import Link from 'next/link';
+import {
+  ReceiptIcon,
+  WrenchIcon,
+  CurrencyDollarIcon,
+  TagIcon,
+} from '@phosphor-icons/react';
 import { formatPeso, PAYMENT_METHOD_LABELS } from '@/lib/utils';
+import { useTransactionReportQuery } from '@/hooks/useTransactionsQuery';
 import { PageHeader } from '@/components/ui/page-header';
 import type { Transaction, ClaimPayment } from '@/lib/types';
+
+const QUICK_ACTIONS = [
+  { label: 'New Transaction', href: '/transactions/new', icon: ReceiptIcon },
+  { label: 'New Service', href: '/services?new=1', icon: WrenchIcon },
+  { label: 'New Expense', href: '/expenses?new=1', icon: CurrencyDollarIcon },
+  { label: 'New Promo', href: '/promos?new=1', icon: TagIcon },
+];
+
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
 
 function getMonthRange(year: number, month: number) {
   const from = `${year}-${String(month).padStart(2, '0')}-01`;
@@ -14,15 +32,12 @@ function getMonthRange(year: number, month: number) {
   return { from, to };
 }
 
-export default function ReportsPage() {
+export default function DashboardPage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
 
-  const { data: transactions = [] } = useQuery({
-    queryKey: ['transactions-report', year, month],
-    queryFn: () => api.transactions.list({ limit: 500 }),
-  });
+  const { data: transactions = [] } = useTransactionReportQuery(year, month);
 
   const { from, to } = getMonthRange(year, month);
 
@@ -39,10 +54,7 @@ export default function ReportsPage() {
     const totalBalance = totalRevenue - totalPaid;
 
     const byStatus = filtered.reduce(
-      (acc, t) => {
-        acc[t.status] = (acc[t.status] ?? 0) + 1;
-        return acc;
-      },
+      (acc, t) => { acc[t.status] = (acc[t.status] ?? 0) + 1; return acc; },
       {} as Record<string, number>,
     );
 
@@ -59,15 +71,10 @@ export default function ReportsPage() {
     return { totalRevenue, totalPaid, totalBalance, byStatus, byPaymentMethod };
   }, [filtered]);
 
-  const MONTHS = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
-  ];
-
   return (
     <div>
       <PageHeader
-        title="Reports"
+        title="Dashboard"
         subtitle="Monthly financial summary"
         action={
           <div className="flex items-center gap-2">
@@ -77,9 +84,7 @@ export default function ReportsPage() {
               className="px-3 py-1.5 text-sm bg-white border border-zinc-200 rounded-md focus:outline-none"
             >
               {MONTHS.map((m, i) => (
-                <option key={i} value={i + 1}>
-                  {m}
-                </option>
+                <option key={i} value={i + 1}>{m}</option>
               ))}
             </select>
             <select
@@ -88,17 +93,29 @@ export default function ReportsPage() {
               className="px-3 py-1.5 text-sm bg-white border border-zinc-200 rounded-md focus:outline-none"
             >
               {[2024, 2025, 2026].map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
+                <option key={y} value={y}>{y}</option>
               ))}
             </select>
           </div>
         }
       />
 
-      {/* Top metrics */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      {/* Quick actions */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        {QUICK_ACTIONS.map(({ label, href, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className="flex items-center gap-2 bg-white border border-zinc-200 rounded-md px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 transition-colors duration-150"
+          >
+            <Icon size={13} className="text-zinc-400 shrink-0" />
+            {label}
+          </Link>
+        ))}
+      </div>
+
+      {/* Metrics */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
         {[
           { label: 'Transactions', value: filtered.length, mono: false },
           { label: 'Total Revenue', value: formatPeso(stats.totalRevenue), mono: true },
@@ -114,8 +131,7 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        {/* By status */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         <div className="bg-white border border-zinc-200 rounded-lg p-5">
           <h2 className="text-sm font-semibold text-zinc-950 mb-4">Transactions by Status</h2>
           <div className="space-y-2">
@@ -131,7 +147,6 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* By payment method */}
         <div className="bg-white border border-zinc-200 rounded-lg p-5">
           <h2 className="text-sm font-semibold text-zinc-950 mb-4">Collected by Payment Method</h2>
           <div className="space-y-2">
