@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, gte, lte, and } from 'drizzle-orm';
 import { DrizzleService } from '../db/drizzle.service';
 import { expenses } from '../db/schema';
 import { AuditService } from '../audit/audit.service';
@@ -12,6 +12,16 @@ export class ExpensesService {
     private readonly drizzle: DrizzleService,
     private readonly audit: AuditService,
   ) {}
+
+  async findByMonth(year: number, month: number) {
+    const from = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const to = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    return this.drizzle.db
+      .select()
+      .from(expenses)
+      .where(and(gte(expenses.dateKey, from), lte(expenses.dateKey, to)));
+  }
 
   async findByDate(dateKey: string) {
     return this.drizzle.db
