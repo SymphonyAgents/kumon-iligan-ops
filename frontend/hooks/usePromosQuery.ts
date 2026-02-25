@@ -10,6 +10,7 @@ export function usePromosQuery() {
   return useQuery({
     queryKey: PROMOS_KEY,
     queryFn: () => api.promos.list(),
+    staleTime: 5 * 60 * 1000,
   });
 }
 
