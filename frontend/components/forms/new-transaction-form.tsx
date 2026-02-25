@@ -15,8 +15,15 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useCustomerByPhoneQuery } from '@/hooks/useCustomersQuery';
-import type { Service } from '@/lib/types';
+import type { Service, Promo } from '@/lib/types';
 
 const itemSchema = z.object({
   shoeDescription: z.string().min(1, 'Shoe description is required'),
@@ -29,6 +36,7 @@ const schema = z.object({
   customerPhone: z.string().min(1, 'Phone number is required'),
   customerEmail: z.string().min(1, 'Email is required').email('Invalid email format'),
   pickupDate: z.string().optional(),
+  promoId: z.string().optional(),
   note: z.string().optional(),
   items: z.array(itemSchema).min(1, 'Add at least one item'),
 });
@@ -41,6 +49,18 @@ export function NewTransactionForm() {
   const { data: services = [] } = useQuery({
     queryKey: ['services', 'active'],
     queryFn: () => api.services.list(true),
+  });
+
+  const { data: promos = [] } = useQuery({
+    queryKey: ['promos', 'active'],
+    queryFn: () => api.promos.list(true),
+  });
+
+  const today = new Date().toISOString().split('T')[0];
+  const validPromos = (promos as Promo[]).filter((p) => {
+    if (p.dateFrom && p.dateFrom > today) return false;
+    if (p.dateTo && p.dateTo < today) return false;
+    return true;
   });
 
   const primaryServices = (services as Service[]).filter((s) => s.type === 'primary');
@@ -59,6 +79,7 @@ export function NewTransactionForm() {
       customerPhone: '',
       customerEmail: '',
       pickupDate: '',
+      promoId: '',
       note: '',
       items: [{ shoeDescription: '', primaryServiceId: '', addonServiceIds: [] }],
     },
@@ -67,6 +88,7 @@ export function NewTransactionForm() {
   const { fields, append, remove } = useFieldArray({ control, name: 'items' });
 
   const watchedItems = useWatch({ control, name: 'items' });
+  const watchedPromoId = useWatch({ control, name: 'promoId' }) ?? '';
   const phoneValue = useWatch({ control, name: 'customerPhone' }) ?? '';
 
   const [debouncedPhone, setDebouncedPhone] = useState('');
@@ -85,7 +107,7 @@ export function NewTransactionForm() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingCustomer]);
 
-  const total = (watchedItems ?? []).reduce((sum, item) => {
+  const rawTotal = (watchedItems ?? []).reduce((sum, item) => {
     const primarySvc = item?.primaryServiceId
       ? (services as Service[]).find((s) => s.id === parseInt(item.primaryServiceId, 10))
       : null;
@@ -95,6 +117,13 @@ export function NewTransactionForm() {
     }, 0);
     return sum + (primarySvc ? parseFloat(primarySvc.price) : 0) + addonTotal;
   }, 0);
+
+  const selectedPromo = watchedPromoId
+    ? validPromos.find((p) => String(p.id) === watchedPromoId) ?? null
+    : null;
+  const total = selectedPromo
+    ? rawTotal * (1 - parseFloat(selectedPromo.percent) / 100)
+    : rawTotal;
 
   const createMut = useMutation({
     mutationFn: (data: FormData) => {
@@ -120,7 +149,8 @@ export function NewTransactionForm() {
         customerEmail: data.customerEmail || undefined,
         pickupDate: data.pickupDate || undefined,
         note: data.note || undefined,
-        total: String(total),
+        promoId: data.promoId ? parseInt(data.promoId, 10) : undefined,
+        total: total.toFixed(2),
         paid: '0',
         items: allItems,
       });
@@ -360,12 +390,24 @@ export function NewTransactionForm() {
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Input
-                    label="Promo Code"
-                    placeholder="SAVE20"
-                    className="font-mono uppercase"
-                    name="promoCode"
-                  />
+                  <label className="text-xs font-medium text-zinc-700">Promo Code</label>
+                  <Select
+                    value={watchedPromoId}
+                    onValueChange={(v) => setValue('promoId', v)}
+                  >
+                    <SelectTrigger className="h-9 text-sm w-full border-zinc-200 font-mono">
+                      <SelectValue placeholder="None" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {validPromos.map((p) => (
+                        <SelectItem key={p.id} value={String(p.id)}>
+                          <span className="font-mono">{p.code}</span>
+                          <span className="text-zinc-400 ml-1.5">· -{parseFloat(p.percent).toFixed(0)}%</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-zinc-700">Note</label>
@@ -388,11 +430,22 @@ export function NewTransactionForm() {
                     {(watchedItems ?? []).filter((i) => i?.primaryServiceId).length}
                   </span>
                 </div>
+                {selectedPromo && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-zinc-500">Promo</span>
+                    <span className="font-mono text-emerald-600">-{parseFloat(selectedPromo.percent).toFixed(0)}%</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between text-sm border-t border-zinc-100 pt-2">
                   <span className="font-medium text-zinc-950">Total</span>
-                  <span className="font-mono font-semibold text-zinc-950">
-                    ₱{total.toFixed(2)}
-                  </span>
+                  <div className="text-right">
+                    {selectedPromo && (
+                      <p className="font-mono text-xs text-zinc-400 line-through">₱{rawTotal.toFixed(2)}</p>
+                    )}
+                    <span className="font-mono font-semibold text-zinc-950">
+                      ₱{total.toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
