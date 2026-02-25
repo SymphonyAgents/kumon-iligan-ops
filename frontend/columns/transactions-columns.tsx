@@ -66,9 +66,14 @@ export const createTransactionColumns = ({ onDelete }: TransactionColumnsOptions
     header: () => <span className="block text-right">Balance</span>,
     cell: ({ row }) => {
       const balance = parseFloat(row.original.total) - parseFloat(row.original.paid);
+      const paid = parseFloat(row.original.paid);
+      const isPartial = balance > 0 && paid > 0;
+      const isUnpaid = balance > 0 && paid === 0;
       return (
-        <span className={`block text-right font-mono text-sm ${balance > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
-          {balance > 0 ? formatPeso(balance) : 'Paid'}
+        <span className={`block text-right font-mono text-sm ${
+          isUnpaid ? 'text-red-500' : isPartial ? 'text-amber-600' : 'text-emerald-600'
+        }`}>
+          {isUnpaid ? formatPeso(balance) : isPartial ? 'Partial' : 'Paid'}
         </span>
       );
     },
