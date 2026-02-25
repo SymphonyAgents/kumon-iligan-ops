@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, desc, sql, gte, lte, and, not, inArray } from 'drizzle-orm';
 import { DrizzleService } from '../db/drizzle.service';
 import { transactions, transactionItems, claimPayments } from '../db/schema';
+import { TRANSACTION_STATUS } from '../db/constants';
 import { AuditService } from '../audit/audit.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
@@ -18,7 +19,9 @@ export class TransactionsService {
   // Generate next zero-padded transaction number using a DB sequence-safe query
   private async nextNumber(): Promise<string> {
     const [result] = await this.drizzle.db
-      .select({ max: sql<string>`COALESCE(MAX(CAST(${transactions.number} AS INTEGER)), 0)` })
+      .select({
+        max: sql<string>`COALESCE(MAX(CAST(${transactions.number} AS INTEGER)), 0)`,
+      })
       .from(transactions);
     const next = parseInt(result?.max ?? '0', 10) + 1;
     return String(next).padStart(4, '0');
@@ -63,7 +66,11 @@ export class TransactionsService {
     return this.findOne(txn.id);
   }
 
-  async create(dto: CreateTransactionDto, source = 'pos', performedBy?: string) {
+  async create(
+    dto: CreateTransactionDto,
+    source = 'pos',
+    performedBy?: string,
+  ) {
     const number = await this.nextNumber();
 
     const [created] = await this.drizzle.db
@@ -108,17 +115,34 @@ export class TransactionsService {
     return this.findOne(created.id);
   }
 
-  async update(id: number, dto: UpdateTransactionDto, source = 'pos', performedBy?: string) {
+  async update(
+    id: number,
+    dto: UpdateTransactionDto,
+    source = 'pos',
+    performedBy?: string,
+  ) {
     const existing = await this.findOne(id);
     const prevStatus = existing.status;
 
+    const setValues: Record<string, unknown> = {
+      ...dto,
+      updatedAt: new Date(),
+    };
+    if (
+      dto.status === TRANSACTION_STATUS.CLAIMED &&
+      prevStatus !== TRANSACTION_STATUS.CLAIMED
+    ) {
+      setValues.claimedAt = new Date();
+    }
+
     const [updated] = await this.drizzle.db
       .update(transactions)
-      .set({ ...dto, updatedAt: new Date() })
+      .set(setValues)
       .where(eq(transactions.id, id))
       .returning();
 
-    const action = dto.status && dto.status !== prevStatus ? 'status_change' : 'update';
+    const action =
+      dto.status && dto.status !== prevStatus ? 'status_change' : 'update';
 
     await this.audit.log({
       action,
@@ -126,16 +150,55 @@ export class TransactionsService {
       entityId: updated.number,
       source,
       performedBy,
-      details: action === 'status_change'
-        ? { from: prevStatus, to: dto.status }
-        : { fields: Object.keys(dto) },
+      details:
+        action === 'status_change'
+          ? { from: prevStatus, to: dto.status }
+          : { fields: Object.keys(dto) },
     });
 
     return this.findOne(id);
   }
 
-  async updateItem(transactionId: number, itemId: number, dto: UpdateItemDto, performedBy?: string) {
-    await this.findOne(transactionId); // ensure transaction exists
+  async findRecent(limit = 10) {
+    return this.drizzle.db
+      .select()
+      .from(transactions)
+      .orderBy(desc(transactions.createdAt))
+      .limit(limit);
+  }
+
+  async findUpcoming() {
+    const today = new Date().toISOString().split('T')[0];
+    const plus3 = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split('T')[0];
+    return this.drizzle.db
+      .select()
+      .from(transactions)
+      .where(
+        and(
+          gte(transactions.pickupDate, today),
+          lte(transactions.pickupDate, plus3),
+          not(inArray(transactions.status, ['claimed', 'cancelled'])),
+        ),
+      )
+      .orderBy(transactions.pickupDate);
+  }
+
+  async updateItem(
+    transactionId: number,
+    itemId: number,
+    dto: UpdateItemDto,
+    performedBy?: string,
+  ) {
+    const txn = await this.findOne(transactionId);
+
+    const [existing] = await this.drizzle.db
+      .select()
+      .from(transactionItems)
+      .where(eq(transactionItems.id, itemId));
+
+    if (!existing) throw new NotFoundException(`Item ${itemId} not found`);
 
     const [updated] = await this.drizzle.db
       .update(transactionItems)
@@ -143,7 +206,21 @@ export class TransactionsService {
       .where(eq(transactionItems.id, itemId))
       .returning();
 
-    if (!updated) throw new NotFoundException(`Item ${itemId} not found`);
+    if (dto.status && dto.status !== existing.status) {
+      await this.audit.log({
+        action: 'status_change',
+        entityType: 'transaction_item',
+        entityId: String(itemId),
+        source: 'pos',
+        performedBy,
+        details: {
+          transactionNumber: txn.number,
+          from: existing.status,
+          to: dto.status,
+          shoe: existing.shoeDescription,
+        },
+      });
+    }
 
     return updated;
   }
@@ -160,7 +237,7 @@ export class TransactionsService {
       })
       .returning();
 
-    const newPaid = (parseFloat(txn.paid as string) + parseFloat(dto.amount)).toFixed(2);
+    const newPaid = (parseFloat(txn.paid) + parseFloat(dto.amount)).toFixed(2);
     await this.drizzle.db
       .update(transactions)
       .set({ paid: newPaid, updatedAt: new Date() })
