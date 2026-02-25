@@ -50,9 +50,27 @@ export class TransactionsService {
       .from(transactionItems)
       .leftJoin(services, eq(transactionItems.serviceId, services.id))
       .where(eq(transactionItems.transactionId, id));
+
+    const allAddonIds = [
+      ...new Set(
+        itemRows.flatMap((r) => (r.item.addonServiceIds as number[] | null) ?? []),
+      ),
+    ];
+    const addonMap = new Map<number, { id: number; name: string; type: string }>();
+    if (allAddonIds.length > 0) {
+      const addonRows = await this.drizzle.db
+        .select()
+        .from(services)
+        .where(inArray(services.id, allAddonIds));
+      addonRows.forEach((s) => addonMap.set(s.id, { id: s.id, name: s.name, type: s.type }));
+    }
+
     const items = itemRows.map((r) => ({
       ...r.item,
       service: r.service ? { id: r.service.id, name: r.service.name, type: r.service.type } : null,
+      addonServices: ((r.item.addonServiceIds as number[] | null) ?? [])
+        .map((id) => addonMap.get(id))
+        .filter(Boolean),
     }));
 
     const payments = await this.drizzle.db
@@ -101,6 +119,7 @@ export class TransactionsService {
           transactionId: created.id,
           shoeDescription: item.shoeDescription ?? null,
           serviceId: item.serviceId ?? null,
+          addonServiceIds: item.addonServiceIds?.length ? item.addonServiceIds : null,
           status: item.status ?? 'pending',
           beforeImageUrl: item.beforeImageUrl ?? null,
           afterImageUrl: item.afterImageUrl ?? null,
