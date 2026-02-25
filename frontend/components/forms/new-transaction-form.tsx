@@ -79,17 +79,21 @@ export function NewTransactionForm() {
 
   const createMut = useMutation({
     mutationFn: (data: FormData) => {
-      const allItems = data.items.flatMap((i) => {
-        const svcIds = [i.primaryServiceId, ...(i.addonServiceIds ?? [])].filter(Boolean);
-        return svcIds.map((serviceId) => {
-          const svc = (services as Service[]).find((s) => s.id === parseInt(serviceId, 10));
-          return {
-            shoeDescription: i.shoeDescription || undefined,
-            serviceId: parseInt(serviceId, 10),
-            status: 'pending' as const,
-            price: svc ? svc.price : undefined,
-          };
-        });
+      const allItems = data.items.map((i) => {
+        const primarySvc = i.primaryServiceId
+          ? (services as Service[]).find((s) => s.id === parseInt(i.primaryServiceId, 10))
+          : null;
+        const addonTotal = (i.addonServiceIds ?? []).reduce((sum, id) => {
+          const svc = (services as Service[]).find((s) => s.id === parseInt(id, 10));
+          return sum + (svc ? parseFloat(svc.price) : 0);
+        }, 0);
+        const itemPrice = (primarySvc ? parseFloat(primarySvc.price) : 0) + addonTotal;
+        return {
+          shoeDescription: i.shoeDescription || undefined,
+          serviceId: i.primaryServiceId ? parseInt(i.primaryServiceId, 10) : undefined,
+          status: 'pending' as const,
+          price: itemPrice > 0 ? String(itemPrice) : undefined,
+        };
       });
       return api.transactions.create({
         customerName: data.customerName || undefined,
@@ -176,7 +180,7 @@ export function NewTransactionForm() {
                   onClick={() => append({ shoeDescription: '', primaryServiceId: '', addonServiceIds: [] })}
                 >
                   <PlusIcon size={13} weight="bold" />
-                  Add Shoe
+                  Add Item
                 </Button>
               </div>
 
