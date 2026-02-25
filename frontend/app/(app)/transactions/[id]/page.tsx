@@ -4,7 +4,7 @@ import { use, useMemo, useState } from 'react';
 import { ArrowLeftIcon, PlusIcon, EnvelopeIcon } from '@phosphor-icons/react';
 import { Lightbox } from '@/components/ui/lightbox';
 import Link from 'next/link';
-import { formatPeso, formatDate, formatDatetime, PAYMENT_METHOD_LABELS, STATUS_LABELS } from '@/lib/utils';
+import { formatPeso, formatDate, formatDatetime, PAYMENT_METHOD_LABELS, STATUS_LABELS, cn } from '@/lib/utils';
 import { toTitleCase } from '@/utils/text';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
@@ -68,6 +68,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   if (!txn) return <p className="text-sm text-zinc-400">Transaction not found.</p>;
 
   const balance = parseFloat(txn.total) - parseFloat(txn.paid);
+  const txnLocked = ['cancelled', 'claimed'].includes(txn.status);
 
   return (
     <div>
@@ -82,12 +83,21 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
           </Link>
         }
         action={
-          <Select value={txn.status} onValueChange={(v) => updateStatusMut.mutate(v as TransactionStatus)}>
-            <SelectTrigger className="h-9 w-40 text-sm border-zinc-200">
+          <Select
+            value={txn.status}
+            onValueChange={(v) => updateStatusMut.mutate(v as TransactionStatus)}
+            disabled={txnLocked}
+          >
+            <SelectTrigger
+              className={cn(
+                'h-9 w-40 text-sm border-zinc-200',
+                txnLocked && 'cursor-not-allowed opacity-60',
+              )}
+            >
               <StatusBadge status={txn.status} />
             </SelectTrigger>
             <SelectContent>
-              {TRANSACTION_STATUS_VALUES.map((s) => (
+              {TRANSACTION_STATUS_VALUES.filter((s) => !['cancelled', 'claimed'].includes(s)).map((s) => (
                 <SelectItem key={s} value={s}>
                   <StatusBadge status={s} />
                 </SelectItem>
