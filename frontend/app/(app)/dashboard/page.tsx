@@ -7,10 +7,18 @@ import {
   WrenchIcon,
   CurrencyDollarIcon,
   TagIcon,
+  CalendarIcon,
 } from '@phosphor-icons/react';
-import { formatPeso, PAYMENT_METHOD_LABELS } from '@/lib/utils';
-import { useTransactionReportQuery } from '@/hooks/useTransactionsQuery';
+import { formatPeso, formatDate, PAYMENT_METHOD_LABELS, STATUS_LABELS } from '@/lib/utils';
+import {
+  useTransactionReportQuery,
+  useRecentTransactionsQuery,
+  useUpcomingPickupsQuery,
+} from '@/hooks/useTransactionsQuery';
+import { useMonthlyExpensesQuery } from '@/hooks/useExpensesQuery';
 import { PageHeader } from '@/components/ui/page-header';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { toTitleCase } from '@/utils/text';
 import type { Transaction, ClaimPayment } from '@/lib/types';
 
 const QUICK_ACTIONS = [
@@ -32,12 +40,23 @@ function getMonthRange(year: number, month: number) {
   return { from, to };
 }
 
+function pickupDateClass(dateStr: string | null) {
+  if (!dateStr) return 'text-zinc-400';
+  const today = new Date().toISOString().split('T')[0];
+  if (dateStr < today) return 'text-red-500 font-medium';
+  if (dateStr === today) return 'text-amber-600 font-medium';
+  return 'text-zinc-700';
+}
+
 export default function DashboardPage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
 
   const { data: transactions = [] } = useTransactionReportQuery(year, month);
+  const { data: recentTxns = [] } = useRecentTransactionsQuery(10);
+  const { data: upcomingPickups = [] } = useUpcomingPickupsQuery();
+  const { data: expenses = [] } = useMonthlyExpensesQuery(year, month);
 
   const { from, to } = getMonthRange(year, month);
 
@@ -70,6 +89,8 @@ export default function DashboardPage() {
 
     return { totalRevenue, totalPaid, totalBalance, byStatus, byPaymentMethod };
   }, [filtered]);
+
+  const totalExpenses = expenses.reduce((sum, e) => sum + parseFloat(e.amount), 0);
 
   return (
     <div>
@@ -131,13 +152,14 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+        {/* Transactions by Status */}
         <div className="bg-white border border-zinc-200 rounded-lg p-5">
           <h2 className="text-sm font-semibold text-zinc-950 mb-4">Transactions by Status</h2>
           <div className="space-y-2">
             {Object.entries(stats.byStatus).map(([status, count]) => (
               <div key={status} className="flex items-center justify-between py-1">
-                <span className="text-sm text-zinc-600 capitalize">{status.replace('_', ' ')}</span>
+                <span className="text-sm text-zinc-600 capitalize">{STATUS_LABELS[status] ?? status.replace('_', ' ')}</span>
                 <span className="font-mono text-sm font-medium text-zinc-950">{count}</span>
               </div>
             ))}
@@ -147,23 +169,106 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="bg-white border border-zinc-200 rounded-lg p-5">
-          <h2 className="text-sm font-semibold text-zinc-950 mb-4">Collected by Payment Method</h2>
-          <div className="space-y-2">
-            {Object.entries(stats.byPaymentMethod).map(([method, amount]) => (
-              <div key={method} className="flex items-center justify-between py-1">
-                <span className="text-sm text-zinc-600">
-                  {PAYMENT_METHOD_LABELS[method] ?? method}
-                </span>
-                <span className="font-mono text-sm font-medium text-zinc-950">
-                  {formatPeso(amount)}
-                </span>
-              </div>
-            ))}
-            {Object.keys(stats.byPaymentMethod).length === 0 && (
-              <p className="text-sm text-zinc-400">No payments recorded for this period.</p>
+        {/* Collected by Payment Method + Expenses */}
+        <div className="space-y-4">
+          <div className="bg-white border border-zinc-200 rounded-lg p-5">
+            <h2 className="text-sm font-semibold text-zinc-950 mb-4">Collected by Payment Method</h2>
+            <div className="space-y-2">
+              {Object.entries(stats.byPaymentMethod).map(([method, amount]) => (
+                <div key={method} className="flex items-center justify-between py-1">
+                  <span className="text-sm text-zinc-600">
+                    {PAYMENT_METHOD_LABELS[method] ?? method}
+                  </span>
+                  <span className="font-mono text-sm font-medium text-zinc-950">
+                    {formatPeso(amount)}
+                  </span>
+                </div>
+              ))}
+              {Object.keys(stats.byPaymentMethod).length === 0 && (
+                <p className="text-sm text-zinc-400">No payments recorded for this period.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white border border-zinc-200 rounded-lg p-5">
+            <h2 className="text-sm font-semibold text-zinc-950 mb-1">Expenses</h2>
+            <p className="text-xs text-zinc-400 mb-2">Month total</p>
+            <p className="text-2xl font-mono font-semibold text-zinc-950">
+              {formatPeso(totalExpenses)}
+            </p>
+            {expenses.length > 0 && (
+              <p className="text-xs text-zinc-400 mt-1">{expenses.length} entries</p>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Upcoming pickups + Recent transactions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+        {/* Upcoming pickups */}
+        <div className="bg-white border border-zinc-200 rounded-lg p-5">
+          <h2 className="text-sm font-semibold text-zinc-950 mb-4 flex items-center gap-1.5">
+            <CalendarIcon size={14} className="text-amber-500" />
+            Upcoming Pickups
+            {upcomingPickups.length > 0 && (
+              <span className="ml-auto text-xs font-normal text-zinc-400">{upcomingPickups.length} within 3 days</span>
+            )}
+          </h2>
+          {upcomingPickups.length === 0 ? (
+            <p className="text-sm text-zinc-400">No pickups in the next 3 days.</p>
+          ) : (
+            <div className="divide-y divide-zinc-100">
+              {(upcomingPickups as Transaction[]).map((t) => (
+                <Link
+                  key={t.id}
+                  href={`/transactions/${t.id}`}
+                  className="flex items-center justify-between py-2.5 hover:bg-zinc-50 -mx-1 px-1 rounded transition-colors duration-150"
+                >
+                  <div className="min-w-0">
+                    <p className="font-mono text-xs font-medium text-zinc-950">#{t.number}</p>
+                    <p className="text-xs text-zinc-500 truncate">{toTitleCase(t.customerName) || '—'}</p>
+                  </div>
+                  <div className="text-right ml-3 shrink-0">
+                    <p className={`text-xs ${pickupDateClass(t.pickupDate)}`}>
+                      {formatDate(t.pickupDate)}
+                    </p>
+                    <div className="mt-0.5">
+                      <StatusBadge status={t.status} />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Recent transactions */}
+        <div className="bg-white border border-zinc-200 rounded-lg p-5">
+          <h2 className="text-sm font-semibold text-zinc-950 mb-4">Recent Transactions</h2>
+          {recentTxns.length === 0 ? (
+            <p className="text-sm text-zinc-400">No transactions yet.</p>
+          ) : (
+            <div className="divide-y divide-zinc-100">
+              {(recentTxns as Transaction[]).map((t) => (
+                <Link
+                  key={t.id}
+                  href={`/transactions/${t.id}`}
+                  className="flex items-center justify-between py-2.5 hover:bg-zinc-50 -mx-1 px-1 rounded transition-colors duration-150"
+                >
+                  <div className="min-w-0">
+                    <p className="font-mono text-xs font-medium text-zinc-950">#{t.number}</p>
+                    <p className="text-xs text-zinc-500 truncate">{toTitleCase(t.customerName) || '—'}</p>
+                  </div>
+                  <div className="text-right ml-3 shrink-0">
+                    <p className="font-mono text-xs text-zinc-950">{formatPeso(t.total)}</p>
+                    <div className="mt-0.5">
+                      <StatusBadge status={t.status} />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
