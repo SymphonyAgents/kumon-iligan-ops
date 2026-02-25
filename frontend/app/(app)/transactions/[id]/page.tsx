@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useMemo, useState } from 'react';
+import { use, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeftIcon, PlusIcon, EnvelopeIcon } from '@phosphor-icons/react';
 import { Lightbox } from '@/components/ui/lightbox';
 import Link from 'next/link';
@@ -22,6 +22,7 @@ import { createTransactionItemColumns } from '@/columns/transaction-items-column
 import {
   useTransactionDetailQuery,
   useUpdateTransactionStatusMutation,
+  useUpdateTransactionMutation,
   useUpdateItemStatusMutation,
   useAddPaymentMutation,
 } from '@/hooks/useTransactionsQuery';
@@ -40,8 +41,13 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   const [emailTemplate, setEmailTemplate] = useState<EmailTemplateKey>(EMAIL_TEMPLATES.pickup_ready);
   const [lightbox, setLightbox] = useState<{ src: string; label: string } | null>(null);
 
+  const [rescheduleValue, setRescheduleValue] = useState('');
+  const [noteValue, setNoteValue] = useState('');
+  const initializedRef = useRef<string | null>(null);
+
   const { data: txn, isLoading, isFetching } = useTransactionDetailQuery(id);
   const updateStatusMut = useUpdateTransactionStatusMutation(id);
+  const updateTxnMut = useUpdateTransactionMutation(id);
   const updateItemStatusMut = useUpdateItemStatusMutation(id);
 
   const [loadingItemIds, setLoadingItemIds] = useState<Set<number>>(new Set());
@@ -52,6 +58,15 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFetching, updateItemStatusMut.isPending]);
+
+  useEffect(() => {
+    if (txn && initializedRef.current !== id) {
+      initializedRef.current = id;
+      setRescheduleValue(txn.newPickupDate ?? '');
+      setNoteValue(txn.note ?? '');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [txn?.id]);
 
   const itemColumns = useMemo(
     () => createTransactionItemColumns({
@@ -140,11 +155,66 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                 <p className="text-sm text-zinc-700">{txn.customerPhone ?? '—'}</p>
               </div>
               <div>
-                <p className="text-xs text-zinc-400">Pickup</p>
+                <p className="text-xs text-zinc-400">Original Pickup</p>
                 <p className="text-sm text-zinc-700">{formatDate(txn.pickupDate)}</p>
               </div>
+              {txn.newPickupDate && (
+                <div>
+                  <p className="text-xs text-amber-600">Rescheduled</p>
+                  <p className="text-sm font-medium text-amber-600">{formatDate(txn.newPickupDate)}</p>
+                </div>
+              )}
             </div>
-            {txn.note && (
+
+            {!txnLocked && (
+              <div className="mt-3 pt-3 border-t border-zinc-100 space-y-3">
+                <div>
+                  <p className="text-xs text-zinc-400 mb-1.5">
+                    {txn.newPickupDate ? 'Update Rescheduled Date' : 'Reschedule Pickup'}
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      value={rescheduleValue}
+                      onChange={(e) => setRescheduleValue(e.target.value)}
+                      className="flex-1 px-3 py-2 text-sm bg-white border border-zinc-200 rounded-md text-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                    <Button
+                      size="sm"
+                      variant="dark"
+                      disabled={!rescheduleValue || updateTxnMut.isPending}
+                      onClick={() => updateTxnMut.mutate({ newPickupDate: rescheduleValue })}
+                    >
+                      {updateTxnMut.isPending ? <Spinner /> : 'Save'}
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs text-zinc-400 mb-1.5">Note</p>
+                  <div className="flex flex-col gap-2">
+                    <textarea
+                      rows={2}
+                      value={noteValue}
+                      onChange={(e) => setNoteValue(e.target.value)}
+                      placeholder="Internal note..."
+                      className="w-full px-3 py-2 text-sm bg-white border border-zinc-200 rounded-md text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
+                    />
+                    <Button
+                      size="sm"
+                      variant="dark"
+                      disabled={noteValue === (txn.note ?? '') || updateTxnMut.isPending}
+                      onClick={() => updateTxnMut.mutate({ note: noteValue || null })}
+                      className="self-end"
+                    >
+                      {updateTxnMut.isPending ? <Spinner /> : 'Save Note'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {txnLocked && txn.note && (
               <div className="mt-3 pt-3 border-t border-zinc-100">
                 <p className="text-xs text-zinc-400">Note</p>
                 <p className="text-sm text-zinc-700 mt-0.5 whitespace-pre-wrap">{txn.note}</p>
