@@ -70,9 +70,27 @@ export const createTransactionItemColumns = ({ onStatusChange, onImageClick, loa
   {
     id: 'service',
     header: 'Service',
-    cell: ({ row }) => (
-      <span className="text-sm text-zinc-600">{row.original.service?.name ?? '—'}</span>
-    ),
+    cell: ({ row }) => {
+      const primary = row.original.service;
+      const addons = row.original.addonServices ?? [];
+      if (!primary && addons.length === 0) {
+        return <span className="text-zinc-400 text-xs">—</span>;
+      }
+      return (
+        <div className="flex flex-col gap-1">
+          {primary && (
+            <span className="inline-flex w-fit items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-100 text-zinc-700">
+              {primary.name}
+            </span>
+          )}
+          {addons.map((a) => (
+            <span key={a.id} className="inline-flex w-fit items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-100 text-zinc-500">
+              +{a.name}
+            </span>
+          ))}
+        </div>
+      );
+    },
   },
   {
     accessorKey: 'beforeImageUrl',
