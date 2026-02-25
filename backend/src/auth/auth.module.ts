@@ -8,3 +8,5 @@ import { SupabaseAuthGuard } from './auth.guard';
   exports: [SupabaseAuthGuard, SupabaseModule],
 })
 export class AuthModule {}
+
+// RolesGuard is provided by UsersModule (needs UsersService) — import UsersModule where needed
