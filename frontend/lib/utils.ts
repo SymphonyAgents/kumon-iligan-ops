@@ -42,11 +42,11 @@ export const STATUS_LABELS: Record<string, string> = {
 };
 
 export const STATUS_COLORS: Record<string, string> = {
-  pending: 'text-blue-600 bg-blue-50',
-  in_progress: 'text-amber-600 bg-amber-50',
-  done: 'text-emerald-600 bg-emerald-50',
-  claimed: 'text-zinc-400 bg-zinc-100',
-  cancelled: 'text-red-500 bg-red-50',
+  pending: 'text-zinc-600 bg-zinc-100',
+  in_progress: 'text-blue-600 bg-blue-100',
+  done: 'text-emerald-700 bg-emerald-100',
+  claimed: 'text-violet-700 bg-violet-100',
+  cancelled: 'text-red-500 bg-red-100',
 };
 
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {
