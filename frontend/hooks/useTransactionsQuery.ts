@@ -71,15 +71,7 @@ export function useTransactionDetailQuery(id: string) {
         if (found) return found;
       }
     },
-    initialDataUpdatedAt: () => {
-      const queries = qc.getQueriesData<Transaction[]>({ queryKey: TRANSACTIONS_KEY });
-      let latest = 0;
-      for (const [key] of queries) {
-        const ts = qc.getQueryState(key)?.dataUpdatedAt ?? 0;
-        if (ts > latest) latest = ts;
-      }
-      return latest;
-    },
+    initialDataUpdatedAt: 0,
   });
 }
 
