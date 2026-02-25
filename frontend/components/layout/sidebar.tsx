@@ -17,20 +17,24 @@ import {
 } from '@phosphor-icons/react';
 import { createBrowserClient } from '@supabase/ssr';
 import { cn } from '@/lib/utils';
+import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 
 const NAV = [
-  { href: '/dashboard', label: 'Dashboard', icon: ChartBarIcon },
-  { href: '/transactions', label: 'Transactions', icon: ReceiptIcon },
-  { href: '/services', label: 'Services', icon: WrenchIcon },
-  { href: '/promos', label: 'Promos', icon: TagIcon },
-  { href: '/expenses', label: 'Expenses', icon: CurrencyDollarIcon },
-  { href: '/audit', label: 'Audit Log', icon: ClockIcon },
+  { href: '/dashboard', label: 'Dashboard', icon: ChartBarIcon, adminOnly: false },
+  { href: '/transactions', label: 'Transactions', icon: ReceiptIcon, adminOnly: false },
+  { href: '/services', label: 'Services', icon: WrenchIcon, adminOnly: true },
+  { href: '/promos', label: 'Promos', icon: TagIcon, adminOnly: true },
+  { href: '/expenses', label: 'Expenses', icon: CurrencyDollarIcon, adminOnly: false },
+  { href: '/audit', label: 'Audit Log', icon: ClockIcon, adminOnly: true },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { data: currentUser } = useCurrentUserQuery();
+  const isAdmin = currentUser?.userType === 'admin' || currentUser?.userType === 'superadmin';
+  const visibleNav = NAV.filter((item) => !item.adminOnly || isAdmin);
 
   async function handleSignOut() {
     const supabase = createBrowserClient(
@@ -43,7 +47,7 @@ export function Sidebar() {
 
   const navLinks = (
     <nav className="flex-1 px-3 py-4 space-y-0.5">
-      {NAV.map(({ href, label, icon: Icon }) => {
+      {visibleNav.map(({ href, label, icon: Icon }) => {
         const active = pathname.startsWith(href);
         return (
           <Link
