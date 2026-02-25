@@ -24,15 +24,12 @@ const itemSchema = z.object({
 
 const schema = z.object({
   customerName: z.string().optional(),
-  customerPhone: z.string().optional(),
-  customerEmail: z.string().email('Invalid email').optional().or(z.literal('')),
+  customerPhone: z.string().min(1, 'Phone number is required'),
+  customerEmail: z.string().min(1, 'Email is required').email('Invalid email format'),
   pickupDate: z.string().optional(),
   note: z.string().optional(),
   items: z.array(itemSchema).min(1, 'Add at least one item'),
-}).refine(
-  (data) => !!(data.customerName?.trim() || data.customerPhone?.trim()),
-  { message: 'Provide at least a name or phone number', path: ['customerName'] },
-);
+});
 
 type FormData = z.infer<typeof schema>;
 
@@ -150,6 +147,9 @@ export function NewTransactionForm() {
                     placeholder="09XX XXX XXXX"
                     {...register('customerPhone')}
                   />
+                  {errors.customerPhone && (
+                    <p className="text-xs text-red-500">{errors.customerPhone.message}</p>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Input
