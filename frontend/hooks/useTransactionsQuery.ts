@@ -22,6 +22,21 @@ export function useTransactionReportQuery(year: number, month: number) {
   });
 }
 
+export function useRecentTransactionsQuery(limit = 10) {
+  return useQuery({
+    queryKey: ['transactions-recent', limit],
+    queryFn: () => api.transactions.recent(limit),
+  });
+}
+
+export function useUpcomingPickupsQuery() {
+  return useQuery({
+    queryKey: ['transactions-upcoming'],
+    queryFn: () => api.transactions.upcoming(),
+    refetchInterval: 5 * 60 * 1000, // refresh every 5 min
+  });
+}
+
 export function useTransactionDetailQuery(id: string) {
   return useQuery({
     queryKey: transactionDetailKey(id),
