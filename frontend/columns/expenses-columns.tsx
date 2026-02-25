@@ -1,7 +1,7 @@
 'use client';
 
 import { type ColumnDef } from '@tanstack/react-table';
-import { TrashIcon } from '@phosphor-icons/react';
+import { TrashIcon, ReceiptIcon } from '@phosphor-icons/react';
 import { formatPeso } from '@/lib/utils';
 import { toTitleCase } from '@/utils/text';
 import type { Expense } from '@/lib/types';
@@ -15,7 +15,10 @@ export const createExpenseColumns = ({ onDelete }: ExpenseColumnsOptions): Colum
     accessorKey: 'category',
     header: 'Category',
     cell: ({ row }) => (
-      <span className="font-medium text-zinc-950">{toTitleCase(row.original.category) || '—'}</span>
+      <div className="flex items-center gap-2">
+        <ReceiptIcon size={13} className="text-zinc-400 shrink-0" />
+        <span className="font-medium text-zinc-950">{toTitleCase(row.original.category) || '—'}</span>
+      </div>
     ),
   },
   {
