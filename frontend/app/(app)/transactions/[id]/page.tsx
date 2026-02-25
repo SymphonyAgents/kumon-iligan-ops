@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeftIcon, PlusIcon, EnvelopeIcon } from '@phosphor-icons/react';
+import { ArrowLeftIcon, PlusIcon, EnvelopeIcon, DiamondIcon } from '@phosphor-icons/react';
 import { Lightbox } from '@/components/ui/lightbox';
 import Link from 'next/link';
 import { formatPeso, formatDate, formatDatetime, PAYMENT_METHOD_LABELS, cn } from '@/lib/utils';
@@ -257,6 +257,14 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                 <span className="text-zinc-500">Total</span>
                 <span className="font-mono font-medium text-zinc-950">{formatPeso(txn.total)}</span>
               </div>
+              {txn.promo && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-zinc-500">Promo</span>
+                  <span className="font-mono text-emerald-600">
+                    {txn.promo.code} · -{parseFloat(txn.promo.percent).toFixed(0)}%
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between text-sm">
                 <span className="text-zinc-500">Paid</span>
                 <span className="font-mono text-emerald-600">{formatPeso(txn.paid)}</span>
