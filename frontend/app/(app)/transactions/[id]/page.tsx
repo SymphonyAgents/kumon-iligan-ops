@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useMemo, useState } from 'react';
-import { ArrowLeftIcon, PlusIcon } from '@phosphor-icons/react';
+import { ArrowLeftIcon, PlusIcon, EnvelopeIcon } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { formatPeso, formatDate, formatDatetime, PAYMENT_METHOD_LABELS, STATUS_LABELS } from '@/lib/utils';
 import { toTitleCase } from '@/utils/text';
@@ -18,16 +18,18 @@ import {
   useUpdateItemStatusMutation,
   useAddPaymentMutation,
 } from '@/hooks/useTransactionsQuery';
+import { TRANSACTION_STATUS_VALUES, PAYMENT_METHOD_VALUES } from '@/lib/constants';
+import { generateGmailLink, EMAIL_TEMPLATES, EMAIL_TEMPLATE_LABELS } from '@/utils/email';
+import type { EmailTemplateKey } from '@/utils/email';
 import type { TransactionStatus, PaymentMethod } from '@/lib/types';
-
-const STATUSES: TransactionStatus[] = ['pending', 'in_progress', 'done', 'claimed'];
-const PAYMENT_METHODS: PaymentMethod[] = ['cash', 'gcash', 'card', 'bank_deposit'];
 
 export default function TransactionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [paymentAmount, setPaymentAmount] = useState('');
+
+  const [emailTemplate, setEmailTemplate] = useState<EmailTemplateKey>(EMAIL_TEMPLATES.pickup_ready);
 
   const { data: txn, isLoading } = useTransactionDetailQuery(id);
   const updateStatusMut = useUpdateTransactionStatusMutation(id);
@@ -76,7 +78,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
             onChange={(e) => updateStatusMut.mutate(e.target.value as TransactionStatus)}
             className="w-40"
           >
-            {STATUSES.map((s) => (
+            {TRANSACTION_STATUS_VALUES.map((s) => (
               <option key={s} value={s}>
                 {STATUS_LABELS[s]}
               </option>
@@ -107,6 +109,12 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                 <p className="text-sm text-zinc-700">{formatDate(txn.pickupDate)}</p>
               </div>
             </div>
+            {txn.note && (
+              <div className="mt-3 pt-3 border-t border-zinc-100">
+                <p className="text-xs text-zinc-400">Note</p>
+                <p className="text-sm text-zinc-700 mt-0.5 whitespace-pre-wrap">{txn.note}</p>
+              </div>
+            )}
           </div>
 
           {/* Items */}
@@ -165,7 +173,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
                 >
-                  {PAYMENT_METHODS.map((m) => (
+                  {PAYMENT_METHOD_VALUES.map((m) => (
                     <option key={m} value={m}>
                       {PAYMENT_METHOD_LABELS[m]}
                     </option>
@@ -224,6 +232,36 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
             </h2>
             <StatusBadge status={txn.status} />
           </div>
+
+          {/* Email customer */}
+          {txn.customerEmail && (
+            <div className="bg-white border border-zinc-200 rounded-lg p-5">
+              <h2 className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-3">
+                Email Customer
+              </h2>
+              <p className="text-xs text-zinc-400 mb-3 truncate">{txn.customerEmail}</p>
+              <div className="space-y-2">
+                <select
+                  value={emailTemplate}
+                  onChange={(e) => setEmailTemplate(e.target.value as EmailTemplateKey)}
+                  className="w-full px-3 py-2 text-sm bg-white border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                >
+                  {Object.entries(EMAIL_TEMPLATE_LABELS).map(([key, label]) => (
+                    <option key={key} value={key}>{label}</option>
+                  ))}
+                </select>
+                <a
+                  href={generateGmailLink(txn, emailTemplate)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full px-3 py-2 text-sm font-medium bg-zinc-950 text-white rounded-md hover:bg-zinc-800 transition-colors duration-150"
+                >
+                  <EnvelopeIcon size={13} />
+                  Open in Gmail
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
