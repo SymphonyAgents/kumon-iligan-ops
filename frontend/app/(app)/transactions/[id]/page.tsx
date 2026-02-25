@@ -2,6 +2,7 @@
 
 import { use, useMemo, useState } from 'react';
 import { ArrowLeftIcon, PlusIcon, EnvelopeIcon } from '@phosphor-icons/react';
+import { Lightbox } from '@/components/ui/lightbox';
 import Link from 'next/link';
 import { formatPeso, formatDate, formatDatetime, PAYMENT_METHOD_LABELS, STATUS_LABELS } from '@/lib/utils';
 import { toTitleCase } from '@/utils/text';
@@ -30,6 +31,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   const [paymentAmount, setPaymentAmount] = useState('');
 
   const [emailTemplate, setEmailTemplate] = useState<EmailTemplateKey>(EMAIL_TEMPLATES.pickup_ready);
+  const [lightbox, setLightbox] = useState<{ src: string; label: string } | null>(null);
 
   const { data: txn, isLoading } = useTransactionDetailQuery(id);
   const updateStatusMut = useUpdateTransactionStatusMutation(id);
@@ -38,6 +40,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   const itemColumns = useMemo(
     () => createTransactionItemColumns({
       onStatusChange: (itemId, status) => updateItemStatusMut.mutate({ itemId, status }),
+      onImageClick: (src, label) => setLightbox({ src, label }),
     }),
     [],
   );
@@ -264,6 +267,13 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
           )}
         </div>
       </div>
+
+      <Lightbox
+        open={!!lightbox}
+        src={lightbox?.src ?? ''}
+        alt={lightbox?.label}
+        onClose={() => setLightbox(null)}
+      />
     </div>
   );
 }
