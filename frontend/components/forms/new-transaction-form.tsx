@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { PlusIcon, TrashIcon, ArrowLeftIcon } from '@phosphor-icons/react';
+import { PlusIcon, TrashIcon, ArrowLeftIcon, CameraIcon } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -182,7 +182,7 @@ export function NewTransactionForm() {
                 {fields.map((field, idx) => (
                   <div
                     key={field.id}
-                    className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-start p-3 bg-zinc-50 rounded-md"
+                    className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-3 items-start p-3 bg-zinc-50 rounded-md"
                   >
                     <div className="flex flex-col gap-1.5">
                       <span className={cn('text-xs font-medium text-zinc-700', idx !== 0 && 'invisible')}>
@@ -236,16 +236,28 @@ export function NewTransactionForm() {
                       </p>
                     </div>
 
-                    <div className="flex flex-col">
-                      <span className={cn('text-xs', idx !== 0 && 'invisible')}>‎</span>
-                      <button
-                        type="button"
-                        onClick={() => remove(idx)}
-                        disabled={fields.length === 1}
-                        className="p-2 text-zinc-400 hover:text-red-500 transition-colors disabled:opacity-30"
-                      >
-                        <TrashIcon size={14} />
-                      </button>
+                    <div className="flex items-center justify-between sm:contents gap-3">
+                      <div className="flex flex-col items-center">
+                        <span className={cn('text-xs font-medium text-zinc-500', idx !== 0 && 'invisible')}>Before</span>
+                        <div
+                          title="Photo upload available after save"
+                          className="w-10 h-10 mt-0.5 rounded-md border-2 border-dashed border-zinc-300 flex items-center justify-center bg-zinc-100 cursor-not-allowed"
+                        >
+                          <CameraIcon size={16} className="text-zinc-500" />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col">
+                        <span className={cn('text-xs', idx !== 0 && 'invisible')}>‎</span>
+                        <button
+                          type="button"
+                          onClick={() => remove(idx)}
+                          disabled={fields.length === 1}
+                          className="p-2 text-zinc-400 hover:text-red-500 transition-colors disabled:opacity-30"
+                        >
+                          <TrashIcon size={14} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
