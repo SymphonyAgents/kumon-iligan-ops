@@ -22,7 +22,9 @@ export const services = pgTable('services', {
   type: varchar('type', { length: 50 }).notNull(), // 'primary' | 'add_on'
   price: numeric('price', { precision: 10, scale: 2 }).notNull(),
   isActive: boolean('is_active').default(true).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }),
 });
 
@@ -37,7 +39,9 @@ export const promos = pgTable('promos', {
   dateFrom: date('date_from'),
   dateTo: date('date_to'),
   isActive: boolean('is_active').default(true).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }),
 });
 
@@ -50,12 +54,18 @@ export const transactions = pgTable('transactions', {
   customerName: varchar('customer_name', { length: 255 }),
   customerPhone: varchar('customer_phone', { length: 50 }),
   customerEmail: varchar('customer_email', { length: 255 }),
-  status: varchar('status', { length: 50 }).default('pending').notNull(), // pending | in_progress | done | claimed
+  status: varchar('status', { length: 50 }).default('pending').notNull(), // pending | in_progress | done | claimed | cancelled
+  note: varchar('note', { length: 1000 }),
   pickupDate: date('pickup_date'),
   total: numeric('total', { precision: 10, scale: 2 }).default('0').notNull(),
   paid: numeric('paid', { precision: 10, scale: 2 }).default('0').notNull(),
-  promoId: integer('promo_id').references(() => promos.id, { onDelete: 'set null' }),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  promoId: integer('promo_id').references(() => promos.id, {
+    onDelete: 'set null',
+  }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  claimedAt: timestamp('claimed_at', { withTimezone: true }), // auto-set when status transitions to 'claimed'
   updatedAt: timestamp('updated_at', { withTimezone: true }),
 });
 
@@ -68,8 +78,10 @@ export const transactionItems = pgTable('transaction_items', {
     .references(() => transactions.id, { onDelete: 'cascade' })
     .notNull(),
   shoeDescription: varchar('shoe_description', { length: 255 }),
-  serviceId: integer('service_id').references(() => services.id, { onDelete: 'set null' }),
-  status: varchar('status', { length: 50 }).default('pending').notNull(),
+  serviceId: integer('service_id').references(() => services.id, {
+    onDelete: 'set null',
+  }),
+  status: varchar('status', { length: 50 }).default('pending').notNull(), // pending | in_progress | done | claimed | cancelled
   beforeImageUrl: text('before_image_url'),
   afterImageUrl: text('after_image_url'),
   price: numeric('price', { precision: 10, scale: 2 }), // snapshot of service price at time of intake
@@ -96,8 +108,23 @@ export const expenses = pgTable('expenses', {
   dateKey: date('date_key').notNull(),
   category: varchar('category', { length: 100 }),
   note: varchar('note', { length: 500 }),
+  source: varchar('source', { length: 20 }).default('pos').notNull(), // pos | admin
   amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+// ---------------------------------------------------------------------------
+// users (mirrors auth.users for role management)
+// ---------------------------------------------------------------------------
+export const users = pgTable('users', {
+  id: uuid('id').primaryKey(), // matches auth.users.id
+  email: varchar('email', { length: 255 }).notNull(),
+  userType: varchar('user_type', { length: 20 }).default('staff').notNull(), // admin | staff | superadmin
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 // ---------------------------------------------------------------------------
@@ -105,7 +132,9 @@ export const expenses = pgTable('expenses', {
 // ---------------------------------------------------------------------------
 export const auditLog = pgTable('audit_log', {
   id: serial('id').primaryKey(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
   action: varchar('action', { length: 100 }).notNull(), // create | update | delete | status_change | payment_add
   entityType: varchar('entity_type', { length: 50 }).notNull(), // transaction | service | promo | expense
   entityId: varchar('entity_id', { length: 50 }),
@@ -117,25 +146,31 @@ export const auditLog = pgTable('audit_log', {
 // ---------------------------------------------------------------------------
 // Relations
 // ---------------------------------------------------------------------------
-export const transactionsRelations = relations(transactions, ({ one, many }) => ({
-  promo: one(promos, {
-    fields: [transactions.promoId],
-    references: [promos.id],
+export const transactionsRelations = relations(
+  transactions,
+  ({ one, many }) => ({
+    promo: one(promos, {
+      fields: [transactions.promoId],
+      references: [promos.id],
+    }),
+    items: many(transactionItems),
+    payments: many(claimPayments),
   }),
-  items: many(transactionItems),
-  payments: many(claimPayments),
-}));
+);
 
-export const transactionItemsRelations = relations(transactionItems, ({ one }) => ({
-  transaction: one(transactions, {
-    fields: [transactionItems.transactionId],
-    references: [transactions.id],
+export const transactionItemsRelations = relations(
+  transactionItems,
+  ({ one }) => ({
+    transaction: one(transactions, {
+      fields: [transactionItems.transactionId],
+      references: [transactions.id],
+    }),
+    service: one(services, {
+      fields: [transactionItems.serviceId],
+      references: [services.id],
+    }),
   }),
-  service: one(services, {
-    fields: [transactionItems.serviceId],
-    references: [services.id],
-  }),
-}));
+);
 
 export const claimPaymentsRelations = relations(claimPayments, ({ one }) => ({
   transaction: one(transactions, {
