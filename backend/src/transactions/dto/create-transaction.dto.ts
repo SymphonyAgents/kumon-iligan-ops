@@ -1,6 +1,7 @@
 export class CreateTransactionItemDto {
   shoeDescription: string;
   serviceId?: number;
+  addonServiceIds?: number[];
   status?: string;
   beforeImageUrl?: string;
   afterImageUrl?: string;
