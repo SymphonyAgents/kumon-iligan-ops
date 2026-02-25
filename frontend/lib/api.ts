@@ -1,6 +1,7 @@
 import { createClient } from './supabase/client';
 import type {
   Transaction,
+  Customer,
   Service,
   Promo,
   Expense,
@@ -100,6 +101,10 @@ export const api = {
 
   audit: {
     list: () => apiFetch<AuditEntry[]>('/audit'),
+  },
+
+  customers: {
+    findByPhone: (phone: string) => apiFetch<Customer | null>(`/customers/by-phone/${encodeURIComponent(phone)}`),
   },
 
   users: {
