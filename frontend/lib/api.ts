@@ -117,14 +117,20 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify({ branchId }),
       }),
+    list: () => apiFetch<AppUser[]>('/users'),
+    updateRole: (id: string, userType: string) =>
+      apiFetch<AppUser>(`/users/${id}/role`, {
+        method: 'PATCH',
+        body: JSON.stringify({ userType }),
+      }),
   },
 
   branches: {
     list: (activeOnly?: boolean) =>
       apiFetch<Branch[]>(`/branches${activeOnly ? '?active=1' : ''}`),
-    create: (body: { name: string }) =>
+    create: (body: { name: string; address?: string; phone?: string }) =>
       apiFetch<Branch>('/branches', { method: 'POST', body: JSON.stringify(body) }),
-    update: (id: number, body: Partial<{ name: string; isActive: boolean }>) =>
+    update: (id: number, body: Partial<{ name: string; address: string | null; phone: string | null; isActive: boolean }>) =>
       apiFetch<Branch>(`/branches/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   },
 };

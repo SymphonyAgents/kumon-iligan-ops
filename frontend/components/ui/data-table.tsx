@@ -28,6 +28,7 @@ interface DataTableProps<TData, TValue> {
   emptyDescription?: string;
   onRowClick?: (row: TData) => void;
   pageSize?: number;
+  hidePagination?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -39,8 +40,10 @@ export function DataTable<TData, TValue>({
   emptyDescription,
   onRowClick,
   pageSize = 20,
+  hidePagination = false,
 }: DataTableProps<TData, TValue>) {
-  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize });
+  const effectivePageSize = hidePagination ? 100_000 : pageSize;
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: effectivePageSize });
 
   const table = useReactTable({
     data,
@@ -56,7 +59,7 @@ export function DataTable<TData, TValue>({
   const total = data.length;
   const from = total === 0 ? 0 : pageIndex * pagination.pageSize + 1;
   const to = Math.min((pageIndex + 1) * pagination.pageSize, total);
-  const showPagination = !isLoading && total > pagination.pageSize;
+  const showPagination = !isLoading && !hidePagination && total > pagination.pageSize;
 
   return (
     <div>

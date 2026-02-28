@@ -14,6 +14,20 @@ export function usePromosQuery() {
   });
 }
 
+export function useUpdatePromoMutation(onSuccess?: () => void) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: number; isActive?: boolean; name?: string; code?: string; percent?: string; dateFrom?: string; dateTo?: string }) =>
+      api.promos.update(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: PROMOS_KEY });
+      toast.success('Promo updated');
+      onSuccess?.();
+    },
+    onError: (err: Error) => toast.error('Failed to update promo', { description: err.message }),
+  });
+}
+
 export function useDeletePromoMutation() {
   const qc = useQueryClient();
   return useMutation({

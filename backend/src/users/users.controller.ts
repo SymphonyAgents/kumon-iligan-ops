@@ -1,6 +1,17 @@
-import { Controller, Get, Patch, Body, Request, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Body,
+  Param,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 import { UsersService } from './users.service';
+import type { UserType } from '../db/constants';
 
 @Controller('users')
 @UseGuards(SupabaseAuthGuard)
@@ -18,5 +29,19 @@ export class UsersController {
     @Body() body: { branchId: number },
   ) {
     return this.usersService.onboard(req.user.id, body.branchId);
+  }
+
+  @Get()
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'superadmin')
+  findAll() {
+    return this.usersService.findAll();
+  }
+
+  @Patch(':id/role')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'superadmin')
+  updateRole(@Param('id') id: string, @Body() body: { userType: UserType }) {
+    return this.usersService.updateUserType(id, body.userType);
   }
 }

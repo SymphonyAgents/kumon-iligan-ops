@@ -10,6 +10,7 @@ import {
   timestamp,
   jsonb,
   integer,
+  bigint,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -19,6 +20,8 @@ import { relations } from 'drizzle-orm';
 export const branches = pgTable('branches', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 255 }).unique().notNull(),
+  address: varchar('address', { length: 500 }),
+  phone: varchar('phone', { length: 50 }),
   isActive: boolean('is_active').default(true).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
@@ -32,7 +35,7 @@ export const services = pgTable('services', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 255 }).unique().notNull(),
   type: varchar('type', { length: 50 }).notNull(), // 'primary' | 'add_on'
-  price: numeric('price', { precision: 10, scale: 2 }).notNull(),
+  price: bigint('price', { mode: 'number' }).notNull(),
   isActive: boolean('is_active').default(true).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
@@ -70,8 +73,8 @@ export const transactions = pgTable('transactions', {
   note: varchar('note', { length: 1000 }),
   pickupDate: date('pickup_date'),
   newPickupDate: date('new_pickup_date'),
-  total: numeric('total', { precision: 10, scale: 2 }).default('0').notNull(),
-  paid: numeric('paid', { precision: 10, scale: 2 }).default('0').notNull(),
+  total: bigint('total', { mode: 'number' }).default(0).notNull(),
+  paid: bigint('paid', { mode: 'number' }).default(0).notNull(),
   promoId: integer('promo_id').references(() => promos.id, {
     onDelete: 'set null',
   }),
@@ -100,7 +103,7 @@ export const transactionItems = pgTable('transaction_items', {
   status: varchar('status', { length: 50 }).default('pending').notNull(), // pending | in_progress | done | claimed | cancelled
   beforeImageUrl: text('before_image_url'),
   afterImageUrl: text('after_image_url'),
-  price: numeric('price', { precision: 10, scale: 2 }), // snapshot of service price at time of intake
+  price: bigint('price', { mode: 'number' }), // snapshot of service price at time of intake
   addonServiceIds: jsonb('addon_service_ids').$type<number[]>(), // snapshot of add-on service IDs at time of intake
 });
 
@@ -113,7 +116,7 @@ export const claimPayments = pgTable('claim_payments', {
     .references(() => transactions.id, { onDelete: 'cascade' })
     .notNull(),
   method: varchar('method', { length: 50 }).notNull(), // cash | gcash | card | bank_deposit
-  amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
+  amount: bigint('amount', { mode: 'number' }).notNull(),
   paidAt: timestamp('paid_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -125,8 +128,9 @@ export const expenses = pgTable('expenses', {
   dateKey: date('date_key').notNull(),
   category: varchar('category', { length: 100 }),
   note: varchar('note', { length: 500 }),
+  method: varchar('method', { length: 50 }), // cash | gcash | card | bank_deposit
   source: varchar('source', { length: 20 }).default('pos').notNull(), // pos | admin
-  amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
+  amount: bigint('amount', { mode: 'number' }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),

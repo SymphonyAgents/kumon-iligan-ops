@@ -9,7 +9,7 @@ import { DataTable } from '@/components/ui/data-table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PromoForm } from '@/components/forms/promo-form';
 import { createPromoColumns } from '@/columns/promos-columns';
-import { usePromosQuery, useDeletePromoMutation } from '@/hooks/usePromosQuery';
+import { usePromosQuery, useUpdatePromoMutation, useDeletePromoMutation } from '@/hooks/usePromosQuery';
 import type { Promo } from '@/lib/types';
 
 export default function PromosPage() {
@@ -22,10 +22,15 @@ export default function PromosPage() {
   }, [searchParams]);
 
   const { data: promos = [], isLoading } = usePromosQuery();
+  const updateMut = useUpdatePromoMutation();
   const deleteMut = useDeletePromoMutation();
 
   const columns = useMemo(
-    () => createPromoColumns({ onDelete: setDeleteTarget }),
+    () => createPromoColumns({
+      onDelete: setDeleteTarget,
+      onToggle: (id, isActive) => updateMut.mutate({ id, isActive }),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 

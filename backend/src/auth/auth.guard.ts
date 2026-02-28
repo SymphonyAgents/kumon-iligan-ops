@@ -21,7 +21,7 @@ export class SupabaseAuthGuard implements CanActivate {
 
     if (error || !data.user) throw new UnauthorizedException('Invalid token');
 
-    (request as any).user = data.user;
+    (request as Request & Record<string, unknown>).user = data.user;
     return true;
   }
 

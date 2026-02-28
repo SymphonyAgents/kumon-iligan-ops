@@ -4,10 +4,12 @@ import { type ColumnDef } from '@tanstack/react-table';
 import { TrashIcon } from '@phosphor-icons/react';
 import { formatDate } from '@/lib/utils';
 import { toTitleCase } from '@/utils/text';
+import { Switch } from '@/components/ui/switch';
 import type { Promo } from '@/lib/types';
 
 interface PromoColumnsOptions {
   onDelete: (promo: Promo) => void;
+  onToggle: (id: number, isActive: boolean) => void;
 }
 
 const isPromoActive = (p: Promo): boolean => {
@@ -18,7 +20,7 @@ const isPromoActive = (p: Promo): boolean => {
   return true;
 };
 
-export const createPromoColumns = ({ onDelete }: PromoColumnsOptions): ColumnDef<Promo>[] => [
+export const createPromoColumns = ({ onDelete, onToggle }: PromoColumnsOptions): ColumnDef<Promo>[] => [
   {
     accessorKey: 'name',
     header: 'Name',
@@ -68,13 +70,23 @@ export const createPromoColumns = ({ onDelete }: PromoColumnsOptions): ColumnDef
   {
     id: 'actions',
     header: '',
-    cell: ({ row }) => (
-      <button
-        onClick={(e) => { e.stopPropagation(); onDelete(row.original); }}
-        className="opacity-0 group-hover:opacity-100 p-1.5 text-zinc-400 hover:text-red-500 rounded transition-all"
-      >
-        <TrashIcon size={14} />
-      </button>
-    ),
+    cell: ({ row }) => {
+      const p = row.original;
+      return (
+        <div className="flex items-center justify-end gap-3">
+          <Switch
+            checked={p.isActive}
+            onCheckedChange={(checked) => { onToggle(p.id, checked); }}
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(p); }}
+            className="opacity-0 group-hover:opacity-100 p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
+          >
+            <TrashIcon size={14} />
+          </button>
+        </div>
+      );
+    },
   },
 ];

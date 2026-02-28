@@ -9,10 +9,7 @@ export class BranchesService {
   constructor(private readonly drizzle: DrizzleService) {}
 
   async findAll() {
-    return this.drizzle.db
-      .select()
-      .from(branches)
-      .orderBy(branches.name);
+    return this.drizzle.db.select().from(branches).orderBy(branches.name);
   }
 
   async findActive() {
@@ -35,12 +32,19 @@ export class BranchesService {
   async create(dto: CreateBranchDto) {
     const [created] = await this.drizzle.db
       .insert(branches)
-      .values({ name: dto.name })
+      .values({
+        name: dto.name,
+        address: dto.address ?? null,
+        phone: dto.phone ?? null,
+      })
       .returning();
     return created;
   }
 
-  async update(id: number, dto: Partial<CreateBranchDto> & { isActive?: boolean }) {
+  async update(
+    id: number,
+    dto: Partial<CreateBranchDto> & { isActive?: boolean },
+  ) {
     await this.findOne(id);
     const [updated] = await this.drizzle.db
       .update(branches)

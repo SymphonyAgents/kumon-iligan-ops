@@ -35,7 +35,10 @@ const schema = z.object({
   customerName: z.string().optional(),
   customerPhone: z.string().min(1, 'Phone number is required'),
   customerEmail: z.string().min(1, 'Email is required').email('Invalid email format'),
-  pickupDate: z.string().min(1, 'Pickup date is required'),
+  pickupDate: z.string().min(1, 'Pickup date is required').refine(
+    (v) => v >= new Date().toISOString().split('T')[0],
+    'Pickup date cannot be in the past',
+  ),
   promoId: z.string().optional(),
   note: z.string().optional(),
   items: z.array(itemSchema).min(1, 'Add at least one item'),
@@ -387,6 +390,7 @@ export function NewTransactionForm() {
                   <Input
                     label="Pickup Date"
                     type="date"
+                    min={today}
                     {...register('pickupDate')}
                   />
                   {errors.pickupDate && (

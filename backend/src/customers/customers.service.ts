@@ -18,10 +18,19 @@ export class CustomersService {
   async upsert(phone: string, name?: string | null, email?: string | null) {
     const [result] = await this.drizzle.db
       .insert(customers)
-      .values({ phone, name: name ?? null, email: email ?? null, updatedAt: new Date() })
+      .values({
+        phone,
+        name: name ?? null,
+        email: email ?? null,
+        updatedAt: new Date(),
+      })
       .onConflictDoUpdate({
         target: customers.phone,
-        set: { name: name ?? null, email: email ?? null, updatedAt: new Date() },
+        set: {
+          name: name ?? null,
+          email: email ?? null,
+          updatedAt: new Date(),
+        },
       })
       .returning();
     return result;

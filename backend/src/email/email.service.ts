@@ -22,6 +22,7 @@ export class EmailService {
     // this.resend = new Resend(this.config.get('RESEND_API_KEY'));
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async send(params: SendEmailParams): Promise<void> {
     this.logger.log(
       `[EMAIL STUB] To: ${params.to} | Subject: ${params.subject}`,

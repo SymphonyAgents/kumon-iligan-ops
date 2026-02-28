@@ -2,9 +2,16 @@
 
 import { type ColumnDef } from '@tanstack/react-table';
 import { TrashIcon, ReceiptIcon } from '@phosphor-icons/react';
-import { formatPeso } from '@/lib/utils';
+import { formatPeso, PAYMENT_METHOD_LABELS } from '@/lib/utils';
 import { toTitleCase } from '@/utils/text';
 import type { Expense } from '@/lib/types';
+
+const METHOD_STYLES: Record<string, string> = {
+  cash: 'bg-emerald-50 text-emerald-700',
+  gcash: 'bg-blue-50 text-blue-700',
+  card: 'bg-violet-50 text-violet-700',
+  bank_deposit: 'bg-amber-50 text-amber-700',
+};
 
 interface ExpenseColumnsOptions {
   onDelete: (expense: Expense) => void;
@@ -27,6 +34,19 @@ export const createExpenseColumns = ({ onDelete }: ExpenseColumnsOptions): Colum
     cell: ({ row }) => (
       <span className="text-zinc-500">{toTitleCase(row.original.note) || '—'}</span>
     ),
+  },
+  {
+    accessorKey: 'method',
+    header: 'Method',
+    cell: ({ row }) => {
+      const m = row.original.method;
+      if (!m) return <span className="text-xs text-zinc-400">—</span>;
+      return (
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${METHOD_STYLES[m] ?? 'bg-zinc-100 text-zinc-500'}`}>
+          {PAYMENT_METHOD_LABELS[m] ?? m}
+        </span>
+      );
+    },
   },
   {
     accessorKey: 'amount',

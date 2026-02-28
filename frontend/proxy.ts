@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { ROUTES, PROTECTED_ROUTES, AUTH_ROUTES } from '@/lib/routes';
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -20,22 +21,19 @@ export async function proxy(request: NextRequest) {
 
   const { data: { session } } = await supabase.auth.getSession();
 
-  const protectedPrefixes = ['/transactions', '/services', '/promos', '/expenses', '/dashboard', '/audit', '/onboarding'];
-  const authRoutes = ['/login'];
-
   // Root "/" — redirect based on session
-  if (pathname === '/') {
+  if (pathname === ROUTES.ROOT) {
     return NextResponse.redirect(
-      new URL(session ? '/transactions' : '/login', request.url),
+      new URL(session ? ROUTES.TRANSACTIONS : ROUTES.LOGIN, request.url),
     );
   }
 
-  if (!session && protectedPrefixes.some((r) => pathname.startsWith(r))) {
-    return NextResponse.redirect(new URL('/login', request.url));
+  if (!session && PROTECTED_ROUTES.some((r) => pathname.startsWith(r))) {
+    return NextResponse.redirect(new URL(ROUTES.LOGIN, request.url));
   }
 
-  if (session && authRoutes.includes(pathname)) {
-    return NextResponse.redirect(new URL('/transactions', request.url));
+  if (session && AUTH_ROUTES.includes(pathname)) {
+    return NextResponse.redirect(new URL(ROUTES.TRANSACTIONS, request.url));
   }
 
   return response;

@@ -12,6 +12,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/auth.guard';
+import type { AuthedRequest } from '../auth/auth.types';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
@@ -78,7 +79,7 @@ export class TransactionsController {
 
   @UseGuards(SupabaseAuthGuard)
   @Post()
-  create(@Body() dto: CreateTransactionDto, @Req() req: any) {
+  create(@Body() dto: CreateTransactionDto, @Req() req: AuthedRequest) {
     return this.transactionsService.create(dto, 'pos', req.user?.id);
   }
 
@@ -87,7 +88,7 @@ export class TransactionsController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateTransactionDto,
-    @Req() req: any,
+    @Req() req: AuthedRequest,
   ) {
     return this.transactionsService.update(id, dto, 'pos', req.user?.id);
   }
@@ -98,7 +99,7 @@ export class TransactionsController {
     @Param('id', ParseIntPipe) id: number,
     @Param('itemId', ParseIntPipe) itemId: number,
     @Body() dto: UpdateItemDto,
-    @Req() req: any,
+    @Req() req: AuthedRequest,
   ) {
     return this.transactionsService.updateItem(id, itemId, dto, req.user?.id);
   }
@@ -108,14 +109,14 @@ export class TransactionsController {
   addPayment(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: AddPaymentDto,
-    @Req() req: any,
+    @Req() req: AuthedRequest,
   ) {
     return this.transactionsService.addPayment(id, dto, req.user?.id);
   }
 
   @UseGuards(SupabaseAuthGuard)
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req: AuthedRequest) {
     return this.transactionsService.remove(id, req.user?.id);
   }
 }

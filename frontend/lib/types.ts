@@ -3,6 +3,8 @@ import { ItemStatus, PaymentMethod, ServiceType, TransactionStatus } from './con
 export interface Branch {
   id: number;
   name: string;
+  address: string | null;
+  phone: string | null;
   isActive: boolean;
   createdAt: string;
 }
@@ -94,6 +96,7 @@ export interface Expense {
   dateKey: string;
   category: string | null;
   note: string | null;
+  method: string | null;
   amount: string;
   createdAt: string;
 }
@@ -112,6 +115,7 @@ export interface AuditEntry {
   entityId: string | null;
   source: string | null;
   performedBy: string | null;
+  performedByEmail: string | null;
   branchId: number | null;
   details: Record<string, unknown> | null;
 }

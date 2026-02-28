@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import type { Transaction, TransactionStatus, PaymentMethod, ItemStatus } from '@/lib/types';
@@ -13,6 +13,20 @@ export function useTransactionsQuery(params?: Record<string, string>) {
   return useQuery({
     queryKey: params ? [...TRANSACTIONS_KEY, params] : TRANSACTIONS_KEY,
     queryFn: () => api.transactions.list(params),
+    staleTime: 30 * 1000,
+  });
+}
+
+const TRANSACTIONS_PAGE_LIMIT = 50;
+
+export function useInfiniteTransactionsQuery(params: Record<string, string> = {}) {
+  return useInfiniteQuery({
+    queryKey: [...TRANSACTIONS_KEY, 'infinite', params],
+    queryFn: ({ pageParam }) =>
+      api.transactions.list({ ...params, limit: String(TRANSACTIONS_PAGE_LIMIT), page: String(pageParam) }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length === TRANSACTIONS_PAGE_LIMIT ? allPages.length + 1 : undefined,
     staleTime: 30 * 1000,
   });
 }
@@ -71,9 +85,14 @@ export function useTransactionDetailQuery(id: string) {
     enabled: !!numericId,
     staleTime: 30 * 1000,
     initialData: () => {
-      const queries = qc.getQueriesData<Transaction[]>({ queryKey: TRANSACTIONS_KEY });
+      const queries = qc.getQueriesData({ queryKey: TRANSACTIONS_KEY });
       for (const [, data] of queries) {
-        const found = data?.find((t) => t.id === numericId);
+        if (!data) continue;
+        // Infinite query shape: { pages: Transaction[][], pageParams: ... }
+        const rows: Transaction[] = Array.isArray(data)
+          ? (data as Transaction[])
+          : ((data as { pages?: Transaction[][] }).pages ?? []).flat();
+        const found = rows.find((t) => t.id === numericId);
         if (found) return found;
       }
     },

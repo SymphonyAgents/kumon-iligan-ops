@@ -1,5 +1,20 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { eq, desc, sql, gte, lte, and, not, inArray, ilike, or } from 'drizzle-orm';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  eq,
+  desc,
+  sql,
+  gte,
+  lte,
+  and,
+  not,
+  inArray,
+  ilike,
+  or,
+} from 'drizzle-orm';
 import { DrizzleService } from '../db/drizzle.service';
 import {
   transactions,
@@ -9,13 +24,18 @@ import {
   promos,
   services,
 } from '../db/schema';
-import { TRANSACTION_STATUS, AUDIT_TYPE, type AuditType } from '../db/constants';
+import {
+  TRANSACTION_STATUS,
+  AUDIT_TYPE,
+  type AuditType,
+} from '../db/constants';
 import { AuditService } from '../audit/audit.service';
 import { UsersService } from '../users/users.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { AddPaymentDto } from './dto/add-payment.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
+import { toScaled, fromScaled } from '../utils/money';
 
 export interface FindAllParams {
   page?: number;
@@ -25,6 +45,11 @@ export interface FindAllParams {
   from?: string;
   to?: string;
   branchId?: number;
+}
+
+// Map raw transaction row fields to unscaled money strings
+function mapTxn<T extends { total: number; paid: number }>(txn: T) {
+  return { ...txn, total: fromScaled(txn.total), paid: fromScaled(txn.paid) };
 }
 
 @Injectable()
@@ -54,8 +79,12 @@ export class TransactionsService {
 
     if (status) conditions.push(eq(transactions.status, status));
     if (branchId) conditions.push(eq(transactions.branchId, branchId));
-    if (from) conditions.push(gte(transactions.createdAt, new Date(`${from}T00:00:00`)));
-    if (to) conditions.push(lte(transactions.createdAt, new Date(`${to}T23:59:59`)));
+    if (from)
+      conditions.push(
+        gte(transactions.createdAt, new Date(`${from}T00:00:00`)),
+      );
+    if (to)
+      conditions.push(lte(transactions.createdAt, new Date(`${to}T23:59:59`)));
     if (search) {
       conditions.push(
         or(
@@ -66,13 +95,15 @@ export class TransactionsService {
       );
     }
 
-    return this.drizzle.db
+    const rows = await this.drizzle.db
       .select()
       .from(transactions)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(transactions.createdAt))
       .limit(limit)
       .offset(offset);
+
+    return rows.map(mapTxn);
   }
 
   async findOne(id: number) {
@@ -90,23 +121,29 @@ export class TransactionsService {
       .where(eq(transactionItems.transactionId, id));
 
     const allAddonIds = [
-      ...new Set(
-        itemRows.flatMap((r) => (r.item.addonServiceIds as number[] | null) ?? []),
-      ),
+      ...new Set(itemRows.flatMap((r) => r.item.addonServiceIds ?? [])),
     ];
-    const addonMap = new Map<number, { id: number; name: string; type: string }>();
+    const addonMap = new Map<
+      number,
+      { id: number; name: string; type: string }
+    >();
     if (allAddonIds.length > 0) {
       const addonRows = await this.drizzle.db
         .select()
         .from(services)
         .where(inArray(services.id, allAddonIds));
-      addonRows.forEach((s) => addonMap.set(s.id, { id: s.id, name: s.name, type: s.type }));
+      addonRows.forEach((s) =>
+        addonMap.set(s.id, { id: s.id, name: s.name, type: s.type }),
+      );
     }
 
     const items = itemRows.map((r) => ({
       ...r.item,
-      service: r.service ? { id: r.service.id, name: r.service.name, type: r.service.type } : null,
-      addonServices: ((r.item.addonServiceIds as number[] | null) ?? [])
+      price: r.item.price !== null ? fromScaled(r.item.price) : null,
+      service: r.service
+        ? { id: r.service.id, name: r.service.name, type: r.service.type }
+        : null,
+      addonServices: (r.item.addonServiceIds ?? [])
         .map((id) => addonMap.get(id))
         .filter(Boolean),
     }));
@@ -116,7 +153,12 @@ export class TransactionsService {
       .from(claimPayments)
       .where(eq(claimPayments.transactionId, id));
 
-    return { ...row.txn, promo: row.promo ?? null, items, payments };
+    return {
+      ...mapTxn(row.txn),
+      promo: row.promo ?? null,
+      items,
+      payments: payments.map((p) => ({ ...p, amount: fromScaled(p.amount) })),
+    };
   }
 
   async findByNumber(number: string) {
@@ -135,8 +177,18 @@ export class TransactionsService {
   ) {
     const number = await this.nextNumber();
 
+    // Validate pickup date is not in the past
+    if (dto.pickupDate) {
+      const today = new Date().toISOString().split('T')[0];
+      if (dto.pickupDate < today) {
+        throw new BadRequestException('Pickup date cannot be in the past');
+      }
+    }
+
     // Resolve branch from the performing user
-    const branchId = performedBy ? await this.users.getBranchId(performedBy) : null;
+    const branchId = performedBy
+      ? await this.users.getBranchId(performedBy)
+      : null;
 
     const [created] = await this.drizzle.db
       .insert(transactions)
@@ -147,8 +199,8 @@ export class TransactionsService {
         customerEmail: dto.customerEmail ?? null,
         status: dto.status ?? 'pending',
         pickupDate: dto.pickupDate ?? null,
-        total: dto.total ?? '0',
-        paid: dto.paid ?? '0',
+        total: toScaled(dto.total ?? '0'),
+        paid: toScaled(dto.paid ?? '0'),
         promoId: dto.promoId ?? null,
         branchId: branchId ?? null,
         updatedAt: new Date(),
@@ -161,11 +213,16 @@ export class TransactionsService {
           transactionId: created.id,
           shoeDescription: item.shoeDescription ?? null,
           serviceId: item.serviceId ?? null,
-          addonServiceIds: item.addonServiceIds?.length ? item.addonServiceIds : null,
+          addonServiceIds: item.addonServiceIds?.length
+            ? item.addonServiceIds
+            : null,
           status: item.status ?? 'pending',
           beforeImageUrl: item.beforeImageUrl ?? null,
           afterImageUrl: item.afterImageUrl ?? null,
-          price: item.price ?? null,
+          price:
+            item.price !== undefined && item.price !== null
+              ? toScaled(item.price)
+              : null,
         })),
       );
     }
@@ -197,7 +254,11 @@ export class TransactionsService {
       source,
       performedBy,
       branchId: branchId ?? undefined,
-      details: { number: created.number, customerName: created.customerName, total: created.total },
+      details: {
+        number: created.number,
+        customerName: created.customerName,
+        total: created.total, // scaled bigint in audit details (intentional)
+      },
     });
 
     return this.findOne(created.id);
@@ -212,8 +273,26 @@ export class TransactionsService {
     const existing = await this.findOne(id);
     const prevStatus = existing.status;
 
+    // Validate pickup date is not in the past
+    if (dto.pickupDate) {
+      const today = new Date().toISOString().split('T')[0];
+      if (dto.pickupDate < today) {
+        throw new BadRequestException('Pickup date cannot be in the past');
+      }
+    }
+    if (dto.newPickupDate) {
+      const today = new Date().toISOString().split('T')[0];
+      if (dto.newPickupDate < today) {
+        throw new BadRequestException(
+          'Rescheduled pickup date cannot be in the past',
+        );
+      }
+    }
+
     const setValues: Record<string, unknown> = {
       ...dto,
+      ...(dto.total !== undefined && { total: toScaled(dto.total) }),
+      ...(dto.paid !== undefined && { paid: toScaled(dto.paid) }),
       updatedAt: new Date(),
     };
     if (
@@ -244,7 +323,10 @@ export class TransactionsService {
       } else {
         auditType = AUDIT_TYPE.TRANSACTION_STATUS_CHANGED;
       }
-    } else if (dto.newPickupDate !== undefined && dto.newPickupDate !== existing.newPickupDate) {
+    } else if (
+      dto.newPickupDate !== undefined &&
+      dto.newPickupDate !== existing.newPickupDate
+    ) {
       auditType = AUDIT_TYPE.PICKUP_RESCHEDULED;
       auditDetails = {
         from: existing.newPickupDate ?? existing.pickupDate,
@@ -252,7 +334,9 @@ export class TransactionsService {
       };
     }
 
-    const branchId = performedBy ? await this.users.getBranchId(performedBy) : null;
+    const branchId = performedBy
+      ? await this.users.getBranchId(performedBy)
+      : null;
 
     await this.audit.log({
       action,
@@ -269,11 +353,12 @@ export class TransactionsService {
   }
 
   async findRecent(limit = 10) {
-    return this.drizzle.db
+    const rows = await this.drizzle.db
       .select()
       .from(transactions)
       .orderBy(desc(transactions.createdAt))
       .limit(limit);
+    return rows.map(mapTxn);
   }
 
   async findUpcoming() {
@@ -281,7 +366,7 @@ export class TransactionsService {
     const plus3 = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
       .toISOString()
       .split('T')[0];
-    return this.drizzle.db
+    const rows = await this.drizzle.db
       .select()
       .from(transactions)
       .where(
@@ -292,11 +377,12 @@ export class TransactionsService {
         ),
       )
       .orderBy(transactions.pickupDate);
+    return rows.map(mapTxn);
   }
 
   async todayCollections() {
     const today = new Date().toISOString().split('T')[0];
-    return this.drizzle.db
+    const rows = await this.drizzle.db
       .select({
         id: claimPayments.id,
         transactionId: claimPayments.transactionId,
@@ -310,6 +396,7 @@ export class TransactionsService {
       .innerJoin(transactions, eq(claimPayments.transactionId, transactions.id))
       .where(sql`${claimPayments.paidAt}::date = ${today}::date`)
       .orderBy(desc(claimPayments.paidAt));
+    return rows.map((r) => ({ ...r, amount: fromScaled(r.amount) }));
   }
 
   // Auto-sync transaction status when items change (multi-item only)
@@ -334,13 +421,21 @@ export class TransactionsService {
     if (allClaimed && txn.status !== 'claimed') {
       await this.drizzle.db
         .update(transactions)
-        .set({ status: 'claimed', claimedAt: new Date(), updatedAt: new Date() })
+        .set({
+          status: 'claimed',
+          claimedAt: new Date(),
+          updatedAt: new Date(),
+        })
         .where(eq(transactions.id, transactionId));
       return;
     }
 
     const someClaimed = nonCancelledItems.some((i) => i.status === 'claimed');
-    if (someClaimed && txn.status !== 'in_progress' && txn.status !== 'claimed') {
+    if (
+      someClaimed &&
+      txn.status !== 'in_progress' &&
+      txn.status !== 'claimed'
+    ) {
       await this.drizzle.db
         .update(transactions)
         .set({ status: 'in_progress', updatedAt: new Date() })
@@ -370,7 +465,9 @@ export class TransactionsService {
       .returning();
 
     if (dto.status && dto.status !== existing.status) {
-      const branchId = performedBy ? await this.users.getBranchId(performedBy) : null;
+      const branchId = performedBy
+        ? await this.users.getBranchId(performedBy)
+        : null;
 
       await this.audit.log({
         action: 'status_change',
@@ -398,22 +495,27 @@ export class TransactionsService {
   async addPayment(id: number, dto: AddPaymentDto, performedBy?: string) {
     const txn = await this.findOne(id);
 
+    const scaledAmount = toScaled(dto.amount);
+
     const [payment] = await this.drizzle.db
       .insert(claimPayments)
       .values({
         transactionId: id,
         method: dto.method,
-        amount: dto.amount,
+        amount: scaledAmount,
       })
       .returning();
 
-    const newPaid = (parseFloat(txn.paid) + parseFloat(dto.amount)).toFixed(2);
+    // Compute new paid in scaled domain then store
+    const newPaidScaled = toScaled(txn.paid) + scaledAmount;
     await this.drizzle.db
       .update(transactions)
-      .set({ paid: newPaid, updatedAt: new Date() })
+      .set({ paid: newPaidScaled, updatedAt: new Date() })
       .where(eq(transactions.id, id));
 
-    const branchId = performedBy ? await this.users.getBranchId(performedBy) : null;
+    const branchId = performedBy
+      ? await this.users.getBranchId(performedBy)
+      : null;
 
     await this.audit.log({
       action: 'payment_add',
@@ -423,10 +525,14 @@ export class TransactionsService {
       source: 'pos',
       performedBy,
       branchId: branchId ?? undefined,
-      details: { method: dto.method, amount: dto.amount, newPaid },
+      details: {
+        method: dto.method,
+        amount: payment.amount,
+        newPaid: newPaidScaled,
+      },
     });
 
-    return payment;
+    return { ...payment, amount: fromScaled(payment.amount) };
   }
 
   async remove(id: number, performedBy?: string) {
@@ -434,7 +540,9 @@ export class TransactionsService {
 
     await this.drizzle.db.delete(transactions).where(eq(transactions.id, id));
 
-    const branchId = performedBy ? await this.users.getBranchId(performedBy) : null;
+    const branchId = performedBy
+      ? await this.users.getBranchId(performedBy)
+      : null;
 
     await this.audit.log({
       action: 'delete',

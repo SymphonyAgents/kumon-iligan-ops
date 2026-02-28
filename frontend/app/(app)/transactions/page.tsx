@@ -10,24 +10,58 @@ import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { createTransactionColumns } from '@/columns/transactions-columns';
-import { useTransactionsQuery, useDeleteTransactionMutation } from '@/hooks/useTransactionsQuery';
+import { useInfiniteTransactionsQuery, useDeleteTransactionMutation } from '@/hooks/useTransactionsQuery';
 import type { Transaction } from '@/lib/types';
 
 export default function TransactionsPage() {
   const router = useRouter();
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
 
-  const params: Record<string, string> = { limit: '200' };
-  if (statusFilter !== 'all') params.status = statusFilter;
-  if (search) params.search = search;
-  if (dateFrom) params.from = dateFrom;
-  if (dateTo) params.to = dateTo;
+  // Draft state — what the user is typing/selecting
+  const [draftSearch, setDraftSearch] = useState('');
+  const [draftFrom, setDraftFrom] = useState('');
+  const [draftTo, setDraftTo] = useState('');
 
-  const { data: transactions = [], isLoading } = useTransactionsQuery(params);
+  // Committed state — what's actually sent to the API
+  const [committedSearch, setCommittedSearch] = useState('');
+  const [committedFrom, setCommittedFrom] = useState('');
+  const [committedTo, setCommittedTo] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  const isDirty =
+    draftSearch !== committedSearch ||
+    draftFrom !== committedFrom ||
+    draftTo !== committedTo;
+
+  function commit() {
+    setCommittedSearch(draftSearch);
+    setCommittedFrom(draftFrom);
+    setCommittedTo(draftTo);
+  }
+
+  function clearDates() {
+    setDraftFrom('');
+    setDraftTo('');
+  }
+
+  function clearAll() {
+    setDraftSearch('');
+    setDraftFrom('');
+    setDraftTo('');
+    setCommittedSearch('');
+    setCommittedFrom('');
+    setCommittedTo('');
+    setStatusFilter('all');
+  }
+
+  const params: Record<string, string> = {};
+  if (statusFilter !== 'all') params.status = statusFilter;
+  if (committedSearch) params.search = committedSearch;
+  if (committedFrom) params.from = committedFrom;
+  if (committedTo) params.to = committedTo;
+
+  const query = useInfiniteTransactionsQuery(params);
+  const transactions = useMemo(() => query.data?.pages.flat() ?? [], [query.data]);
   const deleteMut = useDeleteTransactionMutation();
 
   const statusCounts = useMemo(() =>
@@ -43,18 +77,13 @@ export default function TransactionsPage() {
     [],
   );
 
-  const hasDateFilter = dateFrom || dateTo;
-
-  function clearDateFilter() {
-    setDateFrom('');
-    setDateTo('');
-  }
+  const hasActiveFilter = committedSearch || committedFrom || committedTo || statusFilter !== 'all';
 
   return (
     <div>
       <PageHeader
         title="Transactions"
-        subtitle={`${transactions.length} results`}
+        subtitle={`${transactions.length} loaded`}
         action={
           <Link href="/transactions/new">
             <Button>
@@ -65,7 +94,7 @@ export default function TransactionsPage() {
         }
       />
 
-      {/* Status tabs */}
+      {/* Status tabs — commit immediately on click */}
       <div className="flex flex-wrap items-center gap-2 mb-3">
         {['all', 'pending', 'in_progress', 'done', 'claimed', 'cancelled'].map((s) => (
           <button
@@ -82,15 +111,16 @@ export default function TransactionsPage() {
         ))}
       </div>
 
-      {/* Search + Date filters */}
+      {/* Search + Date filters — explicit submit */}
       <div className="flex flex-wrap items-center gap-2 mb-5">
         <div className="relative">
           <MagnifyingGlassIcon size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input
             type="text"
             placeholder="Search #number, name, phone..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={draftSearch}
+            onChange={(e) => setDraftSearch(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') commit(); }}
             className="pl-8 pr-3 py-1.5 text-sm bg-white border border-zinc-200 rounded-md text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-56 transition-colors"
           />
         </div>
@@ -99,42 +129,75 @@ export default function TransactionsPage() {
           <span className="text-xs text-zinc-400">From</span>
           <input
             type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
+            value={draftFrom}
+            onChange={(e) => setDraftFrom(e.target.value)}
             className="px-2 py-1.5 text-sm bg-white border border-zinc-200 rounded-md text-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
           />
           <span className="text-xs text-zinc-400">to</span>
           <input
             type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
+            value={draftTo}
+            onChange={(e) => setDraftTo(e.target.value)}
             className="px-2 py-1.5 text-sm bg-white border border-zinc-200 rounded-md text-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
           />
-          {hasDateFilter && (
+          {(draftFrom || draftTo) && (
             <button
-              onClick={clearDateFilter}
+              onClick={clearDates}
               className="p-1 text-zinc-400 hover:text-zinc-700 transition-colors"
-              title="Clear date filter"
+              title="Clear dates"
             >
               <XIcon size={14} />
             </button>
           )}
         </div>
+
+        <button
+          onClick={commit}
+          disabled={!isDirty}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-zinc-950 text-white rounded-md hover:bg-zinc-800 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+        >
+          <MagnifyingGlassIcon size={13} weight="bold" />
+          Search
+        </button>
+
+        {hasActiveFilter && (
+          <button
+            onClick={clearAll}
+            className="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 rounded-md transition-colors"
+          >
+            Clear all
+          </button>
+        )}
       </div>
 
       <DataTable
         columns={columns}
         data={transactions}
-        isLoading={isLoading}
+        isLoading={query.isLoading}
         loadingRows={8}
+        hidePagination
         emptyTitle="No transactions"
         emptyDescription={
-          search || statusFilter !== 'all' || hasDateFilter
-            ? 'Try adjusting your filters.'
-            : 'Create the first transaction to get started.'
+          hasActiveFilter ? 'Try adjusting your filters.' : 'Create the first transaction to get started.'
         }
         onRowClick={(txn) => router.push(`/transactions/${txn.id}`)}
       />
+
+      {query.hasNextPage && (
+        <div className="flex justify-center mt-4">
+          <button
+            onClick={() => query.fetchNextPage()}
+            disabled={query.isFetchingNextPage}
+            className="px-4 py-2 text-sm text-zinc-600 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:text-zinc-950 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+          >
+            {query.isFetchingNextPage ? 'Loading...' : 'Load more'}
+          </button>
+        </div>
+      )}
+
+      {!query.isLoading && !query.hasNextPage && transactions.length > 0 && (
+        <p className="text-center mt-4 text-xs text-zinc-400">All {transactions.length} results loaded</p>
+      )}
 
       <ConfirmDialog
         open={!!deleteTarget}

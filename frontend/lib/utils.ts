@@ -13,7 +13,9 @@ export function formatPeso(value: string | number): string {
 
 export function formatDate(value?: string | null): string {
   if (!value) return '—';
-  const d = new Date(value + 'T00:00:00');
+  // If already a full ISO datetime, parse directly; otherwise append time to avoid UTC shift
+  const d = new Date(value.includes('T') ? value : value + 'T00:00:00');
+  if (isNaN(d.getTime())) return '—';
   return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 

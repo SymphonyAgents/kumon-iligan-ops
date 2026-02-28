@@ -48,9 +48,20 @@ export const createTransactionColumns = ({ onDelete }: TransactionColumnsOptions
   {
     accessorKey: 'pickupDate',
     header: 'Pickup',
-    cell: ({ row }) => (
-      <span className="text-sm text-zinc-500">{formatDate(row.original.pickupDate)}</span>
-    ),
+    cell: ({ row }) => {
+      const { pickupDate, newPickupDate } = row.original;
+      if (newPickupDate) {
+        return (
+          <div>
+            <span className="text-sm font-medium text-amber-600">{formatDate(newPickupDate)}</span>
+            {pickupDate && (
+              <span className="block text-xs text-zinc-400 line-through">{formatDate(pickupDate)}</span>
+            )}
+          </div>
+        );
+      }
+      return <span className="text-sm text-zinc-500">{formatDate(pickupDate)}</span>;
+    },
   },
   {
     accessorKey: 'total',

@@ -9,8 +9,15 @@ import {
   TagIcon,
   CalendarIcon,
   CoinIcon,
+  TrendUpIcon,
+  HourglassIcon,
+  WalletIcon,
+  DeviceMobileIcon,
+  MoneyIcon,
+  CreditCardIcon,
+  BankIcon,
 } from '@phosphor-icons/react';
-import { formatPeso, formatDate, PAYMENT_METHOD_LABELS, STATUS_LABELS } from '@/lib/utils';
+import { formatPeso, formatDate, PAYMENT_METHOD_LABELS } from '@/lib/utils';
 import {
   useTransactionReportQuery,
   useRecentTransactionsQuery,
@@ -31,7 +38,7 @@ import { useBranchesQuery } from '@/hooks/useBranchesQuery';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { toTitleCase } from '@/utils/text';
-import type { Transaction, ClaimPayment } from '@/lib/types';
+import type { Transaction, ClaimPayment, TodayCollection } from '@/lib/types';
 
 const ALL_QUICK_ACTIONS = [
   { label: 'New Transaction', href: '/transactions/new', icon: ReceiptIcon, adminOnly: false },
@@ -45,12 +52,59 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
+const PAYMENT_METHOD_CONFIG: Record<string, {
+  label: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  iconClass: string;
+  iconBg: string;
+}> = {
+  gcash: { label: 'GCash', icon: DeviceMobileIcon, iconClass: 'text-blue-600', iconBg: 'bg-blue-50' },
+  bank_deposit: { label: 'Bank Deposit', icon: BankIcon, iconClass: 'text-amber-600', iconBg: 'bg-amber-50' },
+  cash: { label: 'Cash', icon: MoneyIcon, iconClass: 'text-emerald-600', iconBg: 'bg-emerald-50' },
+  card: { label: 'Card', icon: CreditCardIcon, iconClass: 'text-violet-600', iconBg: 'bg-violet-50' },
+};
+
+const METHOD_ORDER = ['gcash', 'bank_deposit', 'cash', 'card'] as const;
+
 function pickupDateClass(dateStr: string | null) {
   if (!dateStr) return 'text-zinc-400';
   const today = new Date().toISOString().split('T')[0];
   if (dateStr < today) return 'text-red-500 font-medium';
   if (dateStr === today) return 'text-amber-600 font-medium';
   return 'text-zinc-700';
+}
+
+interface StatCardProps {
+  label: string;
+  href: string;
+  value: string;
+  mono?: boolean;
+  loading?: boolean;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  iconClass: string;
+  iconBg: string;
+}
+
+function StatCard({ label, href, value, mono, loading, icon: Icon, iconClass, iconBg }: StatCardProps) {
+  return (
+    <div className="bg-white border border-zinc-200 rounded-lg p-5">
+      <div className="flex items-center justify-between mb-3">
+        <Link href={href} className="text-xs font-medium text-zinc-400 hover:text-blue-600 transition-colors duration-150">
+          {label}
+        </Link>
+        <div className={`w-7 h-7 rounded-full flex items-center justify-center ${iconBg}`}>
+          <Icon size={13} className={iconClass} />
+        </div>
+      </div>
+      {loading ? (
+        <div className="h-7 w-24 bg-zinc-100 rounded animate-pulse" />
+      ) : (
+        <p className={`text-lg md:text-2xl font-semibold text-zinc-950 truncate ${mono ? 'font-mono' : ''}`}>
+          {value}
+        </p>
+      )}
+    </div>
+  );
 }
 
 export default function DashboardPage() {
@@ -116,8 +170,17 @@ export default function DashboardPage() {
     return { count: txns.length, totalRevenue, totalPaid, totalBalance: totalRevenue - totalPaid };
   }, [dailyTxns]);
 
-  const todayCollectionTotal = todayCollections.reduce((sum, c) => sum + parseFloat(c.amount), 0);
+  const todayByMethod = useMemo(() => {
+    return (todayCollections as TodayCollection[]).reduce(
+      (acc, c) => {
+        acc[c.method] = (acc[c.method] ?? 0) + parseFloat(c.amount);
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+  }, [todayCollections]);
 
+  const todayCollectionTotal = todayCollections.reduce((sum, c) => sum + parseFloat(c.amount), 0);
   const totalExpenses = (expenses ?? []).reduce((sum, e) => sum + parseFloat(e.amount), 0);
 
   return (
@@ -127,22 +190,22 @@ export default function DashboardPage() {
         subtitle={isAdmin ? 'Monthly financial summary' : "Today's overview"}
         action={
           isAdmin ? (
-            <div className="flex items-center gap-2 flex-wrap justify-end">
+            <div className={`grid gap-2 ${isSuperadmin && branches.length > 0 ? 'grid-cols-3' : 'grid-cols-2'} sm:flex sm:items-center sm:flex-wrap sm:justify-end`}>
               {isSuperadmin && branches.length > 0 && (
                 <Select value={branchFilter} onValueChange={setBranchFilter}>
-                  <SelectTrigger className="h-9 text-sm w-36 border-zinc-200">
+                  <SelectTrigger className="h-9 text-sm w-full sm:w-36 border-zinc-200">
                     <SelectValue placeholder="All Branches" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Branches</SelectItem>
                     {branches.map((b) => (
-                      <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+                      <SelectItem key={b.id} value={String(b.id)}>{toTitleCase(b.name)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               )}
               <Select value={String(month)} onValueChange={(v) => setMonth(parseInt(v, 10))}>
-                <SelectTrigger className="h-9 text-sm w-32 border-zinc-200">
+                <SelectTrigger className="h-9 text-sm w-full sm:w-32 border-zinc-200">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -152,7 +215,7 @@ export default function DashboardPage() {
                 </SelectContent>
               </Select>
               <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v, 10))}>
-                <SelectTrigger className="h-9 text-sm w-24 border-zinc-200">
+                <SelectTrigger className="h-9 text-sm w-full sm:w-24 border-zinc-200">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -184,71 +247,88 @@ export default function DashboardPage() {
       {isAdmin && (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
-            {[
-              { label: 'Transactions', value: String(filtered.length), mono: false },
-              { label: 'Total Revenue', value: formatPeso(monthlyStats.totalRevenue), mono: true },
-              { label: 'Total Collected', value: formatPeso(monthlyStats.totalPaid), mono: true },
-              { label: 'Outstanding', value: formatPeso(monthlyStats.totalBalance), mono: true },
-            ].map(({ label, value, mono }) => (
-              <div key={label} className="bg-white border border-zinc-200 rounded-lg p-5">
-                <p className="text-xs text-zinc-400 mb-1">{label}</p>
-                {reportLoading ? (
-                  <div className="h-8 w-24 bg-zinc-100 rounded animate-pulse mt-1" />
-                ) : (
-                  <p className={`text-2xl font-semibold text-zinc-950 ${mono ? 'font-mono' : ''}`}>
-                    {value}
-                  </p>
-                )}
-              </div>
-            ))}
+            <StatCard
+              label="Transactions"
+              href="/transactions"
+              value={String(filtered.length)}
+              loading={reportLoading}
+              icon={ReceiptIcon}
+              iconClass="text-zinc-500"
+              iconBg="bg-zinc-100"
+            />
+            <StatCard
+              label="Total Revenue"
+              href="/transactions"
+              value={formatPeso(monthlyStats.totalRevenue)}
+              mono
+              loading={reportLoading}
+              icon={TrendUpIcon}
+              iconClass="text-emerald-600"
+              iconBg="bg-emerald-50"
+            />
+            <StatCard
+              label="Total Collected"
+              href="/transactions"
+              value={formatPeso(monthlyStats.totalPaid)}
+              mono
+              loading={reportLoading}
+              icon={WalletIcon}
+              iconClass="text-blue-600"
+              iconBg="bg-blue-50"
+            />
+            <StatCard
+              label="Outstanding"
+              href="/transactions"
+              value={formatPeso(monthlyStats.totalBalance)}
+              mono
+              loading={reportLoading}
+              icon={HourglassIcon}
+              iconClass="text-amber-600"
+              iconBg="bg-amber-50"
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+            {/* Expenses card */}
             <div className="bg-white border border-zinc-200 rounded-lg p-5">
-              <h2 className="text-sm font-semibold text-zinc-950 mb-4">Transactions by Status</h2>
-              <div className="space-y-2">
-                {Object.entries(monthlyStats.byStatus).map(([status, count]) => (
-                  <div key={status} className="flex items-center justify-between py-1">
-                    <span className="text-sm text-zinc-600">{STATUS_LABELS[status] ?? status.replace('_', ' ')}</span>
-                    <span className="font-mono text-sm font-medium text-zinc-950">{count}</span>
-                  </div>
-                ))}
-                {Object.keys(monthlyStats.byStatus).length === 0 && (
-                  <p className="text-sm text-zinc-400">No data for this period.</p>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="bg-white border border-zinc-200 rounded-lg p-5">
-                <h2 className="text-sm font-semibold text-zinc-950 mb-4">Collected by Payment Method</h2>
-                <div className="space-y-2">
-                  {Object.entries(monthlyStats.byPaymentMethod).map(([method, amount]) => (
-                    <div key={method} className="flex items-center justify-between py-1">
-                      <span className="text-sm text-zinc-600">{PAYMENT_METHOD_LABELS[method] ?? method}</span>
-                      <span className="font-mono text-sm font-medium text-zinc-950">{formatPeso(amount)}</span>
-                    </div>
-                  ))}
-                  {Object.keys(monthlyStats.byPaymentMethod).length === 0 && (
-                    <p className="text-sm text-zinc-400">No payments recorded for this period.</p>
-                  )}
+              <div className="flex items-center justify-between mb-1">
+                <Link href="/expenses" className="text-sm font-semibold text-zinc-950 hover:text-blue-600 transition-colors duration-150">
+                  Expenses
+                </Link>
+                <div className="w-7 h-7 rounded-full flex items-center justify-center bg-red-50">
+                  <CurrencyDollarIcon size={13} className="text-red-500" />
                 </div>
               </div>
+              <p className="text-xs text-zinc-400 mb-2">Month total</p>
+              {expensesLoading ? (
+                <div className="h-8 w-24 bg-zinc-100 rounded animate-pulse" />
+              ) : (
+                <>
+                  <p className="text-lg md:text-2xl font-mono font-semibold text-zinc-950 truncate">{formatPeso(totalExpenses)}</p>
+                  {expenses.length > 0 && (
+                    <p className="text-xs text-zinc-400 mt-1">{expenses.length} entries</p>
+                  )}
+                </>
+              )}
+            </div>
 
-              <div className="bg-white border border-zinc-200 rounded-lg p-5">
-                <h2 className="text-sm font-semibold text-zinc-950 mb-1">Expenses</h2>
-                <p className="text-xs text-zinc-400 mb-2">Month total</p>
-                {expensesLoading ? (
-                  <div className="h-8 w-24 bg-zinc-100 rounded animate-pulse" />
-                ) : (
-                  <>
-                    <p className="text-2xl font-mono font-semibold text-zinc-950">{formatPeso(totalExpenses)}</p>
-                    {expenses.length > 0 && (
-                      <p className="text-xs text-zinc-400 mt-1">{expenses.length} entries</p>
-                    )}
-                  </>
-                )}
-              </div>
+            {/* Payment method breakdown — 2x2 grid */}
+            <div className="grid grid-cols-2 gap-3">
+              {METHOD_ORDER.map((key) => {
+                const config = PAYMENT_METHOD_CONFIG[key];
+                const amount = monthlyStats.byPaymentMethod[key] ?? 0;
+                return (
+                  <div key={key} className="bg-white border border-zinc-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center ${config.iconBg}`}>
+                        <config.icon size={12} className={config.iconClass} />
+                      </div>
+                      <span className="text-xs text-zinc-400">{config.label}</span>
+                    </div>
+                    <p className="font-mono text-base font-semibold text-zinc-950">{formatPeso(amount)}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </>
@@ -258,26 +338,67 @@ export default function DashboardPage() {
       {!isAdmin && (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
-            {[
-              { label: 'Transactions Today', value: String(dailyStats.count), mono: false },
-              { label: "Today's Revenue", value: formatPeso(dailyStats.totalRevenue), mono: true },
-              { label: 'Collected Today', value: formatPeso(dailyStats.totalPaid), mono: true },
-              { label: 'Outstanding', value: formatPeso(dailyStats.totalBalance), mono: true },
-            ].map(({ label, value, mono }) => (
-              <div key={label} className="bg-white border border-zinc-200 rounded-lg p-5">
-                <p className="text-xs text-zinc-400 mb-1">{label}</p>
-                {dailyLoading ? (
-                  <div className="h-8 w-24 bg-zinc-100 rounded animate-pulse mt-1" />
-                ) : (
-                  <p className={`text-2xl font-semibold text-zinc-950 ${mono ? 'font-mono' : ''}`}>
-                    {value}
-                  </p>
-                )}
-              </div>
-            ))}
+            <StatCard
+              label="Transactions Today"
+              href="/transactions"
+              value={String(dailyStats.count)}
+              loading={dailyLoading}
+              icon={ReceiptIcon}
+              iconClass="text-zinc-500"
+              iconBg="bg-zinc-100"
+            />
+            <StatCard
+              label="Today's Revenue"
+              href="/transactions"
+              value={formatPeso(dailyStats.totalRevenue)}
+              mono
+              loading={dailyLoading}
+              icon={TrendUpIcon}
+              iconClass="text-emerald-600"
+              iconBg="bg-emerald-50"
+            />
+            <StatCard
+              label="Collected Today"
+              href="/transactions"
+              value={formatPeso(dailyStats.totalPaid)}
+              mono
+              loading={dailyLoading}
+              icon={WalletIcon}
+              iconClass="text-blue-600"
+              iconBg="bg-blue-50"
+            />
+            <StatCard
+              label="Outstanding"
+              href="/transactions"
+              value={formatPeso(dailyStats.totalBalance)}
+              mono
+              loading={dailyLoading}
+              icon={HourglassIcon}
+              iconClass="text-amber-600"
+              iconBg="bg-amber-50"
+            />
           </div>
 
-          {/* Today's collections */}
+          {/* Today's collections by method */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            {METHOD_ORDER.map((key) => {
+              const config = PAYMENT_METHOD_CONFIG[key];
+              const amount = todayByMethod[key] ?? 0;
+              return (
+                <div key={key} className="bg-white border border-zinc-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${config.iconBg}`}>
+                      <config.icon size={12} className={config.iconClass} />
+                    </div>
+                    <span className="text-xs text-zinc-400">{config.label}</span>
+                  </div>
+                  <p className="font-mono text-base font-semibold text-zinc-950">{formatPeso(amount)}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Today's collections list */}
           <div className="bg-white border border-zinc-200 rounded-lg p-5 mb-6">
             <h2 className="text-sm font-semibold text-zinc-950 mb-1 flex items-center gap-1.5">
               <CoinIcon size={14} className="text-emerald-500" />
@@ -364,6 +485,7 @@ export default function DashboardPage() {
                   <div className="min-w-0">
                     <p className="font-mono text-xs font-medium text-zinc-950">#{t.number}</p>
                     <p className="text-xs text-zinc-500 truncate">{toTitleCase(t.customerName) || '—'}</p>
+                    <p className="text-xs text-zinc-400">{formatDate(t.createdAt)}</p>
                   </div>
                   <div className="text-right ml-3 shrink-0">
                     <p className="font-mono text-xs text-zinc-950">{formatPeso(t.total)}</p>

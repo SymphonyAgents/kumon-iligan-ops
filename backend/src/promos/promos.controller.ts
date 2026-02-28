@@ -12,6 +12,9 @@ import {
   Req,
 } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import type { AuthedRequest } from '../auth/auth.types';
 import { PromosService } from './promos.service';
 import { CreatePromoDto } from './dto/create-promo.dto';
 import { UpdatePromoDto } from './dto/update-promo.dto';
@@ -37,25 +40,28 @@ export class PromosController {
   }
 
   // Admin-only mutations
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles('admin', 'superadmin')
   @Post()
-  create(@Body() dto: CreatePromoDto, @Req() req: any) {
+  create(@Body() dto: CreatePromoDto, @Req() req: AuthedRequest) {
     return this.promosService.create(dto, req.user?.id);
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles('admin', 'superadmin')
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdatePromoDto,
-    @Req() req: any,
+    @Req() req: AuthedRequest,
   ) {
     return this.promosService.update(id, dto, req.user?.id);
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles('admin', 'superadmin')
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req: AuthedRequest) {
     return this.promosService.remove(id, req.user?.id);
   }
 }

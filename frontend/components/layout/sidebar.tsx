@@ -16,19 +16,64 @@ import {
   XIcon,
   UserIcon,
   GitBranchIcon,
+  UsersIcon,
 } from '@phosphor-icons/react';
 import { createBrowserClient } from '@supabase/ssr';
 import { cn } from '@/lib/utils';
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
+import { ROUTES } from '@/lib/routes';
 
-const NAV = [
-  { href: '/dashboard', label: 'Dashboard', icon: ChartBarIcon, adminOnly: false, superadminOnly: false },
-  { href: '/transactions', label: 'Transactions', icon: ReceiptIcon, adminOnly: false, superadminOnly: false },
-  { href: '/services', label: 'Services', icon: WrenchIcon, adminOnly: true, superadminOnly: false },
-  { href: '/promos', label: 'Promos', icon: TagIcon, adminOnly: true, superadminOnly: false },
-  { href: '/expenses', label: 'Expenses', icon: CurrencyDollarIcon, adminOnly: true, superadminOnly: false },
-  { href: '/audit', label: 'Audit Log', icon: ClockIcon, adminOnly: true, superadminOnly: false },
-  { href: '/branches', label: 'Branches', icon: GitBranchIcon, adminOnly: false, superadminOnly: true },
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; weight?: 'fill' | 'regular' | 'bold'; className?: string }>;
+  adminOnly: boolean;
+  superadminOnly: boolean;
+}
+
+interface NavGroup {
+  label?: string;
+  adminOnly?: boolean;
+  superadminOnly?: boolean;
+  items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    items: [
+      { href: ROUTES.DASHBOARD, label: 'Dashboard', icon: ChartBarIcon, adminOnly: false, superadminOnly: false },
+    ],
+  },
+  {
+    label: 'Operations',
+    items: [
+      { href: ROUTES.TRANSACTIONS, label: 'Transactions', icon: ReceiptIcon, adminOnly: false, superadminOnly: false },
+    ],
+  },
+  {
+    label: 'Catalog',
+    adminOnly: true,
+    items: [
+      { href: ROUTES.SERVICES, label: 'Services', icon: WrenchIcon, adminOnly: true, superadminOnly: false },
+      { href: ROUTES.PROMOS, label: 'Promos', icon: TagIcon, adminOnly: true, superadminOnly: false },
+    ],
+  },
+  {
+    label: 'Finance',
+    adminOnly: true,
+    items: [
+      { href: ROUTES.EXPENSES, label: 'Expenses', icon: CurrencyDollarIcon, adminOnly: true, superadminOnly: false },
+    ],
+  },
+  {
+    label: 'Admin',
+    adminOnly: true,
+    items: [
+      { href: ROUTES.AUDIT, label: 'Audit Log', icon: ClockIcon, adminOnly: true, superadminOnly: false },
+      { href: ROUTES.USERS, label: 'Users', icon: UsersIcon, adminOnly: true, superadminOnly: false },
+      { href: ROUTES.BRANCHES, label: 'Branches', icon: GitBranchIcon, adminOnly: false, superadminOnly: true },
+    ],
+  },
 ];
 
 export function Sidebar() {
@@ -38,11 +83,18 @@ export function Sidebar() {
   const { data: currentUser } = useCurrentUserQuery();
   const isAdmin = currentUser?.userType === 'admin' || currentUser?.userType === 'superadmin';
   const isSuperadmin = currentUser?.userType === 'superadmin';
-  const visibleNav = NAV.filter((item) => {
+
+  function filterItem(item: NavItem) {
     if (item.superadminOnly) return isSuperadmin;
     if (item.adminOnly) return isAdmin;
     return true;
-  });
+  }
+
+  function filterGroup(group: NavGroup) {
+    if (group.superadminOnly) return isSuperadmin;
+    if (group.adminOnly) return isAdmin;
+    return true;
+  }
 
   async function handleSignOut() {
     const supabase = createBrowserClient(
@@ -50,35 +102,50 @@ export function Sidebar() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     );
     await supabase.auth.signOut();
-    router.push('/login');
+    router.push(ROUTES.LOGIN);
   }
 
   const navLinks = (
-    <nav className="flex-1 px-3 py-4 space-y-0.5">
-      {visibleNav.map(({ href, label, icon: Icon }) => {
-        const active = pathname.startsWith(href);
-        const itemClass = cn(
-          'flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm transition-colors duration-150',
-          active ? 'bg-zinc-950 text-white' : 'text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100',
-        );
-        if (active) {
-          return (
-            <span key={href} className={itemClass}>
-              <Icon size={16} weight="fill" />
-              {label}
-            </span>
-          );
-        }
+    <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
+      {NAV_GROUPS.filter(filterGroup).map((group, gi) => {
+        const visibleItems = group.items.filter(filterItem);
+        if (visibleItems.length === 0) return null;
         return (
-          <Link
-            key={href}
-            href={href}
-            onClick={() => setMobileOpen(false)}
-            className={itemClass}
-          >
-            <Icon size={16} weight="regular" />
-            {label}
-          </Link>
+          <div key={gi}>
+            {group.label && (
+              <p className="px-2.5 mb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
+                {group.label}
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {visibleItems.map(({ href, label, icon: Icon }) => {
+                const active = pathname.startsWith(href);
+                const itemClass = cn(
+                  'flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm transition-colors duration-150',
+                  active ? 'bg-zinc-950 text-white' : 'text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100',
+                );
+                if (active) {
+                  return (
+                    <span key={href} className={itemClass}>
+                      <Icon size={16} weight="fill" />
+                      {label}
+                    </span>
+                  );
+                }
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={() => setMobileOpen(false)}
+                    className={itemClass}
+                  >
+                    <Icon size={16} weight="regular" />
+                    {label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
         );
       })}
     </nav>

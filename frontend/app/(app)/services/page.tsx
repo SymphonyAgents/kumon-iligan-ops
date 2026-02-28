@@ -71,6 +71,7 @@ export default function ServicesPage() {
       onToggle: (id, isActive) => toggleActive.mutate({ id, isActive }),
       onDelete: setDeleteTarget,
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [editId, form],
   );
 

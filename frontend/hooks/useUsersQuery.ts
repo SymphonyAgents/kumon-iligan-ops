@@ -1,0 +1,25 @@
+'use client';
+
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+
+const USERS_KEY = ['users'];
+
+export function useUsersQuery() {
+  return useQuery({
+    queryKey: USERS_KEY,
+    queryFn: () => api.users.list(),
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useUpdateUserRoleMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, userType }: { id: string; userType: string }) =>
+      api.users.updateRole(id, userType),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: USERS_KEY });
+    },
+  });
+}
