@@ -10,7 +10,8 @@ import { useRouter } from 'next/navigation';
 import { PlusIcon, TrashIcon, ArrowLeftIcon, CameraIcon, ArrowRightIcon } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { cn } from '@/lib/utils';
+import { cn, formatDate, formatPeso } from '@/lib/utils';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
@@ -99,6 +100,7 @@ export function NewTransactionForm() {
   const [customerStep, setCustomerStep] = useState<'phone' | 'details'>('phone');
   const [existingCustomer, setExistingCustomer] = useState<Customer | null | undefined>(undefined);
   const [lookingUp, setLookingUp] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState<FormData | null>(null);
 
   async function handleFindCustomer() {
     if (phoneValue.length !== 11) return;
@@ -197,7 +199,7 @@ export function NewTransactionForm() {
         }
       />
 
-      <form onSubmit={handleSubmit((data) => createMut.mutate(data))}>
+      <form onSubmit={handleSubmit((data) => setPendingSubmit(data))}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           <div className="col-span-2 space-y-6">
             {/* Customer */}
@@ -525,6 +527,67 @@ export function NewTransactionForm() {
           </div>
         </div>
       </form>
+
+      <ConfirmDialog
+        open={pendingSubmit !== null}
+        title="Create transaction?"
+        confirmLabel="Confirm & Create"
+        confirmVariant="dark"
+        loading={createMut.isPending}
+        onConfirm={() => {
+          if (!pendingSubmit) return;
+          createMut.mutate(pendingSubmit);
+        }}
+        onCancel={() => setPendingSubmit(null)}
+      >
+        {pendingSubmit && (
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-zinc-400 uppercase tracking-wide mb-1.5">Customer</p>
+              {pendingSubmit.customerName && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-zinc-500">Name</span>
+                  <span className="text-zinc-950">{pendingSubmit.customerName}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">Phone</span>
+                <span className="font-mono text-zinc-950">{pendingSubmit.customerPhone}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-500">Pickup</span>
+                <span className="text-zinc-950">{formatDate(pendingSubmit.pickupDate)}</span>
+              </div>
+              {existingCustomer !== undefined && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-zinc-500">Customer type</span>
+                  <span className={existingCustomer ? 'text-emerald-600' : 'text-zinc-400'}>
+                    {existingCustomer ? 'Existing' : 'New'}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-zinc-400 uppercase tracking-wide mb-1.5">Items</p>
+              {pendingSubmit.items.map((item, idx) => {
+                const svc = item.primaryServiceId
+                  ? (services as Service[]).find((s) => s.id === parseInt(item.primaryServiceId, 10))
+                  : null;
+                return (
+                  <div key={idx} className="flex justify-between text-sm">
+                    <span className="text-zinc-950 truncate max-w-[160px]">{item.shoeDescription || `Item ${idx + 1}`}</span>
+                    <span className="text-zinc-500 shrink-0 ml-2">{svc?.name ?? '—'}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex justify-between text-sm font-medium border-t border-zinc-100 pt-3">
+              <span className="text-zinc-950">Total</span>
+              <span className="font-mono text-zinc-950">{formatPeso(String(total.toFixed(2)))}</span>
+            </div>
+          </div>
+        )}
+      </ConfirmDialog>
     </div>
   );
 }
