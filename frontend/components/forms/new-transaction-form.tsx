@@ -33,8 +33,11 @@ const itemSchema = z.object({
 
 const schema = z.object({
   customerName: z.string().optional(),
-  customerPhone: z.string().min(1, 'Phone number is required'),
-  customerEmail: z.string().min(1, 'Email is required').email('Invalid email format'),
+  customerPhone: z.string().regex(/^\d{11}$/, 'Phone number must be exactly 11 digits'),
+  customerEmail: z.string().optional().refine(
+    (v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
+    'Invalid email format',
+  ),
   pickupDate: z.string().min(1, 'Pickup date is required').refine(
     (v) => v >= new Date().toISOString().split('T')[0],
     'Pickup date cannot be in the past',
@@ -151,6 +154,7 @@ export function NewTransactionForm() {
         customerName: data.customerName || undefined,
         customerPhone: data.customerPhone || undefined,
         customerEmail: data.customerEmail || undefined,
+        isExistingCustomer: !!existingCustomer,
         pickupDate: data.pickupDate || undefined,
         note: data.note || undefined,
         promoId: data.promoId && data.promoId !== 'none' ? parseInt(data.promoId, 10) : undefined,
@@ -201,13 +205,13 @@ export function NewTransactionForm() {
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-zinc-700">Phone</span>
-                    {customerLookingUp && debouncedPhone.length >= 7 && (
+                    {customerLookingUp && debouncedPhone.length === 11 && (
                       <span className="text-xs text-zinc-400">Looking up...</span>
                     )}
                     {!customerLookingUp && existingCustomer && (
-                      <span className="text-xs text-emerald-600 font-medium">Customer found</span>
+                      <span className="text-xs text-emerald-600 font-medium">Existing customer</span>
                     )}
-                    {!customerLookingUp && debouncedPhone.length >= 7 && existingCustomer === null && (
+                    {!customerLookingUp && debouncedPhone.length === 11 && existingCustomer === null && (
                       <span className="text-xs text-zinc-400">New customer</span>
                     )}
                   </div>

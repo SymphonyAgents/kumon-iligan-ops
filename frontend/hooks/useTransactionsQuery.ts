@@ -156,6 +156,19 @@ export function useAddPaymentMutation(txnId: string, onSuccess?: () => void) {
   });
 }
 
+export function useCollectionsSummaryQuery(
+  year: number,
+  month: number,
+  options?: { branchId?: number; enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: ['collections-summary', year, month, options?.branchId],
+    queryFn: () => api.transactions.collectionsSummary(year, month, options?.branchId),
+    staleTime: 2 * 60 * 1000,
+    enabled: options?.enabled ?? true,
+  });
+}
+
 export function useTodayCollectionsQuery() {
   return useQuery({
     queryKey: ['today-collections'],

@@ -1,11 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { DrizzleService } from '../db/drizzle.service';
 import { customers } from '../db/schema';
 
 @Injectable()
 export class CustomersService {
   constructor(private readonly drizzle: DrizzleService) {}
+
+  async findAll() {
+    return this.drizzle.db
+      .select()
+      .from(customers)
+      .orderBy(desc(customers.createdAt));
+  }
 
   async findByPhone(phone: string) {
     const [customer] = await this.drizzle.db

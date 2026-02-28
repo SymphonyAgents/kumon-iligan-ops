@@ -12,6 +12,7 @@ export class CreateTransactionDto {
   customerName?: string;
   customerPhone?: string;
   customerEmail?: string;
+  isExistingCustomer?: boolean; // if true, skip customer upsert
   status?: string;
   note?: string;
   pickupDate?: string; // ISO date YYYY-MM-DD

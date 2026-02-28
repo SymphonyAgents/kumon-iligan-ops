@@ -66,6 +66,20 @@ export class TransactionsController {
   }
 
   @UseGuards(SupabaseAuthGuard)
+  @Get('collections/summary')
+  collectionsSummary(
+    @Query('year') year: string,
+    @Query('month') month: string,
+    @Query('branchId') branchId?: string,
+  ) {
+    return this.transactionsService.collectionsSummary(
+      parseInt(year, 10),
+      parseInt(month, 10),
+      branchId ? parseInt(branchId, 10) : undefined,
+    );
+  }
+
+  @UseGuards(SupabaseAuthGuard)
   @Get('number/:number')
   findByNumber(@Param('number') number: string) {
     return this.transactionsService.findByNumber(number);

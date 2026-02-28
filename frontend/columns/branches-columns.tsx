@@ -49,7 +49,7 @@ export const createBranchesColumns = ({
         );
       }
       return (
-        <span className={cn('font-medium text-sm', b.isActive ? 'text-zinc-950' : 'text-zinc-400 line-through')}>
+        <span className={cn('font-medium text-sm capitalize', b.isActive ? 'text-zinc-950' : 'text-zinc-400 line-through')}>
           {b.name}
         </span>
       );
@@ -72,7 +72,7 @@ export const createBranchesColumns = ({
         );
       }
       return (
-        <span className="text-sm text-zinc-500">{b.address ?? <span className="text-zinc-300">—</span>}</span>
+        <span className="text-sm text-zinc-500 capitalize">{b.address ?? <span className="text-zinc-300">—</span>}</span>
       );
     },
   },

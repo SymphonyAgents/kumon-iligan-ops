@@ -227,7 +227,7 @@ export class TransactionsService {
       );
     }
 
-    if (dto.customerPhone) {
+    if (dto.customerPhone && !dto.isExistingCustomer) {
       await this.drizzle.db
         .insert(customers)
         .values({
@@ -378,6 +378,41 @@ export class TransactionsService {
       )
       .orderBy(transactions.pickupDate);
     return rows.map(mapTxn);
+  }
+
+  async collectionsSummary(year: number, month: number, branchId?: number) {
+    const from = new Date(`${year}-${String(month).padStart(2, '0')}-01T00:00:00`);
+    const lastDay = new Date(year, month, 0).getDate();
+    const to = new Date(
+      `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}T23:59:59`,
+    );
+
+    const conditions: ReturnType<typeof eq>[] = [
+      gte(claimPayments.paidAt, from),
+      lte(claimPayments.paidAt, to),
+    ];
+    if (branchId) conditions.push(eq(transactions.branchId, branchId));
+
+    const rows = await this.drizzle.db
+      .select({
+        method: claimPayments.method,
+        total: sql<number>`COALESCE(SUM(${claimPayments.amount}), 0)`,
+      })
+      .from(claimPayments)
+      .innerJoin(transactions, eq(claimPayments.transactionId, transactions.id))
+      .where(and(...conditions))
+      .groupBy(claimPayments.method);
+
+    const result: Record<string, string> = {
+      cash: '0.00',
+      gcash: '0.00',
+      card: '0.00',
+      bank_deposit: '0.00',
+    };
+    rows.forEach((r) => {
+      result[r.method] = fromScaled(r.total);
+    });
+    return result;
   }
 
   async todayCollections() {

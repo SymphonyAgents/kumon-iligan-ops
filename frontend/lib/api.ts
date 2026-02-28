@@ -49,9 +49,14 @@ export const api = {
     recent: (limit = 10) => apiFetch<Transaction[]>(`/transactions/recent?limit=${limit}`),
     upcoming: () => apiFetch<Transaction[]>('/transactions/upcoming'),
     todayCollections: () => apiFetch<TodayCollection[]>('/transactions/today-collections'),
+    collectionsSummary: (year: number, month: number, branchId?: number) => {
+      const qs = new URLSearchParams({ year: String(year), month: String(month) });
+      if (branchId) qs.set('branchId', String(branchId));
+      return apiFetch<Record<string, string>>(`/transactions/collections/summary?${qs}`);
+    },
     get: (id: number) => apiFetch<Transaction>(`/transactions/${id}`),
     getByNumber: (number: string) => apiFetch<Transaction>(`/transactions/number/${number}`),
-    create: (body: Partial<Omit<Transaction, 'items'>> & { items?: Record<string, unknown>[] }) =>
+    create: (body: Partial<Omit<Transaction, 'items'>> & { items?: Record<string, unknown>[]; isExistingCustomer?: boolean }) =>
       apiFetch<Transaction>('/transactions', { method: 'POST', body: JSON.stringify(body) }),
     update: (id: number, body: Partial<Transaction>) =>
       apiFetch<Transaction>(`/transactions/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
@@ -107,6 +112,7 @@ export const api = {
   },
 
   customers: {
+    list: () => apiFetch<Customer[]>('/customers'),
     findByPhone: (phone: string) => apiFetch<Customer | null>(`/customers/by-phone/${encodeURIComponent(phone)}`),
   },
 

@@ -24,6 +24,7 @@ import {
   useUpcomingPickupsQuery,
   useDailyStatsQuery,
   useTodayCollectionsQuery,
+  useCollectionsSummaryQuery,
 } from '@/hooks/useTransactionsQuery';
 import {
   Select,
@@ -129,6 +130,10 @@ export default function DashboardPage() {
   const { data: recentTxns = [] } = useRecentTransactionsQuery(20);
   const { data: upcomingPickups = [] } = useUpcomingPickupsQuery();
   const { data: expenses = [], isLoading: expensesLoading } = useMonthlyExpensesQuery(year, month, { enabled: isAdmin });
+  const { data: collectionsSummary, isLoading: collectionsLoading } = useCollectionsSummaryQuery(year, month, {
+    branchId,
+    enabled: isAdmin,
+  });
   const { data: todayCollections = [] } = useTodayCollectionsQuery();
 
   const quickActions = ALL_QUICK_ACTIONS.filter((a) => !a.adminOnly || isAdmin);
@@ -316,7 +321,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 gap-3">
               {METHOD_ORDER.map((key) => {
                 const config = PAYMENT_METHOD_CONFIG[key];
-                const amount = monthlyStats.byPaymentMethod[key] ?? 0;
+                const amount = parseFloat(collectionsSummary?.[key] ?? '0');
                 return (
                   <div key={key} className="bg-white border border-zinc-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
@@ -325,7 +330,11 @@ export default function DashboardPage() {
                       </div>
                       <span className="text-xs text-zinc-400">{config.label}</span>
                     </div>
-                    <p className="font-mono text-base font-semibold text-zinc-950">{formatPeso(amount)}</p>
+                    {collectionsLoading ? (
+                      <div className="h-5 w-16 bg-zinc-100 rounded animate-pulse" />
+                    ) : (
+                      <p className="font-mono text-base font-semibold text-zinc-950">{formatPeso(amount)}</p>
+                    )}
                   </div>
                 );
               })}

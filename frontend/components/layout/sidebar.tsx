@@ -17,11 +17,22 @@ import {
   UserIcon,
   GitBranchIcon,
   UsersIcon,
+  AddressBookIcon,
 } from '@phosphor-icons/react';
 import { createBrowserClient } from '@supabase/ssr';
 import { cn } from '@/lib/utils';
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 import { ROUTES } from '@/lib/routes';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 interface NavItem {
   href: string;
@@ -48,6 +59,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Operations',
     items: [
       { href: ROUTES.TRANSACTIONS, label: 'Transactions', icon: ReceiptIcon, adminOnly: false, superadminOnly: false },
+      { href: ROUTES.CUSTOMERS, label: 'Customers', icon: AddressBookIcon, adminOnly: true, superadminOnly: false },
     ],
   },
   {
@@ -80,6 +92,8 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const { data: currentUser } = useCurrentUserQuery();
   const isAdmin = currentUser?.userType === 'admin' || currentUser?.userType === 'superadmin';
   const isSuperadmin = currentUser?.userType === 'superadmin';
@@ -97,6 +111,8 @@ export function Sidebar() {
   }
 
   async function handleSignOut() {
+    setShowSignOutDialog(false);
+    setSigningOut(true);
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -171,7 +187,7 @@ export function Sidebar() {
       )}
       <p className="px-2.5 text-xs text-zinc-400 mb-2">Philippine Peso (₱)</p>
       <button
-        onClick={handleSignOut}
+        onClick={() => setShowSignOutDialog(true)}
         className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-md text-sm text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 transition-colors duration-150"
       >
         <SignOutIcon size={16} />
@@ -182,6 +198,34 @@ export function Sidebar() {
 
   return (
     <>
+      {/* Sign-out confirmation dialog */}
+      <Dialog open={showSignOutDialog} onOpenChange={setShowSignOutDialog}>
+        <DialogContent showCloseButton={false} className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Sign out?</DialogTitle>
+            <DialogDescription>You will be returned to the login screen.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowSignOutDialog(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={handleSignOut}>
+              Sign out
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Signing-out overlay */}
+      {signingOut && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-sm bg-white/60">
+          <div className="flex flex-col items-center gap-3">
+            <Spinner size={24} className="text-zinc-500" />
+            <span className="text-sm text-zinc-500 font-medium">Signing out...</span>
+          </div>
+        </div>
+      )}
+
       {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-20 h-14 bg-white border-b border-zinc-200 flex items-center px-4 gap-3">
         <button

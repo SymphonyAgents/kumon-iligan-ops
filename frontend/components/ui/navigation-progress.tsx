@@ -8,8 +8,8 @@ export function NavigationProgress() {
   const [width, setWidth] = useState(0);
   const [visible, setVisible] = useState(false);
   const prevPathname = useRef(pathname);
-  const tickRef = useRef<ReturnType<typeof setInterval>>();
-  const hideRef = useRef<ReturnType<typeof setTimeout>>();
+  const tickRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const hideRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   function start() {
     clearInterval(tickRef.current);
