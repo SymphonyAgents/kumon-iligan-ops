@@ -20,10 +20,26 @@ export const customerColumns: ColumnDef<Customer>[] = [
     ),
   },
   {
+    accessorKey: 'city',
+    header: 'City',
+    cell: ({ row }) => (
+      <span className="text-sm text-zinc-500 capitalize">{row.original.city ?? '—'}</span>
+    ),
+  },
+  {
     accessorKey: 'email',
     header: 'Email',
     cell: ({ row }) => (
       <span className="text-sm text-zinc-500">{row.original.email ?? '—'}</span>
+    ),
+  },
+  {
+    accessorKey: 'shoesCount',
+    header: () => <span className="block text-right">Shoes</span>,
+    cell: ({ row }) => (
+      <span className="block text-right font-mono text-sm text-zinc-950">
+        {row.original.shoesCount ?? 0}
+      </span>
     ),
   },
   {

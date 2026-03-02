@@ -234,6 +234,7 @@ export class TransactionsService {
           phone: dto.customerPhone,
           name: dto.customerName ?? null,
           email: dto.customerEmail ?? null,
+          city: dto.customerCity ?? null,
           updatedAt: new Date(),
         })
         .onConflictDoUpdate({
@@ -241,6 +242,7 @@ export class TransactionsService {
           set: {
             name: dto.customerName ?? null,
             email: dto.customerEmail ?? null,
+            city: dto.customerCity ?? null,
             updatedAt: new Date(),
           },
         });

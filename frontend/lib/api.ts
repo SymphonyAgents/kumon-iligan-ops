@@ -63,7 +63,7 @@ export const api = {
     },
     get: (id: number) => apiFetch<Transaction>(`/transactions/${id}`),
     getByNumber: (number: string) => apiFetch<Transaction>(`/transactions/number/${number}`),
-    create: (body: Partial<Omit<Transaction, 'items'>> & { items?: Record<string, unknown>[]; isExistingCustomer?: boolean }) =>
+    create: (body: Partial<Omit<Transaction, 'items'>> & { items?: Record<string, unknown>[]; isExistingCustomer?: boolean; customerCity?: string }) =>
       apiFetch<Transaction>('/transactions', { method: 'POST', body: JSON.stringify(body) }),
     update: (id: number, body: Partial<Transaction>) =>
       apiFetch<Transaction>(`/transactions/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),

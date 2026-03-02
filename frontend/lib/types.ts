@@ -22,8 +22,10 @@ export interface Customer {
   phone: string;
   name: string | null;
   email: string | null;
+  city: string | null;
   createdAt: string;
   updatedAt: string | null;
+  shoesCount?: number;
 }
 
 export interface Service {

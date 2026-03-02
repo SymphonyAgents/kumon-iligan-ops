@@ -13,6 +13,7 @@ export const transactionSchema = z.object({
     .string()
     .min(1, 'Customer email is required')
     .refine((v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Invalid email format'),
+  customerCity: z.string().optional(),
   pickupDate: z.string().min(1, 'Pickup date is required').refine(
     (v) => v >= new Date().toISOString().split('T')[0],
     'Pickup date cannot be in the past',

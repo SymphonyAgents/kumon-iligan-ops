@@ -80,6 +80,7 @@ export function NewTransactionForm() {
       customerName: '',
       customerPhone: '',
       customerEmail: '',
+      customerCity: '',
       pickupDate: '',
       promoId: '',
       note: '',
@@ -167,6 +168,7 @@ export function NewTransactionForm() {
     setExistingCustomer(undefined);
     setValue('customerName', '');
     setValue('customerEmail', '');
+    setValue('customerCity', '');
   }
 
   const rawTotal = calcRawTotal(watchedItems ?? [], services as Service[]);
@@ -189,6 +191,7 @@ export function NewTransactionForm() {
         customerName: data.customerName || undefined,
         customerPhone: data.customerPhone || undefined,
         customerEmail: data.customerEmail || undefined,
+        customerCity: data.customerCity || undefined,
         isExistingCustomer: existingCustomer != null,
         pickupDate: data.pickupDate || undefined,
         note: data.note || undefined,
