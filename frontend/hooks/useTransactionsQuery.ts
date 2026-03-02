@@ -33,13 +33,14 @@ export function useInfiniteTransactionsQuery(params: Record<string, string> = {}
 
 export function useTransactionReportQuery(
   year: number,
-  month: number,
+  month: number, // 0 = full year
   options?: { enabled?: boolean; branchId?: number },
 ) {
-  const from = `${year}-${String(month).padStart(2, '0')}-01`;
-  const lastDay = new Date(year, month, 0).getDate();
-  const to = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-  const params: Record<string, string> = { from, to, limit: '500' };
+  const from = month === 0 ? `${year}-01-01` : `${year}-${String(month).padStart(2, '0')}-01`;
+  const to = month === 0
+    ? `${year}-12-31`
+    : `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
+  const params: Record<string, string> = { from, to, limit: '1000' };
   if (options?.branchId) params.branchId = String(options.branchId);
   return useQuery({
     queryKey: ['transactions-report', year, month, options?.branchId],

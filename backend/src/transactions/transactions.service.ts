@@ -383,11 +383,16 @@ export class TransactionsService {
   }
 
   async collectionsSummary(year: number, month: number, branchId?: number) {
-    const from = new Date(`${year}-${String(month).padStart(2, '0')}-01T00:00:00`);
-    const lastDay = new Date(year, month, 0).getDate();
-    const to = new Date(
-      `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}T23:59:59`,
-    );
+    // month=0 means full year
+    const from = month === 0
+      ? new Date(`${year}-01-01T00:00:00`)
+      : new Date(`${year}-${String(month).padStart(2, '0')}-01T00:00:00`);
+    const to = month === 0
+      ? new Date(`${year}-12-31T23:59:59`)
+      : (() => {
+          const lastDay = new Date(year, month, 0).getDate();
+          return new Date(`${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}T23:59:59`);
+        })();
 
     const conditions: ReturnType<typeof eq>[] = [
       gte(claimPayments.paidAt, from),

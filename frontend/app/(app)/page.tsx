@@ -16,6 +16,9 @@ import {
   MoneyIcon,
   CreditCardIcon,
   BankIcon,
+  CheckIcon,
+  XIcon,
+  PencilSimpleIcon,
 } from '@phosphor-icons/react';
 import { formatPeso, formatDate, PAYMENT_METHOD_LABELS } from '@/lib/utils';
 import {
@@ -34,6 +37,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useMonthlyExpensesQuery } from '@/hooks/useExpensesQuery';
+import { useDepositsQuery, useUpsertDepositMutation } from '@/hooks/useDepositsQuery';
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 import { useBranchesQuery } from '@/hooks/useBranchesQuery';
 import { PageHeader } from '@/components/ui/page-header';
@@ -111,8 +115,10 @@ function StatCard({ label, href, value, mono, loading, icon: Icon, iconClass, ic
 export default function DashboardPage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [month, setMonth] = useState(now.getMonth() + 1); // 0 = overall year
   const [branchFilter, setBranchFilter] = useState<string>('all');
+  const [depositEditing, setDepositEditing] = useState<string | null>(null);
+  const [depositDraft, setDepositDraft] = useState('');
 
   const { data: currentUser } = useCurrentUserQuery();
   const isAdmin = currentUser?.userType === 'admin' || currentUser?.userType === 'superadmin';
@@ -134,13 +140,14 @@ export default function DashboardPage() {
     branchId,
     enabled: isAdmin,
   });
+  const { data: depositsData } = useDepositsQuery(year, month, branchId);
+  const upsertDepositMut = useUpsertDepositMutation(year, month, branchId);
   const { data: todayCollections = [] } = useTodayCollectionsQuery();
 
   const quickActions = ALL_QUICK_ACTIONS.filter((a) => !a.adminOnly || isAdmin);
 
-  const from = `${year}-${String(month).padStart(2, '0')}-01`;
-  const lastDay = new Date(year, month, 0).getDate();
-  const to = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+  const from = month === 0 ? `${year}-01-01` : `${year}-${String(month).padStart(2, '0')}-01`;
+  const to = month === 0 ? `${year}-12-31` : `${year}-${String(month).padStart(2, '0')}-${new Date(year, month, 0).getDate()}`;
 
   const filtered = useMemo(() => {
     return (reportTxns as Transaction[]).filter((t) => {
@@ -177,6 +184,7 @@ export default function DashboardPage() {
 
   const todayCollectionTotal = todayCollections.reduce((sum, c) => sum + parseFloat(c.amount), 0);
   const totalExpenses = (expenses ?? []).reduce((sum, e) => sum + parseFloat(e.amount), 0);
+  const monthlyNet = monthlyStats.totalRevenue - totalExpenses;
 
   return (
     <div>
@@ -204,6 +212,7 @@ export default function DashboardPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="0">Overall</SelectItem>
                   {MONTHS.map((m, i) => (
                     <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
                   ))}
@@ -241,7 +250,7 @@ export default function DashboardPage() {
       {/* Admin: monthly stats */}
       {isAdmin && (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 md:gap-4 mb-6 md:mb-8">
             <StatCard
               label="Transactions"
               href="/transactions"
@@ -281,6 +290,16 @@ export default function DashboardPage() {
               iconClass="text-amber-600"
               iconBg="bg-amber-50"
             />
+            <StatCard
+              label="Net Income"
+              href="/expenses"
+              value={formatPeso(monthlyNet)}
+              mono
+              loading={reportLoading || expensesLoading}
+              icon={CoinIcon}
+              iconClass={monthlyNet >= 0 ? 'text-emerald-600' : 'text-red-500'}
+              iconBg={monthlyNet >= 0 ? 'bg-emerald-50' : 'bg-red-50'}
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
@@ -312,6 +331,8 @@ export default function DashboardPage() {
               {METHOD_ORDER.map((key) => {
                 const config = PAYMENT_METHOD_CONFIG[key];
                 const amount = parseFloat(collectionsSummary?.[key] ?? '0');
+                const depositAmount = parseFloat(depositsData?.[key] ?? '0');
+                const isEditingDeposit = depositEditing === key;
                 return (
                   <div key={key} className="bg-white border border-zinc-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
@@ -325,6 +346,49 @@ export default function DashboardPage() {
                     ) : (
                       <p className="font-mono text-base font-semibold text-zinc-950">{formatPeso(amount)}</p>
                     )}
+                    <div className="mt-2 pt-2 border-t border-zinc-100">
+                      <p className="text-xs text-zinc-400 mb-1">Deposited</p>
+                      {isEditingDeposit ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            autoFocus
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={depositDraft}
+                            onChange={(e) => setDepositDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                upsertDepositMut.mutate({ method: key, amount: depositDraft || '0' });
+                                setDepositEditing(null);
+                              }
+                              if (e.key === 'Escape') setDepositEditing(null);
+                            }}
+                            className="w-full px-2 py-0.5 text-xs font-mono border border-blue-300 rounded focus:outline-none"
+                          />
+                          <button
+                            onClick={() => {
+                              upsertDepositMut.mutate({ method: key, amount: depositDraft || '0' });
+                              setDepositEditing(null);
+                            }}
+                            className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                          >
+                            <CheckIcon size={12} weight="bold" />
+                          </button>
+                          <button onClick={() => setDepositEditing(null)} className="p-1 text-zinc-400 hover:bg-zinc-100 rounded">
+                            <XIcon size={12} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setDepositEditing(key); setDepositDraft(depositAmount > 0 ? String(depositAmount.toFixed(2)) : ''); }}
+                          className="flex items-center gap-1.5 group w-full text-left"
+                        >
+                          <span className="font-mono text-xs text-zinc-700">{formatPeso(depositAmount)}</span>
+                          <PencilSimpleIcon size={11} className="text-zinc-300 group-hover:text-zinc-500 transition-colors" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}

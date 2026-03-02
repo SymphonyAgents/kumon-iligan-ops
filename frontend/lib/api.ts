@@ -144,6 +144,16 @@ export const api = {
     delete: (id: string) => apiFetch<void>(`/users/${id}`, { method: 'DELETE' }),
   },
 
+  deposits: {
+    get: (year: number, month: number, branchId?: number) => {
+      const qs = new URLSearchParams({ year: String(year), month: String(month) });
+      if (branchId) qs.set('branchId', String(branchId));
+      return apiFetch<Record<string, string>>(`/deposits?${qs}`);
+    },
+    upsert: (body: { year: number; month: number; method: string; amount: string; branchId?: number }) =>
+      apiFetch<{ id: number; amount: string }>('/deposits', { method: 'PATCH', body: JSON.stringify(body) }),
+  },
+
   branches: {
     list: (activeOnly?: boolean) =>
       apiFetch<Branch[]>(`/branches${activeOnly ? '?active=1' : ''}`),

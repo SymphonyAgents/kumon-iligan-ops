@@ -152,6 +152,19 @@ export const customers = pgTable('customers', {
 });
 
 // ---------------------------------------------------------------------------
+// deposits (tracks manual bank deposit amounts per method per month)
+// ---------------------------------------------------------------------------
+export const deposits = pgTable('deposits', {
+  id: serial('id').primaryKey(),
+  year: integer('year').notNull(),
+  month: integer('month').notNull(), // 1-12; 0 = annual (unused in practice)
+  method: varchar('method', { length: 50 }).notNull(), // cash | gcash | card | bank_deposit
+  amount: bigint('amount', { mode: 'number' }).default(0).notNull(),
+  branchId: integer('branch_id').references(() => branches.id, { onDelete: 'cascade' }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ---------------------------------------------------------------------------
 // users (mirrors auth.users for role management)
 // ---------------------------------------------------------------------------
 export const users = pgTable('users', {
