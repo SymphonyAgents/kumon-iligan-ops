@@ -1,7 +1,7 @@
 'use client';
 
-import { use, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeftIcon, PlusIcon, EnvelopeIcon, ArrowRightIcon } from '@phosphor-icons/react';
+import { use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeftIcon, PlusIcon, EnvelopeIcon } from '@phosphor-icons/react';
 import { Lightbox } from '@/components/ui/lightbox';
 import Link from 'next/link';
 import { formatPeso, formatDate, formatDatetime, PAYMENT_METHOD_LABELS, cn } from '@/lib/utils';
@@ -32,11 +32,12 @@ import {
   useUpdateItemStatusMutation,
   useAddPaymentMutation,
 } from '@/hooks/useTransactionsQuery';
+import { useUploadPhotoMutation } from '@/hooks/useUploadPhoto';
 import { PAYMENT_METHOD_VALUES } from '@/lib/constants';
 import { generateGmailLink, EMAIL_TEMPLATES, EMAIL_TEMPLATE_LABELS } from '@/utils/email';
 import type { EmailTemplateKey } from '@/utils/email';
-import type { PaymentMethod, ItemStatus } from '@/lib/types';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import type { PaymentMethod } from '@/lib/types';
+import { ItemStatusConfirmDialog, type PendingItemChange } from '@/components/transactions/ItemStatusConfirmDialog';
 
 export default function TransactionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -47,6 +48,9 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
 
   const [emailTemplate, setEmailTemplate] = useState<EmailTemplateKey>(EMAIL_TEMPLATES.pickup_ready);
   const [lightbox, setLightbox] = useState<{ src: string; label: string } | null>(null);
+  const [uploadingItemIds, setUploadingItemIds] = useState<Set<string>>(new Set());
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingUploadRef = useRef<{ itemId: number; type: 'before' | 'after' } | null>(null);
 
   const [rescheduleValue, setRescheduleValue] = useState('');
   const [noteValue, setNoteValue] = useState('');
@@ -55,15 +59,10 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   const { data: txn, isLoading, isFetching } = useTransactionDetailQuery(id);
   const updateTxnMut = useUpdateTransactionMutation(id);
   const updateItemStatusMut = useUpdateItemStatusMutation(id);
+  const uploadPhotoMut = useUploadPhotoMutation(id);
 
   const [loadingItemIds, setLoadingItemIds] = useState<Set<number>>(new Set());
-  const [pendingItemChange, setPendingItemChange] = useState<{
-    itemId: number;
-    newStatus: ItemStatus;
-    currentStatus: string;
-    shoeDescription: string;
-    serviceName: string;
-  } | null>(null);
+  const [pendingItemChange, setPendingItemChange] = useState<PendingItemChange | null>(null);
   const txnRef = useRef(txn);
   useEffect(() => { txnRef.current = txn; }, [txn]);
 
@@ -83,6 +82,37 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [txn?.id]);
 
+  const handleUploadClick = useCallback((itemId: number, type: 'before' | 'after') => {
+    pendingUploadRef.current = { itemId, type };
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      const pending = pendingUploadRef.current;
+      if (!file || !pending || !txn) return;
+      // reset so same file can be re-selected if needed
+      e.target.value = '';
+      const key = `${pending.itemId}-${pending.type}`;
+      setUploadingItemIds((prev) => new Set([...prev, key]));
+      uploadPhotoMut.mutate(
+        { itemId: pending.itemId, type: pending.type, file },
+        {
+          onSettled: () => {
+            setUploadingItemIds((prev) => {
+              const next = new Set(prev);
+              next.delete(key);
+              return next;
+            });
+          },
+        },
+      );
+      pendingUploadRef.current = null;
+    },
+    [txn, uploadPhotoMut],
+  );
+
   const itemColumns = useMemo(
     () => createTransactionItemColumns({
       onStatusChange: (itemId, status) => {
@@ -96,10 +126,12 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
         });
       },
       onImageClick: (src, label) => setLightbox({ src, label }),
+      onUploadClick: handleUploadClick,
       loadingItemIds,
+      uploadingItemIds,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [loadingItemIds],
+    [loadingItemIds, uploadingItemIds, handleUploadClick],
   );
   const addPaymentMut = useAddPaymentMutation(id, () => {
     setPaymentDialogOpen(false);
@@ -421,6 +453,15 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
+      {/* Hidden file input — triggered programmatically by handleUploadClick */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
       <Lightbox
         open={!!lightbox}
         src={lightbox?.src ?? ''}
@@ -428,11 +469,10 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
         onClose={() => setLightbox(null)}
       />
 
-      <ConfirmDialog
+      <ItemStatusConfirmDialog
         open={pendingItemChange !== null}
-        title="Change item status?"
-        confirmLabel="Update Status"
-        confirmVariant="dark"
+        pendingChange={pendingItemChange}
+        customerName={txn.customerName}
         loading={updateItemStatusMut.isPending}
         onConfirm={() => {
           if (!pendingItemChange) return;
@@ -441,32 +481,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
           updateItemStatusMut.mutate({ itemId: pendingItemChange.itemId, status: pendingItemChange.newStatus });
         }}
         onCancel={() => setPendingItemChange(null)}
-      >
-        {pendingItemChange && (
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-zinc-500">Customer</span>
-              <span className="text-zinc-950">{toTitleCase(txn.customerName) || '—'}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-zinc-500">Shoe</span>
-              <span className="text-zinc-950">{toTitleCase(pendingItemChange.shoeDescription) || '—'}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-zinc-500">Service</span>
-              <span className="text-zinc-950">{pendingItemChange.serviceName || '—'}</span>
-            </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-zinc-500">Status</span>
-              <div className="flex items-center gap-2">
-                <StatusBadge status={pendingItemChange.currentStatus} />
-                <ArrowRightIcon size={12} className="text-zinc-400" />
-                <StatusBadge status={pendingItemChange.newStatus} />
-              </div>
-            </div>
-          </div>
-        )}
-      </ConfirmDialog>
+      />
     </div>
   );
 }

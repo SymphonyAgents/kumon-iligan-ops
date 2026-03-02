@@ -62,4 +62,16 @@ export class UsersService {
       .returning();
     return updated;
   }
+
+  async updateBranch(id: string, branchId: number) {
+    const user = await this.findById(id);
+    if (!user) throw new NotFoundException('User not found');
+
+    const [updated] = await this.drizzle.db
+      .update(users)
+      .set({ branchId })
+      .where(eq(users.id, id))
+      .returning();
+    return updated;
+  }
 }

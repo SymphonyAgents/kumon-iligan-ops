@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
 
 const USERS_KEY = ['users'];
@@ -21,5 +22,18 @@ export function useUpdateUserRoleMutation() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: USERS_KEY });
     },
+    onError: (err: Error) => toast.error('Failed to update role', { description: err.message }),
+  });
+}
+
+export function useUpdateUserBranchMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, branchId }: { id: string; branchId: number }) =>
+      api.users.updateBranch(id, branchId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: USERS_KEY });
+    },
+    onError: (err: Error) => toast.error('Failed to update branch', { description: err.message }),
   });
 }

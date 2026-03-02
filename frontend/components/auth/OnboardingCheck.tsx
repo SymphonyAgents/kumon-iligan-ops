@@ -9,7 +9,7 @@ export function OnboardingCheck() {
   const router = useRouter();
   const { data: user, isLoading } = useCurrentUserQuery();
 
-  const needsOnboarding = !isLoading && !!user && user.branchId === null && user.userType === 'staff';
+  const needsOnboarding = !isLoading && !!user && user.branchId === null;
 
   useEffect(() => {
     if (needsOnboarding) {

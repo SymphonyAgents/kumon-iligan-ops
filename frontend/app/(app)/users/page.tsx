@@ -1,18 +1,18 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { LockSimpleIcon, ArrowRightIcon } from '@phosphor-icons/react';
+import { LockSimpleIcon } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/ui/page-header';
 import { DataTable } from '@/components/ui/data-table';
 import { createUserColumns } from '@/columns/users-columns';
-import { useUsersQuery, useUpdateUserRoleMutation } from '@/hooks/useUsersQuery';
+import { useUsersQuery, useUpdateUserRoleMutation, useUpdateUserBranchMutation } from '@/hooks/useUsersQuery';
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 import { useBranchesQuery } from '@/hooks/useBranchesQuery';
 import { toTitleCase } from '@/utils/text';
-import { cn } from '@/lib/utils';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import type { AppUser } from '@/lib/types';
+import { UserRoleConfirmDialog, type PendingRoleChange } from '@/components/users/UserRoleConfirmDialog';
+import { UserBranchConfirmDialog, type PendingBranchChange } from '@/components/users/UserBranchConfirmDialog';
+import type { AppUser, Branch } from '@/lib/types';
 
 export default function UsersPage() {
   const { data: currentUser, isSuccess: userLoaded } = useCurrentUserQuery();
@@ -21,23 +21,29 @@ export default function UsersPage() {
   const { data: users = [], isLoading } = useUsersQuery();
   const { data: branches = [] } = useBranchesQuery(false);
   const updateRoleMut = useUpdateUserRoleMutation();
+  const updateBranchMut = useUpdateUserBranchMutation();
 
-  const [pendingRoleChange, setPendingRoleChange] = useState<{
-    id: string;
-    email: string;
-    currentRole: string;
-    newRole: string;
-  } | null>(null);
+  const [pendingRoleChange, setPendingRoleChange] = useState<PendingRoleChange | null>(null);
+  const [pendingBranchChange, setPendingBranchChange] = useState<PendingBranchChange | null>(null);
+
+  const isSuperadmin = currentUser?.userType === 'superadmin';
 
   const columns = useMemo(
     () => createUserColumns({
       onRoleChange: (id, newUserType, currentUserType, email) => {
         setPendingRoleChange({ id, email, currentRole: currentUserType, newRole: newUserType });
       },
+      onBranchChange: isSuperadmin
+        ? (id, newBranchId, currentBranchId, email, newBranchName, currentBranchName) => {
+            setPendingBranchChange({ id, email, currentBranchName, newBranchId, newBranchName });
+          }
+        : undefined,
       currentUserId: currentUser?.id,
+      isSuperadmin,
+      branches: branches as Branch[],
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentUser?.id],
+    [currentUser?.id, isSuperadmin, branches],
   );
 
   const grouped = useMemo(() => {
@@ -81,19 +87,11 @@ export default function UsersPage() {
     );
   }
 
-  const ROLE_STYLES: Record<string, string> = {
-    staff: 'bg-zinc-100 text-zinc-600',
-    admin: 'bg-blue-50 text-blue-600',
-    superadmin: 'bg-violet-50 text-violet-700',
-  };
-
   return (
     <>
-      <ConfirmDialog
+      <UserRoleConfirmDialog
         open={pendingRoleChange !== null}
-        title="Change user role?"
-        confirmLabel="Update Role"
-        confirmVariant="dark"
+        pendingChange={pendingRoleChange}
         loading={updateRoleMut.isPending}
         onConfirm={() => {
           if (!pendingRoleChange) return;
@@ -103,28 +101,20 @@ export default function UsersPage() {
           );
         }}
         onCancel={() => setPendingRoleChange(null)}
-      >
-        {pendingRoleChange && (
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-zinc-500">User</span>
-              <span className="text-zinc-950 truncate max-w-[200px]">{pendingRoleChange.email}</span>
-            </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-zinc-500">Role</span>
-              <div className="flex items-center gap-2">
-                <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium uppercase tracking-wide', ROLE_STYLES[pendingRoleChange.currentRole] ?? 'bg-zinc-100 text-zinc-600')}>
-                  {pendingRoleChange.currentRole}
-                </span>
-                <ArrowRightIcon size={12} className="text-zinc-400" />
-                <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium uppercase tracking-wide', ROLE_STYLES[pendingRoleChange.newRole] ?? 'bg-zinc-100 text-zinc-600')}>
-                  {pendingRoleChange.newRole}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-      </ConfirmDialog>
+      />
+      <UserBranchConfirmDialog
+        open={pendingBranchChange !== null}
+        pendingChange={pendingBranchChange}
+        loading={updateBranchMut.isPending}
+        onConfirm={() => {
+          if (!pendingBranchChange) return;
+          updateBranchMut.mutate(
+            { id: pendingBranchChange.id, branchId: pendingBranchChange.newBranchId },
+            { onSuccess: () => { toast.success('Branch updated'); setPendingBranchChange(null); } },
+          );
+        }}
+        onCancel={() => setPendingBranchChange(null)}
+      />
     <div>
       <PageHeader
         title="Users"

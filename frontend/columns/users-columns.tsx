@@ -8,7 +8,8 @@ import {
   SelectItem,
   SelectTrigger,
 } from '@/components/ui/select';
-import type { AppUser } from '@/lib/types';
+import { toTitleCase } from '@/utils/text';
+import type { AppUser, Branch } from '@/lib/types';
 
 const ROLES = ['staff', 'admin', 'superadmin'] as const;
 
@@ -31,10 +32,19 @@ function RoleBadge({ role }: { role: string }) {
 
 interface UserColumnsOptions {
   onRoleChange: (id: string, newUserType: string, currentUserType: string, email: string) => void;
+  onBranchChange?: (id: string, newBranchId: number, currentBranchId: number | null, email: string, newBranchName: string, currentBranchName: string | null) => void;
   currentUserId?: string;
+  isSuperadmin?: boolean;
+  branches?: Branch[];
 }
 
-export const createUserColumns = ({ onRoleChange, currentUserId }: UserColumnsOptions): ColumnDef<AppUser>[] => [
+export const createUserColumns = ({
+  onRoleChange,
+  onBranchChange,
+  currentUserId,
+  isSuperadmin,
+  branches = [],
+}: UserColumnsOptions): ColumnDef<AppUser>[] => [
   {
     accessorKey: 'email',
     header: 'Email',
@@ -70,6 +80,49 @@ export const createUserColumns = ({ onRoleChange, currentUserId }: UserColumnsOp
             </Select>
           )}
         </div>
+      );
+    },
+  },
+  {
+    id: 'branch',
+    header: 'Branch',
+    size: 180,
+    cell: ({ row }) => {
+      const user = row.original;
+      const isSelf = user.id === currentUserId;
+      const currentBranch = branches.find((b) => b.id === user.branchId) ?? null;
+
+      if (isSelf || !isSuperadmin || !onBranchChange) {
+        return (
+          <span className={cn('text-sm', currentBranch ? 'text-zinc-700' : 'text-zinc-400')}>
+            {toTitleCase(currentBranch?.name) || 'No branch'}
+          </span>
+        );
+      }
+
+      return (
+        <Select
+          value={user.branchId !== null ? String(user.branchId) : ''}
+          onValueChange={(v) => {
+            const newBranchId = parseInt(v, 10);
+            const newBranch = branches.find((b) => b.id === newBranchId);
+            if (!newBranch) return;
+            onBranchChange(user.id, newBranchId, user.branchId, user.email, newBranch.name, currentBranch?.name ?? null);
+          }}
+        >
+          <SelectTrigger className="h-auto border-0 bg-transparent shadow-none p-0 gap-1.5 focus-visible:ring-0 w-auto text-sm text-zinc-700">
+            <span className={cn('text-sm', currentBranch ? 'text-zinc-700' : 'text-zinc-400')}>
+              {toTitleCase(currentBranch?.name) || 'No branch'}
+            </span>
+          </SelectTrigger>
+          <SelectContent position="popper">
+            {branches.map((b) => (
+              <SelectItem key={b.id} value={String(b.id)}>
+                {toTitleCase(b.name)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       );
     },
   },

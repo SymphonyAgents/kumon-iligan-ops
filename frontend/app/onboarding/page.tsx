@@ -6,6 +6,7 @@ import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 import { api } from '@/lib/api';
 import { useBranchesQuery } from '@/hooks/useBranchesQuery';
+import { toTitleCase } from '@/utils/text';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 
@@ -17,9 +18,9 @@ export default function OnboardingPage() {
   const { data: currentUser, isLoading: userLoading } = useCurrentUserQuery();
   const { data: branches = [], isLoading: branchesLoading } = useBranchesQuery(true);
 
-  // Admin and superadmin don't need onboarding
+  // Redirect away if already assigned to a branch
   useEffect(() => {
-    if (!userLoading && currentUser && currentUser.userType !== 'staff') {
+    if (!userLoading && currentUser && currentUser.branchId !== null) {
       router.replace('/');
     }
   }, [currentUser, userLoading, router]);
@@ -63,7 +64,7 @@ export default function OnboardingPage() {
                       : 'border-zinc-200 text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50'
                   }`}
                 >
-                  {b.name}
+                  {toTitleCase(b.name)}
                 </button>
               ))}
             </div>

@@ -53,4 +53,11 @@ export class UsersController {
   updateRole(@Param('id') id: string, @Body() body: { userType: UserType }) {
     return this.usersService.updateUserType(id, body.userType);
   }
+
+  @Patch(':id/branch')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin')
+  updateBranch(@Param('id') id: string, @Body() body: { branchId: number }) {
+    return this.usersService.updateBranch(id, body.branchId);
+  }
 }

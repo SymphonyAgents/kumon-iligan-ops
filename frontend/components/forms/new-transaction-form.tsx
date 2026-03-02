@@ -1,17 +1,16 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { toast } from 'sonner';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { PlusIcon, TrashIcon, ArrowLeftIcon, CameraIcon, ArrowRightIcon } from '@phosphor-icons/react';
+import { PlusIcon, ArrowLeftIcon } from '@phosphor-icons/react';
 import Link from 'next/link';
+import { transactionSchema, type TransactionFormData } from '@/schemas/transaction.schema';
+import { compressWithFallback } from '@/utils/photo';
 import { api } from '@/lib/api';
-import { cn, formatDate, formatPeso } from '@/lib/utils';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
@@ -23,32 +22,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { CustomerLookupSection } from '@/components/transactions/CustomerLookupSection';
+import { TransactionItemCard, type PendingPhoto } from '@/components/transactions/TransactionItemCard';
+import { TransactionConfirmDialog } from '@/components/transactions/TransactionConfirmDialog';
 import type { Service, Promo, Customer } from '@/lib/types';
 import { calcItemPrice, calcRawTotal, findPromo, applyPromo } from '@/utils/pricing';
 
-const itemSchema = z.object({
-  shoeDescription: z.string().min(1, 'Shoe description is required'),
-  primaryServiceId: z.string().min(1, 'Select a primary service'),
-  addonServiceIds: z.array(z.string()),
-});
-
-const schema = z.object({
-  customerName: z.string().optional(),
-  customerPhone: z.string().regex(/^\d{11}$/, 'Phone number must be exactly 11 digits'),
-  customerEmail: z.string().optional().refine(
-    (v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
-    'Invalid email format',
-  ),
-  pickupDate: z.string().min(1, 'Pickup date is required').refine(
-    (v) => v >= new Date().toISOString().split('T')[0],
-    'Pickup date cannot be in the past',
-  ),
-  promoId: z.string().optional(),
-  note: z.string().optional(),
-  items: z.array(itemSchema).min(1, 'Add at least one item'),
-});
-
-type FormData = z.infer<typeof schema>;
+async function doPhotoUpload(txnId: number, itemId: number, file: File): Promise<void> {
+  const { blob } = await compressWithFallback(file);
+  const { signedUrl, publicUrl } = await api.uploads.presignedUrl({
+    txnId,
+    itemId,
+    type: 'before',
+    extension: 'jpg',
+  });
+  const res = await fetch(signedUrl, {
+    method: 'PUT',
+    body: blob,
+    headers: { 'Content-Type': 'image/jpeg' },
+  });
+  if (!res.ok) throw new Error(`Upload failed (${res.status})`);
+  await api.transactions.updateItem(txnId, itemId, { beforeImageUrl: publicUrl });
+}
 
 export function NewTransactionForm() {
   const router = useRouter();
@@ -79,8 +74,8 @@ export function NewTransactionForm() {
     handleSubmit,
     setValue,
     formState: { errors },
-  } = useForm<FormData>({
-    resolver: zodResolver(schema),
+  } = useForm<TransactionFormData>({
+    resolver: zodResolver(transactionSchema),
     defaultValues: {
       customerName: '',
       customerPhone: '',
@@ -93,34 +88,78 @@ export function NewTransactionForm() {
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'items' });
-
   const watchedItems = useWatch({ control, name: 'items' });
   const watchedPromoId = useWatch({ control, name: 'promoId' }) ?? 'none';
-  const phoneValue = useWatch({ control, name: 'customerPhone' }) ?? '';
 
   const [customerStep, setCustomerStep] = useState<'phone' | 'details'>('phone');
   const [existingCustomer, setExistingCustomer] = useState<Customer | null | undefined>(undefined);
-  const [lookingUp, setLookingUp] = useState(false);
-  const [pendingSubmit, setPendingSubmit] = useState<FormData | null>(null);
-  const pendingSubmitStable = useRef<FormData | null>(null);
+  const [pendingSubmit, setPendingSubmit] = useState<TransactionFormData | null>(null);
+  const pendingSubmitStable = useRef<TransactionFormData | null>(null);
   if (pendingSubmit !== null) pendingSubmitStable.current = pendingSubmit;
 
-  async function handleFindCustomer() {
-    if (phoneValue.length !== 11) return;
-    setLookingUp(true);
-    try {
-      const customer = await api.customers.findByPhone(phoneValue);
-      setExistingCustomer(customer);
-      if (customer) {
-        if (customer.name) setValue('customerName', customer.name);
-        if (customer.email) setValue('customerEmail', customer.email);
-      }
-    } catch {
-      setExistingCustomer(null);
-    } finally {
-      setLookingUp(false);
-      setCustomerStep('details');
-    }
+  // Photo state — keyed by item field index
+  const [pendingPhotos, setPendingPhotos] = useState<Map<number, PendingPhoto>>(() => new Map());
+  const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
+  const pendingPhotosRef = useRef(pendingPhotos);
+  pendingPhotosRef.current = pendingPhotos;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingPhotoTarget = useRef<number | null>(null);
+
+  // Revoke all object URLs on unmount
+  useEffect(() => {
+    return () => {
+      pendingPhotosRef.current.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
+    };
+  }, []);
+
+  function handleRemovePhoto(idx: number) {
+    const existing = pendingPhotosRef.current.get(idx);
+    if (existing) URL.revokeObjectURL(existing.previewUrl);
+    setPendingPhotos((prev) => {
+      const next = new Map(prev);
+      next.delete(idx);
+      return next;
+    });
+  }
+
+  function handlePhotoClick(idx: number) {
+    pendingPhotoTarget.current = idx;
+    fileInputRef.current?.click();
+  }
+
+  function handlePhotoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || pendingPhotoTarget.current === null) return;
+
+    if (file.size === 0) { toast.error('File is empty'); return; }
+    if (file.size > 20 * 1024 * 1024) { toast.error('File must be under 20MB'); return; }
+    if (file.type && !file.type.startsWith('image/')) { toast.error('Only image files are allowed'); return; }
+
+    const idx = pendingPhotoTarget.current;
+    const previewUrl = URL.createObjectURL(file);
+    const existing = pendingPhotosRef.current.get(idx);
+    if (existing) URL.revokeObjectURL(existing.previewUrl);
+
+    setPendingPhotos((prev) => {
+      const next = new Map(prev);
+      next.set(idx, { file, previewUrl });
+      return next;
+    });
+  }
+
+  function handleRemoveItem(idx: number) {
+    const existing = pendingPhotosRef.current.get(idx);
+    if (existing) URL.revokeObjectURL(existing.previewUrl);
+
+    // Rebuild map with shifted indices
+    const next = new Map<number, PendingPhoto>();
+    pendingPhotosRef.current.forEach((v, k) => {
+      if (k < idx) next.set(k, v);
+      else if (k > idx) next.set(k - 1, v);
+    });
+    setPendingPhotos(next);
+    remove(idx);
   }
 
   function handleChangePhone() {
@@ -135,7 +174,7 @@ export function NewTransactionForm() {
   const total = applyPromo(rawTotal, selectedPromo);
 
   const createMut = useMutation({
-    mutationFn: (data: FormData) => {
+    mutationFn: (data: TransactionFormData) => {
       const allItems = data.items.map((i) => {
         const itemPrice = calcItemPrice(i, services as Service[]);
         return {
@@ -159,7 +198,24 @@ export function NewTransactionForm() {
         items: allItems,
       });
     },
-    onSuccess: (txn) => {
+    onSuccess: async (txn) => {
+      const items = txn.items ?? [];
+      const uploads = items
+        .map((item, idx) => ({ item, pending: pendingPhotosRef.current.get(idx) }))
+        .filter((x): x is { item: typeof x.item; pending: PendingPhoto } => !!x.pending);
+
+      if (uploads.length > 0) {
+        setIsUploadingPhotos(true);
+        await Promise.allSettled(
+          uploads.map(({ item, pending }) =>
+            doPhotoUpload(txn.id, item.id, pending.file).catch(() => {
+              toast.error(`Photo upload failed for item "${item.shoeDescription || `#${item.id}`}"`);
+            }),
+          ),
+        );
+        setIsUploadingPhotos(false);
+      }
+
       toast.success('Transaction created');
       router.push(`/transactions/${txn.id}`);
     },
@@ -167,6 +223,8 @@ export function NewTransactionForm() {
       toast.error('Failed to create transaction', { description: err.message });
     },
   });
+
+  const isBusy = createMut.isPending || isUploadingPhotos;
 
   return (
     <div>
@@ -181,98 +239,41 @@ export function NewTransactionForm() {
         }
       />
 
-      <form onSubmit={handleSubmit((data) => setPendingSubmit(data))}>
+      {/* Hidden file input shared across all item rows */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handlePhotoFileChange}
+      />
+
+      <form onSubmit={handleSubmit(
+        (data) => setPendingSubmit(data),
+        () => {
+          // Zod validation failed — if we're still on the phone step the errors are on unmounted
+          // fields and won't be visible, so surface a toast instead.
+          if (customerStep === 'phone') {
+            toast.error('Customer required', { description: 'Enter and confirm the customer phone number.' });
+          }
+        },
+      )}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           <div className="col-span-2 space-y-6">
             {/* Customer */}
-            <div className="bg-white border border-zinc-200 rounded-lg p-5">
-              <div className="flex items-center gap-2 mb-4">
-                {customerStep === 'details' && (
-                  <button
-                    type="button"
-                    onClick={handleChangePhone}
-                    className="p-1.5 text-zinc-500 hover:text-zinc-950 bg-zinc-100 hover:bg-zinc-200 rounded-md transition-colors"
-                    title="Change number"
-                  >
-                    <ArrowLeftIcon size={13} weight="bold" />
-                  </button>
-                )}
-                <h2 className="text-sm font-semibold text-zinc-950">Customer</h2>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {customerStep === 'phone' ? (
-                  /* Step 1 — phone input full width with find button */
-                  <div className="col-span-2 flex flex-col gap-1.5">
-                    <span className="text-xs font-medium text-zinc-700">Phone number</span>
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="09XX XXX XXXX"
-                        className="flex-1 w-full"
-                        {...register('customerPhone')}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleFindCustomer();
-                          }
-                        }}
-                      />
-                      <Button
-                        type="button"
-                        variant="dark"
-                        size="sm"
-                        disabled={phoneValue.length !== 11 || lookingUp}
-                        onClick={handleFindCustomer}
-                        className="shrink-0"
-                      >
-                        {lookingUp ? <Spinner /> : <ArrowRightIcon size={14} weight="bold" />}
-                      </Button>
-                    </div>
-                    {errors.customerPhone && (
-                      <p className="text-xs text-red-500">{errors.customerPhone.message}</p>
-                    )}
-                  </div>
-                ) : (
-                  /* Step 2 — Name full width, Phone + Email side by side */
-                  <>
-                    <div className="col-span-2 flex flex-col gap-1.5">
-                      <Input
-                        label="Name"
-                        placeholder="Juan dela Cruz"
-                        {...register('customerName')}
-                      />
-                      {errors.customerName && (
-                        <p className="text-xs text-red-500">{errors.customerName.message}</p>
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <span className="text-xs font-medium text-zinc-700">Phone</span>
-                      <Input
-                        placeholder="09XX XXX XXXX"
-                        className="w-full"
-                        readOnly
-                        {...register('customerPhone')}
-                      />
-                      {existingCustomer
-                        ? <p className="text-xs text-emerald-600">Existing customer</p>
-                        : <p className="text-xs text-zinc-400">New customer</p>
-                      }
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <Input
-                        label="Email"
-                        type="email"
-                        placeholder="juan@example.com"
-                        {...register('customerEmail')}
-                      />
-                      {errors.customerEmail && (
-                        <p className="text-xs text-red-500">{errors.customerEmail.message}</p>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
+            <CustomerLookupSection
+              register={register}
+              errors={errors}
+              setValue={setValue}
+              control={control}
+              step={customerStep}
+              existingCustomer={existingCustomer}
+              onCustomerResolved={(customer) => {
+                setExistingCustomer(customer);
+                setCustomerStep('details');
+              }}
+              onChangePhone={handleChangePhone}
+            />
 
             {/* Items */}
             <div className="bg-white border border-zinc-200 rounded-lg p-5">
@@ -294,130 +295,24 @@ export function NewTransactionForm() {
               )}
 
               <div className="space-y-3">
-                {fields.map((field, idx) => {
-                  const primaryServiceId = watchedItems?.[idx]?.primaryServiceId ?? '';
-                  const addonServiceIds = watchedItems?.[idx]?.addonServiceIds ?? [];
-
-                  return (
-                    <div
-                      key={field.id}
-                      className="p-3 bg-zinc-50 rounded-md space-y-3"
-                    >
-                      {/* Shoe description row */}
-                      <div className="flex gap-2 items-start">
-                        <div className="flex-1 space-y-1">
-                          <Input
-                            placeholder="e.g. Nike Air Max 1, White/Black"
-                            {...register(`items.${idx}.shoeDescription`)}
-                          />
-                          {errors.items?.[idx]?.shoeDescription && (
-                            <p className="text-xs text-red-500">
-                              {errors.items[idx].shoeDescription?.message}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-1.5 pt-0.5">
-                          <div
-                            title="Photo upload available after save"
-                            className="w-9 h-9 rounded-md border-2 border-dashed border-zinc-300 flex items-center justify-center bg-zinc-100 cursor-not-allowed shrink-0"
-                          >
-                            <CameraIcon size={14} className="text-zinc-500" />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => remove(idx)}
-                            disabled={fields.length === 1}
-                            className="w-9 h-9 flex items-center justify-center rounded-md bg-red-400 text-white hover:bg-red-500 transition-colors disabled:opacity-30 shrink-0"
-                          >
-                            <TrashIcon size={14} />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Primary service picker */}
-                      <div>
-                        <span className="text-xs font-medium text-zinc-500 block mb-1.5">
-                          Primary Service
-                        </span>
-                        {primaryServices.length === 0 ? (
-                          <p className="text-xs text-zinc-400">No primary services available.</p>
-                        ) : (
-                          <div className="flex flex-wrap gap-1.5">
-                            {primaryServices.map((s) => {
-                              const selected = primaryServiceId === String(s.id);
-                              return (
-                                <button
-                                  key={s.id}
-                                  type="button"
-                                  onClick={() =>
-                                    setValue(
-                                      `items.${idx}.primaryServiceId`,
-                                      selected ? '' : String(s.id),
-                                    )
-                                  }
-                                  className={cn(
-                                    'inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-md border transition-colors duration-100',
-                                    selected
-                                      ? 'bg-zinc-950 text-white border-zinc-950'
-                                      : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50',
-                                  )}
-                                >
-                                  {s.name}
-                                  <span className={cn('font-mono', selected ? 'opacity-60' : 'text-zinc-400')}>
-                                    ₱{parseFloat(s.price).toLocaleString()}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                        {errors.items?.[idx]?.primaryServiceId && (
-                          <p className="text-xs text-red-500 mt-1">
-                            {errors.items[idx].primaryServiceId?.message}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Add-on picker */}
-                      {addonServices.length > 0 && (
-                        <div>
-                          <span className="text-xs font-medium text-zinc-500 block mb-1.5">
-                            Add-ons
-                          </span>
-                          <div className="flex flex-wrap gap-1.5">
-                            {addonServices.map((s) => {
-                              const selected = addonServiceIds.includes(String(s.id));
-                              return (
-                                <button
-                                  key={s.id}
-                                  type="button"
-                                  onClick={() => {
-                                    const next = selected
-                                      ? addonServiceIds.filter((id) => id !== String(s.id))
-                                      : [...addonServiceIds, String(s.id)];
-                                    setValue(`items.${idx}.addonServiceIds`, next);
-                                  }}
-                                  className={cn(
-                                    'inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-md border transition-colors duration-100',
-                                    selected
-                                      ? 'bg-zinc-700 text-white border-zinc-700'
-                                      : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50',
-                                  )}
-                                >
-                                  {s.name}
-                                  <span className={cn('font-mono', selected ? 'opacity-60' : 'text-zinc-400')}>
-                                    +₱{parseFloat(s.price).toLocaleString()}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                {fields.map((field, idx) => (
+                  <TransactionItemCard
+                    key={field.id}
+                    index={idx}
+                    register={register}
+                    errors={errors}
+                    setValue={setValue}
+                    primaryServices={primaryServices}
+                    addonServices={addonServices}
+                    primaryServiceId={watchedItems?.[idx]?.primaryServiceId ?? ''}
+                    addonServiceIds={watchedItems?.[idx]?.addonServiceIds ?? []}
+                    pendingPhoto={pendingPhotos.get(idx)}
+                    canRemove={fields.length > 1}
+                    onRemove={() => handleRemoveItem(idx)}
+                    onPhotoClick={() => handlePhotoClick(idx)}
+                    onRemovePhoto={() => handleRemovePhoto(idx)}
+                  />
+                ))}
               </div>
             </div>
           </div>
@@ -479,6 +374,12 @@ export function NewTransactionForm() {
                     {(watchedItems ?? []).filter((i) => i?.primaryServiceId).length}
                   </span>
                 </div>
+                {pendingPhotos.size > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-zinc-500">Photos</span>
+                    <span className="font-mono text-zinc-950">{pendingPhotos.size}</span>
+                  </div>
+                )}
                 {selectedPromo && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-zinc-500">Promo</span>
@@ -501,114 +402,32 @@ export function NewTransactionForm() {
               <Button
                 type="submit"
                 className="w-full mt-4"
-                disabled={createMut.isPending}
+                disabled={isBusy}
               >
-                {createMut.isPending ? <Spinner /> : 'Create Transaction'}
+                {isBusy ? <Spinner /> : 'Create Transaction'}
               </Button>
             </div>
           </div>
         </div>
       </form>
 
-      <ConfirmDialog
+      <TransactionConfirmDialog
         open={pendingSubmit !== null}
-        title="Create transaction?"
-        confirmLabel="Confirm & Create"
-        confirmVariant="dark"
-        loading={createMut.isPending}
+        data={pendingSubmitStable.current}
+        services={services as Service[]}
+        pendingPhotos={pendingPhotos}
+        selectedPromo={selectedPromo}
+        total={total}
+        rawTotal={rawTotal}
+        existingCustomer={existingCustomer}
+        isBusy={isBusy}
+        isUploadingPhotos={isUploadingPhotos}
         onConfirm={() => {
           if (!pendingSubmit) return;
           createMut.mutate(pendingSubmit);
         }}
-        onCancel={() => setPendingSubmit(null)}
-      >
-        {(() => {
-          const d = pendingSubmitStable.current;
-          if (!d) return null;
-          return (
-            <div className="space-y-4">
-              {/* Customer grid */}
-              <div>
-                <p className="text-xs font-medium text-zinc-400 uppercase tracking-wide mb-2">Customer</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {d.customerName && (
-                    <div className="bg-zinc-50 rounded-md p-2.5">
-                      <p className="text-xs text-zinc-400 mb-0.5">Name</p>
-                      <p className="text-sm text-zinc-950 truncate">{d.customerName}</p>
-                    </div>
-                  )}
-                  <div className="bg-zinc-50 rounded-md p-2.5">
-                    <p className="text-xs text-zinc-400 mb-0.5">Phone</p>
-                    <p className="text-sm font-mono text-zinc-950">{d.customerPhone}</p>
-                  </div>
-                  <div className="bg-zinc-50 rounded-md p-2.5">
-                    <p className="text-xs text-zinc-400 mb-0.5">Pickup</p>
-                    <p className="text-sm text-zinc-950">{formatDate(d.pickupDate)}</p>
-                  </div>
-                  {existingCustomer !== undefined && (
-                    <div className="bg-zinc-50 rounded-md p-2.5">
-                      <p className="text-xs text-zinc-400 mb-0.5">Customer</p>
-                      <p className={`text-sm ${existingCustomer ? 'text-emerald-600' : 'text-zinc-500'}`}>
-                        {existingCustomer ? 'Existing' : 'New'}
-                      </p>
-                    </div>
-                  )}
-                  {selectedPromo && (
-                    <div className="bg-zinc-50 rounded-md p-2.5">
-                      <p className="text-xs text-zinc-400 mb-0.5">Promo</p>
-                      <p className="text-sm font-mono text-emerald-600">{selectedPromo.code} · -{parseFloat(selectedPromo.percent).toFixed(0)}%</p>
-                    </div>
-                  )}
-                  {d.note && (
-                    <div className="bg-zinc-50 rounded-md p-2.5 col-span-2">
-                      <p className="text-xs text-zinc-400 mb-0.5">Note</p>
-                      <p className="text-sm text-zinc-700 whitespace-pre-wrap">{d.note}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Items */}
-              <div>
-                <p className="text-xs font-medium text-zinc-400 uppercase tracking-wide mb-2">Items</p>
-                <div className="space-y-1.5">
-                  {d.items.map((item, idx) => {
-                    const svc = item.primaryServiceId
-                      ? (services as Service[]).find((s) => s.id === parseInt(item.primaryServiceId, 10))
-                      : null;
-                    const addons = (item.addonServiceIds ?? [])
-                      .map((id) => (services as Service[]).find((s) => s.id === parseInt(id, 10)))
-                      .filter(Boolean) as Service[];
-                    return (
-                      <div key={idx} className="bg-zinc-50 rounded-md p-2.5">
-                        <p className="text-sm text-zinc-950 truncate mb-1.5">{item.shoeDescription || `Item ${idx + 1}`}</p>
-                        <div className="flex flex-wrap gap-1">
-                          {svc && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-zinc-200 text-zinc-600">
-                              {svc.name}
-                            </span>
-                          )}
-                          {addons.map((a) => (
-                            <span key={a.id} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-zinc-100 text-zinc-500">
-                              +{a.name}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Total */}
-              <div className="flex justify-between items-center border border-emerald-500 rounded-md px-3 py-2.5">
-                <span className="text-sm font-medium text-zinc-950">Total</span>
-                <span className="font-mono font-semibold text-emerald-600">{formatPeso(String(total.toFixed(2)))}</span>
-              </div>
-            </div>
-          );
-        })()}
-      </ConfirmDialog>
+        onCancel={() => { if (!isBusy) setPendingSubmit(null); }}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { CameraIcon } from '@phosphor-icons/react';
 import { formatPeso, STATUS_COLORS, cn } from '@/lib/utils';
@@ -35,31 +36,81 @@ function StatusLoadingPill({ status }: { status: string }) {
 interface TransactionItemColumnsOptions {
   onStatusChange: (itemId: number, status: ItemStatus) => void;
   onImageClick?: (url: string, label: string) => void;
+  onUploadClick?: (itemId: number, type: 'before' | 'after') => void;
   loadingItemIds?: Set<number>;
+  uploadingItemIds?: Set<string>; // `${itemId}-${type}`
 }
 
 const ITEM_STATUSES: ItemStatus[] = ['pending', 'in_progress', 'done', 'claimed', 'cancelled'];
 
-function ImageCell({ url, label, onImageClick }: { url: string | null; label: string; onImageClick?: (url: string, label: string) => void }) {
+
+function ImageCell({
+  url,
+  label,
+  uploading,
+  onImageClick,
+  onUploadClick,
+}: {
+  url: string | null;
+  label: string;
+  uploading?: boolean;
+  onImageClick?: (url: string, label: string) => void;
+  onUploadClick?: () => void;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  // Handle already-cached images — onLoad won't fire for them
+  useEffect(() => {
+    if (imgRef.current?.complete) setLoaded(true);
+  }, []);
+
+  if (uploading) {
+    return (
+      <div className="w-16 h-16 rounded border border-zinc-200 flex items-center justify-center bg-zinc-50 animate-pulse">
+        <CameraIcon size={18} className="text-zinc-400" />
+      </div>
+    );
+  }
   if (!url) {
     return (
-      <div className="w-9 h-9 rounded border border-dashed border-zinc-300 flex items-center justify-center bg-zinc-50">
-        <CameraIcon size={14} className="text-zinc-400" />
-      </div>
+      <button
+        onClick={(e) => { e.stopPropagation(); onUploadClick?.(); }}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-dashed border-zinc-300 rounded-md hover:border-blue-400 hover:bg-blue-50 transition-colors group"
+      >
+        <CameraIcon size={13} className="text-zinc-400 group-hover:text-blue-500 transition-colors shrink-0" />
+        <span className="text-xs font-medium text-zinc-500 group-hover:text-blue-600 transition-colors whitespace-nowrap">
+          Upload {label.toLowerCase()}
+        </span>
+      </button>
     );
   }
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onImageClick?.(url, label); }}
-      className="w-9 h-9 rounded border border-zinc-200 overflow-hidden hover:opacity-80 transition-opacity duration-150 shrink-0"
+      className="w-16 h-16 rounded border border-zinc-200 overflow-hidden hover:opacity-80 transition-opacity duration-150 shrink-0 relative"
     >
+      {/* Skeleton shown until image loads */}
+      {!loaded && (
+        <div className="absolute inset-0 bg-zinc-100 animate-pulse" />
+      )}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={url} alt={label} className="w-full h-full object-cover" />
+      <img
+        ref={imgRef}
+        src={url}
+        alt={label}
+        loading="lazy"
+        onLoad={() => setLoaded(true)}
+        className={cn(
+          'w-full h-full object-cover transition-opacity duration-200',
+          loaded ? 'opacity-100' : 'opacity-0',
+        )}
+      />
     </button>
   );
 }
 
-export const createTransactionItemColumns = ({ onStatusChange, onImageClick, loadingItemIds }: TransactionItemColumnsOptions): ColumnDef<TransactionItem>[] => [
+export const createTransactionItemColumns = ({ onStatusChange, onImageClick, onUploadClick, loadingItemIds, uploadingItemIds }: TransactionItemColumnsOptions): ColumnDef<TransactionItem>[] => [
   {
     accessorKey: 'shoeDescription',
     header: 'Shoe',
@@ -96,14 +147,26 @@ export const createTransactionItemColumns = ({ onStatusChange, onImageClick, loa
     accessorKey: 'beforeImageUrl',
     header: 'Before',
     cell: ({ row }) => (
-      <ImageCell url={row.original.beforeImageUrl} label="Before" onImageClick={onImageClick} />
+      <ImageCell
+        url={row.original.beforeImageUrl}
+        label="Before"
+        uploading={uploadingItemIds?.has(`${row.original.id}-before`)}
+        onImageClick={onImageClick}
+        onUploadClick={() => onUploadClick?.(row.original.id, 'before')}
+      />
     ),
   },
   {
     accessorKey: 'afterImageUrl',
     header: 'After',
     cell: ({ row }) => (
-      <ImageCell url={row.original.afterImageUrl} label="After" onImageClick={onImageClick} />
+      <ImageCell
+        url={row.original.afterImageUrl}
+        label="After"
+        uploading={uploadingItemIds?.has(`${row.original.id}-after`)}
+        onImageClick={onImageClick}
+        onUploadClick={() => onUploadClick?.(row.original.id, 'after')}
+      />
     ),
   },
   {

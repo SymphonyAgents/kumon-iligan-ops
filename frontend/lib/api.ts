@@ -136,6 +136,11 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify({ userType }),
       }),
+    updateBranch: (id: string, branchId: number) =>
+      apiFetch<AppUser>(`/users/${id}/branch`, {
+        method: 'PATCH',
+        body: JSON.stringify({ branchId }),
+      }),
   },
 
   branches: {
@@ -145,5 +150,13 @@ export const api = {
       apiFetch<Branch>('/branches', { method: 'POST', body: JSON.stringify(body) }),
     update: (id: number, body: Partial<{ name: string; address: string | null; phone: string | null; isActive: boolean }>) =>
       apiFetch<Branch>(`/branches/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  },
+
+  uploads: {
+    presignedUrl: (body: { txnId: number; itemId: number; type: 'before' | 'after'; extension: string }) =>
+      apiFetch<{ signedUrl: string; token: string; path: string; publicUrl: string }>('/uploads/presigned-url', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
   },
 };
