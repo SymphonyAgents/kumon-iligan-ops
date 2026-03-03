@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import QrScanner from 'qr-scanner';
+QrScanner.WORKER_PATH = '/qr-scanner-worker.min.js';
 import {
   Dialog,
   DialogContent,
