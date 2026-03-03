@@ -80,12 +80,12 @@ export default function ExpensesPage() {
       <PageHeader
         title="Expenses"
         subtitle="Daily operational expenses"
-        action={
+        action={isAdmin ? (
           <Button onClick={() => setShowForm((v) => !v)}>
             <ReceiptIcon size={14} weight="bold" />
             Add Expense
           </Button>
-        }
+        ) : undefined}
       />
 
       <div className="flex items-center gap-4 mb-6">
