@@ -16,10 +16,17 @@ import {
   MoneyIcon,
   CreditCardIcon,
   BankIcon,
-  CheckIcon,
-  XIcon,
-  PencilSimpleIcon,
+  PlusIcon,
 } from '@phosphor-icons/react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { formatPeso, formatDate, PAYMENT_METHOD_LABELS } from '@/lib/utils';
 import {
   useTransactionReportQuery,
@@ -117,8 +124,9 @@ export default function DashboardPage() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1); // 0 = overall year
   const [branchFilter, setBranchFilter] = useState<string>('all');
-  const [depositEditing, setDepositEditing] = useState<string | null>(null);
-  const [depositDraft, setDepositDraft] = useState('');
+  const [depositDialog, setDepositDialog] = useState<string | null>(null);
+  const [depositAmount, setDepositAmount] = useState('');
+  const [depositError, setDepositError] = useState('');
 
   const { data: currentUser } = useCurrentUserQuery();
   const isAdmin = currentUser?.userType === 'admin' || currentUser?.userType === 'superadmin';
@@ -331,8 +339,7 @@ export default function DashboardPage() {
               {METHOD_ORDER.map((key) => {
                 const config = PAYMENT_METHOD_CONFIG[key];
                 const amount = parseFloat(collectionsSummary?.[key] ?? '0');
-                const depositAmount = parseFloat(depositsData?.[key] ?? '0');
-                const isEditingDeposit = depositEditing === key;
+                const depositedAmount = parseFloat(depositsData?.[key] ?? '0');
                 return (
                   <div key={key} className="bg-white border border-zinc-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
@@ -348,46 +355,16 @@ export default function DashboardPage() {
                     )}
                     <div className="mt-2 pt-2 border-t border-zinc-100">
                       <p className="text-xs text-zinc-400 mb-1">Deposited</p>
-                      {isEditingDeposit ? (
-                        <div className="flex items-center gap-1">
-                          <input
-                            autoFocus
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={depositDraft}
-                            onChange={(e) => setDepositDraft(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                upsertDepositMut.mutate({ method: key, amount: depositDraft || '0' });
-                                setDepositEditing(null);
-                              }
-                              if (e.key === 'Escape') setDepositEditing(null);
-                            }}
-                            className="w-full px-2 py-0.5 text-xs font-mono border border-blue-300 rounded focus:outline-none"
-                          />
-                          <button
-                            onClick={() => {
-                              upsertDepositMut.mutate({ method: key, amount: depositDraft || '0' });
-                              setDepositEditing(null);
-                            }}
-                            className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
-                          >
-                            <CheckIcon size={12} weight="bold" />
-                          </button>
-                          <button onClick={() => setDepositEditing(null)} className="p-1 text-zinc-400 hover:bg-zinc-100 rounded">
-                            <XIcon size={12} />
-                          </button>
-                        </div>
-                      ) : (
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs text-zinc-700">{formatPeso(depositedAmount)}</span>
                         <button
-                          onClick={() => { setDepositEditing(key); setDepositDraft(depositAmount > 0 ? String(depositAmount.toFixed(2)) : ''); }}
-                          className="flex items-center gap-1.5 group w-full text-left"
+                          onClick={() => { setDepositDialog(key); setDepositAmount(''); setDepositError(''); }}
+                          className="flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-700 transition-colors"
                         >
-                          <span className="font-mono text-xs text-zinc-700">{formatPeso(depositAmount)}</span>
-                          <PencilSimpleIcon size={11} className="text-zinc-300 group-hover:text-zinc-500 transition-colors" />
+                          <PlusIcon size={10} weight="bold" />
+                          Add
                         </button>
-                      )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -521,6 +498,59 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Deposit dialog */}
+      <Dialog
+        open={depositDialog !== null}
+        onOpenChange={(open) => { if (!open && !upsertDepositMut.isPending) setDepositDialog(null); }}
+      >
+        <DialogContent className="bg-white sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-base">Record Deposit</DialogTitle>
+            <DialogDescription className="text-xs text-zinc-400">
+              {depositDialog ? PAYMENT_METHOD_CONFIG[depositDialog]?.label : ''} · {month === 0 ? `${year} Overall` : `${MONTHS[(month || 1) - 1]} ${year}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-1">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-zinc-700">Amount (₱)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                autoFocus
+                value={depositAmount}
+                onChange={(e) => { setDepositAmount(e.target.value); setDepositError(''); }}
+                className="w-full px-3 py-2 text-sm font-mono bg-white border border-zinc-200 rounded-md text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                placeholder="0.00"
+              />
+              {depositError && <p className="text-xs text-red-500">{depositError}</p>}
+            </div>
+            {depositDialog && depositsData && parseFloat(depositsData[depositDialog] ?? '0') > 0 && (
+              <p className="text-xs text-zinc-400">
+                Current total: <span className="font-mono">{formatPeso(depositsData[depositDialog])}</span>
+                {' '}— this amount will be added to it.
+              </p>
+            )}
+            <Button
+              variant="dark"
+              size="sm"
+              className="w-full"
+              disabled={upsertDepositMut.isPending || !depositAmount}
+              onClick={() => {
+                const amt = parseFloat(depositAmount);
+                if (isNaN(amt) || amt <= 0) { setDepositError('Enter a valid amount'); return; }
+                upsertDepositMut.mutate(
+                  { method: depositDialog!, amount: depositAmount },
+                  { onSuccess: () => setDepositDialog(null) },
+                );
+              }}
+            >
+              {upsertDepositMut.isPending ? <Spinner /> : 'Add Deposit'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

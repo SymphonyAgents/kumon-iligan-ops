@@ -1,4 +1,5 @@
-import { Controller, Get, Patch, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Body, Query, Req, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
 import { SupabaseAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -26,6 +27,7 @@ export class DepositsController {
   @Patch()
   upsert(
     @Body() body: { year: number; month: number; method: string; amount: string; branchId?: number },
+    @Req() req: Request & { user?: { id: string } },
   ) {
     return this.depositsService.upsert(
       body.year,
@@ -33,6 +35,7 @@ export class DepositsController {
       body.method,
       body.amount,
       body.branchId,
+      req.user?.id,
     );
   }
 }

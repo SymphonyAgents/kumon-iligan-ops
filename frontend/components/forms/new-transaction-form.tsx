@@ -28,7 +28,7 @@ import { TransactionConfirmDialog } from '@/components/transactions/TransactionC
 import { ClaimStubDialog } from '@/components/transactions/ClaimStubDialog';
 import type { Service, Promo, Customer, Transaction } from '@/lib/types';
 import { calcItemPrice, calcRawTotal, findPromo, applyPromo } from '@/utils/pricing';
-import { PAYMENT_METHOD_LABELS } from '@/lib/utils';
+import { PAYMENT_METHOD_LABELS, cn } from '@/lib/utils';
 
 const PAYMENT_METHODS = ['cash', 'gcash', 'card', 'bank_deposit'] as const;
 
@@ -248,6 +248,7 @@ export function NewTransactionForm() {
     },
   });
 
+  const paymentExceedsTotal = !!watchedPaymentAmount && parseFloat(watchedPaymentAmount) > total;
   const isBusy = createMut.isPending || isUploadingPhotos;
 
   return (
@@ -421,8 +422,18 @@ export function NewTransactionForm() {
                       step="0.01"
                       placeholder="0.00"
                       {...register('paymentAmount')}
-                      className="px-3 py-2 text-sm font-mono bg-white border border-zinc-200 rounded-md text-right text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      className={cn(
+                        'px-3 py-2 text-sm font-mono bg-white border rounded-md text-right text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500',
+                        watchedPaymentAmount && parseFloat(watchedPaymentAmount) > total
+                          ? 'border-red-400'
+                          : 'border-zinc-200',
+                      )}
                     />
+                    {watchedPaymentAmount && parseFloat(watchedPaymentAmount) > total && (
+                      <p className="text-xs text-red-500">
+                        Amount cannot exceed total of ₱{total.toFixed(2)}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -477,7 +488,7 @@ export function NewTransactionForm() {
               <Button
                 type="submit"
                 className="w-full mt-4"
-                disabled={isBusy}
+                disabled={isBusy || paymentExceedsTotal}
               >
                 {isBusy ? <Spinner /> : 'Create Transaction'}
               </Button>

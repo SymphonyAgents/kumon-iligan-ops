@@ -1,12 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { and, eq } from 'drizzle-orm';
 import { DrizzleService } from '../db/drizzle.service';
+import { AuditService } from '../audit/audit.service';
 import { deposits } from '../db/schema';
 import { toScaled, fromScaled } from '../utils/money';
 
 @Injectable()
 export class DepositsService {
-  constructor(private readonly drizzle: DrizzleService) {}
+  constructor(
+    private readonly drizzle: DrizzleService,
+    private readonly audit: AuditService,
+  ) {}
 
   async findByMonth(year: number, month: number, branchId?: number) {
     const conditions = [eq(deposits.year, year), eq(deposits.month, month)];
@@ -29,8 +33,8 @@ export class DepositsService {
     return result;
   }
 
-  async upsert(year: number, month: number, method: string, amount: string, branchId?: number) {
-    const scaled = toScaled(amount);
+  async upsert(year: number, month: number, method: string, amount: string, branchId?: number, performedBy?: string) {
+    const addScaled = toScaled(amount);
 
     const existing = await this.drizzle.db
       .select()
@@ -44,19 +48,33 @@ export class DepositsService {
         ),
       );
 
+    let result: { id: number; amount: number; method: string };
+
     if (existing.length > 0) {
+      const newTotal = existing[0].amount + addScaled;
       const [updated] = await this.drizzle.db
         .update(deposits)
-        .set({ amount: scaled, updatedAt: new Date() })
+        .set({ amount: newTotal, updatedAt: new Date() })
         .where(eq(deposits.id, existing[0].id))
         .returning();
-      return { ...updated, amount: fromScaled(updated.amount) };
+      result = updated;
+    } else {
+      const [created] = await this.drizzle.db
+        .insert(deposits)
+        .values({ year, month, method, amount: addScaled, branchId: branchId ?? null })
+        .returning();
+      result = created;
     }
 
-    const [created] = await this.drizzle.db
-      .insert(deposits)
-      .values({ year, month, method, amount: scaled, branchId: branchId ?? null })
-      .returning();
-    return { ...created, amount: fromScaled(created.amount) };
+    await this.audit.log({
+      action: `Recorded deposit: ${method} +${fromScaled(addScaled)} (total: ${fromScaled(result.amount)}) for ${year}-${String(month).padStart(2, '0')}`,
+      entityType: 'deposit',
+      entityId: String(result.id),
+      performedBy,
+      branchId,
+      details: { year, month, method, added: fromScaled(addScaled), total: fromScaled(result.amount) },
+    });
+
+    return { ...result, amount: fromScaled(result.amount) };
   }
 }
