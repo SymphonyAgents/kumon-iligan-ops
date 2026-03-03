@@ -1,15 +1,24 @@
 'use client';
 
 import { type ColumnDef } from '@tanstack/react-table';
-import { TrashIcon } from '@phosphor-icons/react';
+import { TrashIcon, PencilSimpleIcon } from '@phosphor-icons/react';
 import { formatDate } from '@/lib/utils';
 import { toTitleCase } from '@/utils/text';
 import { Switch } from '@/components/ui/switch';
 import type { Promo } from '@/lib/types';
 
+export interface PromoEditForm {
+  name: string;
+  code: string;
+  percent: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
 interface PromoColumnsOptions {
   onDelete: (promo: Promo) => void;
   onToggle: (id: number, isActive: boolean) => void;
+  onStartEdit?: (p: Promo) => void;
 }
 
 const isPromoActive = (p: Promo): boolean => {
@@ -20,7 +29,11 @@ const isPromoActive = (p: Promo): boolean => {
   return true;
 };
 
-export const createPromoColumns = ({ onDelete, onToggle }: PromoColumnsOptions): ColumnDef<Promo>[] => [
+export const createPromoColumns = ({
+  onDelete,
+  onToggle,
+  onStartEdit,
+}: PromoColumnsOptions): ColumnDef<Promo>[] => [
   {
     accessorKey: 'name',
     header: 'Name',
@@ -47,13 +60,16 @@ export const createPromoColumns = ({ onDelete, onToggle }: PromoColumnsOptions):
   {
     accessorKey: 'dateFrom',
     header: 'Valid Period',
-    cell: ({ row }) => (
-      <span className="text-zinc-500 text-xs">
-        {row.original.dateFrom || row.original.dateTo
-          ? `${formatDate(row.original.dateFrom)} — ${formatDate(row.original.dateTo)}`
-          : 'No expiry'}
-      </span>
-    ),
+    cell: ({ row }) => {
+      const p = row.original;
+      return (
+        <span className="text-zinc-500 text-xs">
+          {p.dateFrom || p.dateTo
+            ? `${formatDate(p.dateFrom)} — ${formatDate(p.dateTo)}`
+            : 'No expiry'}
+        </span>
+      );
+    },
   },
   {
     accessorKey: 'isActive',
@@ -79,11 +95,19 @@ export const createPromoColumns = ({ onDelete, onToggle }: PromoColumnsOptions):
             onCheckedChange={(checked) => { onToggle(p.id, checked); }}
             onClick={(e) => e.stopPropagation()}
           />
+          {onStartEdit && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onStartEdit(p); }}
+              className="p-2 text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 rounded transition-all"
+            >
+              <PencilSimpleIcon size={16} />
+            </button>
+          )}
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(p); }}
-            className="opacity-0 group-hover:opacity-100 p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
+            className="p-2 text-red-500 bg-red-50 hover:text-red-600 hover:bg-red-100 rounded transition-all"
           >
-            <TrashIcon size={14} />
+            <TrashIcon size={16} />
           </button>
         </div>
       );

@@ -37,3 +37,16 @@ export function useUpdateUserBranchMutation() {
     onError: (err: Error) => toast.error('Failed to update branch', { description: err.message }),
   });
 }
+
+export function useDeleteUserMutation(onSuccess?: () => void) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.users.delete(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: USERS_KEY });
+      toast.success('User removed');
+      onSuccess?.();
+    },
+    onError: (err: Error) => toast.error('Failed to remove user', { description: err.message }),
+  });
+}

@@ -14,3 +14,7 @@ node_modules/
 
 # OS
 .DS_Store
+
+# local docs — not for commits
+*.md
+!AGENTS.md

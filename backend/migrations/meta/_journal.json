@@ -29,6 +29,76 @@
       "when": 1772019324759,
       "tag": "0003_ambitious_mother_askani",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1772020000000,
+      "tag": "0004_add_new_pickup_date",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1772020000001,
+      "tag": "0005_add_customers",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1772020000002,
+      "tag": "0006_branches_and_audit_type",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1772020000003,
+      "tag": "0007_branches_address_phone",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1772020000004,
+      "tag": "0008_expenses_method",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1772020000005,
+      "tag": "0009_scale_monetary_values",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1772020000006,
+      "tag": "0010_users_is_active",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1772020000007,
+      "tag": "0011_customers_city",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1772020000008,
+      "tag": "0012_deposits",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1772514977000,
+      "tag": "0013_medical_sersi",
+      "breakpoints": true
     }
   ]
 }

@@ -3,7 +3,11 @@ import { ItemStatus, PaymentMethod, ServiceType, TransactionStatus } from './con
 export interface Branch {
   id: number;
   name: string;
-  address: string | null;
+  streetName: string | null;
+  barangay: string | null;
+  city: string | null;
+  province: string | null;
+  country: string | null;
   phone: string | null;
   isActive: boolean;
   createdAt: string;
@@ -22,8 +26,14 @@ export interface Customer {
   phone: string;
   name: string | null;
   email: string | null;
+  streetName: string | null;
+  barangay: string | null;
+  city: string | null;
+  province: string | null;
+  country: string | null;
   createdAt: string;
   updatedAt: string | null;
+  shoesCount?: number;
 }
 
 export interface Service {
@@ -66,6 +76,7 @@ export interface ClaimPayment {
   transactionId: number;
   method: PaymentMethod;
   amount: string;
+  referenceNumber: string | null;
   paidAt: string;
 }
 
@@ -75,6 +86,10 @@ export interface Transaction {
   customerName: string | null;
   customerPhone: string | null;
   customerEmail: string | null;
+  customerStreetName: string | null;
+  customerBarangay: string | null;
+  customerCity: string | null;
+  customerProvince: string | null;
   status: TransactionStatus;
   note: string | null;
   pickupDate: string | null;
@@ -132,6 +147,21 @@ export interface AppUser {
   userType: 'admin' | 'staff' | 'superadmin';
   branchId: number | null;
   createdAt: string;
+}
+
+export interface DepositAuditEntry {
+  id: number;
+  createdAt: string;
+  performedBy: string | null;
+  performedByEmail: string | null;
+  branchId: number | null;
+  details: {
+    year: number;
+    month: number;
+    method: string;
+    added: string;
+    total: string;
+  } | null;
 }
 
 export interface TodayCollection {

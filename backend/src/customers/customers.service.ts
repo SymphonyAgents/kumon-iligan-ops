@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, ne, and, sql } from 'drizzle-orm';
 import { DrizzleService } from '../db/drizzle.service';
-import { customers } from '../db/schema';
+import { customers, transactions, transactionItems } from '../db/schema';
 
 @Injectable()
 export class CustomersService {
@@ -9,8 +9,30 @@ export class CustomersService {
 
   async findAll() {
     return this.drizzle.db
-      .select()
+      .select({
+        id: customers.id,
+        phone: customers.phone,
+        name: customers.name,
+        email: customers.email,
+        streetName: customers.streetName,
+        barangay: customers.barangay,
+        city: customers.city,
+        province: customers.province,
+        country: customers.country,
+        createdAt: customers.createdAt,
+        updatedAt: customers.updatedAt,
+        shoesCount: sql<number>`cast(count(distinct ${transactionItems.id}) as int)`,
+      })
       .from(customers)
+      .leftJoin(transactions, eq(transactions.customerPhone, customers.phone))
+      .leftJoin(
+        transactionItems,
+        and(
+          eq(transactionItems.transactionId, transactions.id),
+          ne(transactionItems.status, 'cancelled'),
+        ),
+      )
+      .groupBy(customers.id)
       .orderBy(desc(customers.createdAt));
   }
 
@@ -22,13 +44,27 @@ export class CustomersService {
     return customer ?? null;
   }
 
-  async upsert(phone: string, name?: string | null, email?: string | null) {
+  async upsert(
+    phone: string,
+    name?: string | null,
+    email?: string | null,
+    streetName?: string | null,
+    barangay?: string | null,
+    city?: string | null,
+    province?: string | null,
+    country?: string | null,
+  ) {
     const [result] = await this.drizzle.db
       .insert(customers)
       .values({
         phone,
         name: name ?? null,
         email: email ?? null,
+        streetName: streetName ?? null,
+        barangay: barangay ?? null,
+        city: city ?? null,
+        province: province ?? null,
+        country: country ?? null,
         updatedAt: new Date(),
       })
       .onConflictDoUpdate({
@@ -36,6 +72,11 @@ export class CustomersService {
         set: {
           name: name ?? null,
           email: email ?? null,
+          streetName: streetName ?? null,
+          barangay: barangay ?? null,
+          city: city ?? null,
+          province: province ?? null,
+          country: country ?? null,
           updatedAt: new Date(),
         },
       })

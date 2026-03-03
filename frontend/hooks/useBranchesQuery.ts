@@ -17,7 +17,7 @@ export function useBranchesQuery(activeOnly = false) {
 export function useCreateBranchMutation(onSuccess?: () => void) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { name: string; address?: string; phone?: string }) => api.branches.create(body),
+    mutationFn: (body: { name: string; streetName?: string; barangay?: string; city?: string; province?: string; country?: string; phone?: string }) => api.branches.create(body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: BRANCHES_KEY });
       toast.success('Branch created');
@@ -30,7 +30,7 @@ export function useCreateBranchMutation(onSuccess?: () => void) {
 export function useUpdateBranchMutation(onSuccess?: () => void) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...body }: { id: number; name?: string; address?: string | null; phone?: string | null; isActive?: boolean }) =>
+    mutationFn: ({ id, ...body }: { id: number; name?: string; streetName?: string | null; barangay?: string | null; city?: string | null; province?: string | null; country?: string | null; phone?: string | null; isActive?: boolean }) =>
       api.branches.update(id, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: BRANCHES_KEY });
@@ -38,5 +38,18 @@ export function useUpdateBranchMutation(onSuccess?: () => void) {
       onSuccess?.();
     },
     onError: (err: Error) => toast.error('Failed to update branch', { description: err.message }),
+  });
+}
+
+export function useDeleteBranchMutation(onSuccess?: () => void) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.branches.update(id, { isActive: false }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: BRANCHES_KEY });
+      toast.success('Branch deleted');
+      onSuccess?.();
+    },
+    onError: (err: Error) => toast.error('Failed to delete branch', { description: err.message }),
   });
 }

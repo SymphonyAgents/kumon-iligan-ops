@@ -153,11 +153,36 @@ export class TransactionsService {
       .from(claimPayments)
       .where(eq(claimPayments.transactionId, id));
 
+    // Fetch customer address if phone is available
+    let customerAddress: {
+      streetName: string | null;
+      barangay: string | null;
+      city: string | null;
+      province: string | null;
+    } | null = null;
+    if (row.txn.customerPhone) {
+      const [cust] = await this.drizzle.db
+        .select({
+          streetName: customers.streetName,
+          barangay: customers.barangay,
+          city: customers.city,
+          province: customers.province,
+        })
+        .from(customers)
+        .where(eq(customers.phone, row.txn.customerPhone))
+        .limit(1);
+      customerAddress = cust ?? null;
+    }
+
     return {
       ...mapTxn(row.txn),
       promo: row.promo ?? null,
       items,
       payments: payments.map((p) => ({ ...p, amount: fromScaled(p.amount) })),
+      customerStreetName: customerAddress?.streetName ?? null,
+      customerBarangay: customerAddress?.barangay ?? null,
+      customerCity: customerAddress?.city ?? null,
+      customerProvince: customerAddress?.province ?? null,
     };
   }
 
@@ -234,6 +259,11 @@ export class TransactionsService {
           phone: dto.customerPhone,
           name: dto.customerName ?? null,
           email: dto.customerEmail ?? null,
+          streetName: dto.customerStreetName ?? null,
+          barangay: dto.customerBarangay ?? null,
+          city: dto.customerCity ?? null,
+          province: dto.customerProvince ?? null,
+          country: dto.customerCountry ?? null,
           updatedAt: new Date(),
         })
         .onConflictDoUpdate({
@@ -241,6 +271,11 @@ export class TransactionsService {
           set: {
             name: dto.customerName ?? null,
             email: dto.customerEmail ?? null,
+            streetName: dto.customerStreetName ?? null,
+            barangay: dto.customerBarangay ?? null,
+            city: dto.customerCity ?? null,
+            province: dto.customerProvince ?? null,
+            country: dto.customerCountry ?? null,
             updatedAt: new Date(),
           },
         });
@@ -320,6 +355,7 @@ export class TransactionsService {
         auditType = AUDIT_TYPE.TRANSACTION_CLAIMED;
       } else if (dto.status === TRANSACTION_STATUS.CANCELLED) {
         auditType = AUDIT_TYPE.TRANSACTION_CANCELLED;
+        auditDetails = { from: prevStatus, to: dto.status, refundedAmount: existing.paid };
       } else {
         auditType = AUDIT_TYPE.TRANSACTION_STATUS_CHANGED;
       }
@@ -381,11 +417,16 @@ export class TransactionsService {
   }
 
   async collectionsSummary(year: number, month: number, branchId?: number) {
-    const from = new Date(`${year}-${String(month).padStart(2, '0')}-01T00:00:00`);
-    const lastDay = new Date(year, month, 0).getDate();
-    const to = new Date(
-      `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}T23:59:59`,
-    );
+    // month=0 means full year
+    const from = month === 0
+      ? new Date(`${year}-01-01T00:00:00`)
+      : new Date(`${year}-${String(month).padStart(2, '0')}-01T00:00:00`);
+    const to = month === 0
+      ? new Date(`${year}-12-31T23:59:59`)
+      : (() => {
+          const lastDay = new Date(year, month, 0).getDate();
+          return new Date(`${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}T23:59:59`);
+        })();
 
     const conditions: ReturnType<typeof eq>[] = [
       gte(claimPayments.paidAt, from),
@@ -434,7 +475,7 @@ export class TransactionsService {
     return rows.map((r) => ({ ...r, amount: fromScaled(r.amount) }));
   }
 
-  // Auto-sync transaction status when items change (multi-item only)
+  // Auto-sync transaction status and total when items change
   private async syncTransactionStatus(transactionId: number): Promise<void> {
     const [txn] = await this.drizzle.db
       .select()
@@ -447,10 +488,46 @@ export class TransactionsService {
       .from(transactionItems)
       .where(eq(transactionItems.transactionId, transactionId));
 
-    if (items.length <= 1) return; // Only auto-sync multi-item transactions
-
     const nonCancelledItems = items.filter((i) => i.status !== 'cancelled');
-    if (nonCancelledItems.length === 0) return;
+    const cancelledItems = items.filter((i) => i.status === 'cancelled');
+
+    // All items cancelled → cancel the transaction
+    if (nonCancelledItems.length === 0) {
+      await this.drizzle.db
+        .update(transactions)
+        .set({ status: 'cancelled', updatedAt: new Date() })
+        .where(eq(transactions.id, transactionId));
+      return;
+    }
+
+    // Some items cancelled → recalculate total from non-cancelled item prices
+    if (cancelledItems.length > 0) {
+      const rawSubtotalScaled = nonCancelledItems.reduce(
+        (sum, i) => sum + (i.price ?? 0),
+        0,
+      );
+
+      let newTotalScaled = rawSubtotalScaled;
+
+      if (txn.promoId) {
+        const [promo] = await this.drizzle.db
+          .select()
+          .from(promos)
+          .where(eq(promos.id, txn.promoId));
+        if (promo) {
+          const discountFactor = 1 - parseFloat(promo.percent) / 100;
+          newTotalScaled = Math.round(rawSubtotalScaled * discountFactor);
+        }
+      }
+
+      await this.drizzle.db
+        .update(transactions)
+        .set({ total: newTotalScaled, updatedAt: new Date() })
+        .where(eq(transactions.id, transactionId));
+    }
+
+    // Multi-item status sync
+    if (items.length <= 1) return;
 
     const allClaimed = nonCancelledItems.every((i) => i.status === 'claimed');
     if (allClaimed && txn.status !== 'claimed') {
@@ -517,6 +594,9 @@ export class TransactionsService {
           from: existing.status,
           to: dto.status,
           shoe: existing.shoeDescription,
+          ...(dto.status === 'cancelled' && existing.price !== null
+            ? { refundedAmount: fromScaled(existing.price) }
+            : {}),
         },
       });
 
@@ -538,6 +618,7 @@ export class TransactionsService {
         transactionId: id,
         method: dto.method,
         amount: scaledAmount,
+        referenceNumber: dto.referenceNumber ?? null,
       })
       .returning();
 
@@ -564,6 +645,7 @@ export class TransactionsService {
         method: dto.method,
         amount: payment.amount,
         newPaid: newPaidScaled,
+        ...(dto.referenceNumber ? { referenceNumber: dto.referenceNumber } : {}),
       },
     });
 

@@ -6,12 +6,13 @@ import { toast } from 'sonner';
 import { PageHeader } from '@/components/ui/page-header';
 import { DataTable } from '@/components/ui/data-table';
 import { createUserColumns } from '@/columns/users-columns';
-import { useUsersQuery, useUpdateUserRoleMutation, useUpdateUserBranchMutation } from '@/hooks/useUsersQuery';
+import { useUsersQuery, useUpdateUserRoleMutation, useUpdateUserBranchMutation, useDeleteUserMutation } from '@/hooks/useUsersQuery';
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 import { useBranchesQuery } from '@/hooks/useBranchesQuery';
 import { toTitleCase } from '@/utils/text';
 import { UserRoleConfirmDialog, type PendingRoleChange } from '@/components/users/UserRoleConfirmDialog';
 import { UserBranchConfirmDialog, type PendingBranchChange } from '@/components/users/UserBranchConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { AppUser, Branch } from '@/lib/types';
 
 export default function UsersPage() {
@@ -22,9 +23,11 @@ export default function UsersPage() {
   const { data: branches = [] } = useBranchesQuery(false);
   const updateRoleMut = useUpdateUserRoleMutation();
   const updateBranchMut = useUpdateUserBranchMutation();
+  const deleteMut = useDeleteUserMutation(() => setDeleteTarget(null));
 
   const [pendingRoleChange, setPendingRoleChange] = useState<PendingRoleChange | null>(null);
   const [pendingBranchChange, setPendingBranchChange] = useState<PendingBranchChange | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AppUser | null>(null);
 
   const isSuperadmin = currentUser?.userType === 'superadmin';
 
@@ -38,11 +41,11 @@ export default function UsersPage() {
             setPendingBranchChange({ id, email, currentBranchName, newBranchId, newBranchName });
           }
         : undefined,
+      onDelete: isSuperadmin ? setDeleteTarget : undefined,
       currentUserId: currentUser?.id,
       isSuperadmin,
       branches: branches as Branch[],
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [currentUser?.id, isSuperadmin, branches],
   );
 
@@ -89,6 +92,15 @@ export default function UsersPage() {
 
   return (
     <>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Remove user?"
+        description={`Remove ${deleteTarget?.email}? They will no longer be able to access the system.`}
+        confirmLabel="Remove"
+        onConfirm={() => { if (deleteTarget) deleteMut.mutate(deleteTarget.id); }}
+        onCancel={() => setDeleteTarget(null)}
+        loading={deleteMut.isPending}
+      />
       <UserRoleConfirmDialog
         open={pendingRoleChange !== null}
         pendingChange={pendingRoleChange}

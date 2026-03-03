@@ -13,6 +13,7 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
+import { getLocationByBarangay, getAllBarangays, COUNTRY_DEFAULT } from '@/lib/ph-geo';
 import type { Customer } from '@/lib/types';
 import type { TransactionFormData } from '@/schemas/transaction.schema';
 
@@ -40,6 +41,8 @@ export function CustomerLookupSection({
   const [lookingUp, setLookingUp] = useState(false);
   const phoneValue = useWatch({ control, name: 'customerPhone' }) ?? '';
 
+  const allBarangays = getAllBarangays();
+
   async function handleFindCustomer() {
     if (phoneValue.length < 11) return;
     setLookingUp(true);
@@ -48,9 +51,17 @@ export function CustomerLookupSection({
       if (customer) {
         if (customer.name) setValue('customerName', customer.name);
         if (customer.email) setValue('customerEmail', customer.email);
+        if (customer.streetName) setValue('customerStreetName', customer.streetName);
+        if (customer.barangay) setValue('customerBarangay', customer.barangay);
+        if (customer.city) setValue('customerCity', customer.city);
+        if (customer.province) setValue('customerProvince', customer.province);
       } else {
         setValue('customerName', '');
         setValue('customerEmail', '');
+        setValue('customerStreetName', '');
+        setValue('customerBarangay', '');
+        setValue('customerCity', '');
+        setValue('customerProvince', '');
       }
       onCustomerResolved(customer);
     } catch {
@@ -59,6 +70,17 @@ export function CustomerLookupSection({
       onCustomerResolved(null);
     } finally {
       setLookingUp(false);
+    }
+  }
+
+  const { onChange: brgyOnChange, ...brgyRegisterRest } = register('customerBarangay');
+
+  function handleBarangayChange(e: React.ChangeEvent<HTMLInputElement>) {
+    brgyOnChange(e);
+    const loc = getLocationByBarangay(e.target.value);
+    if (loc) {
+      setValue('customerCity', loc.city);
+      setValue('customerProvince', loc.province);
     }
   }
 
@@ -111,6 +133,7 @@ export function CustomerLookupSection({
           </div>
         ) : (
           <>
+            {/* Row: Name (full width) */}
             <div className="col-span-2 flex flex-col gap-1.5">
               <Input
                 label="Name"
@@ -121,6 +144,8 @@ export function CustomerLookupSection({
                 <p className="text-xs text-red-500">{errors.customerName.message}</p>
               )}
             </div>
+
+            {/* Row: Phone + Email */}
             <div className="flex flex-col gap-1.5">
               <span className="text-xs font-medium text-zinc-700">Phone</span>
               <Input
@@ -144,6 +169,56 @@ export function CustomerLookupSection({
               {errors.customerEmail && (
                 <p className="text-xs text-red-500">{errors.customerEmail.message}</p>
               )}
+            </div>
+
+            {/* Address row 1 — 3 cols: Street Name / Barangay / City */}
+            <div className="col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Input
+                  label="Street Name / Purok"
+                  placeholder="e.g. Purok III"
+                  {...register('customerStreetName')}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-medium text-zinc-700">Barangay</span>
+                <input
+                  list="brgy-list"
+                  placeholder="Type barangay..."
+                  className="w-full px-3 py-2 text-sm bg-white border border-zinc-200 rounded-md text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  {...brgyRegisterRest}
+                  onChange={handleBarangayChange}
+                />
+                <datalist id="brgy-list">
+                  {allBarangays.map((b) => (
+                    <option key={b} value={b} />
+                  ))}
+                </datalist>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Input
+                  label="City / Municipality"
+                  placeholder="Auto-filled from barangay"
+                  {...register('customerCity')}
+                />
+              </div>
+            </div>
+
+            {/* Address row 2 — 2 cols: Province / Country */}
+            <div className="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Input
+                  label="Province"
+                  placeholder="Auto-filled from barangay"
+                  {...register('customerProvince')}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-medium text-zinc-700">Country</span>
+                <p className="text-sm text-zinc-500 py-2">{COUNTRY_DEFAULT}</p>
+              </div>
             </div>
           </>
         )}

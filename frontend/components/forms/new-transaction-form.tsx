@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { PlusIcon, ArrowLeftIcon } from '@phosphor-icons/react';
+import { PlusIcon, ArrowLeftIcon, CurrencyDollarIcon } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { transactionSchema, type TransactionFormData } from '@/schemas/transaction.schema';
 import { compressWithFallback } from '@/utils/photo';
@@ -25,8 +25,13 @@ import {
 import { CustomerLookupSection } from '@/components/transactions/CustomerLookupSection';
 import { TransactionItemCard, type PendingPhoto } from '@/components/transactions/TransactionItemCard';
 import { TransactionConfirmDialog } from '@/components/transactions/TransactionConfirmDialog';
-import type { Service, Promo, Customer } from '@/lib/types';
+import { ClaimStubDialog } from '@/components/transactions/ClaimStubDialog';
+import type { Service, Promo, Customer, Transaction } from '@/lib/types';
 import { calcItemPrice, calcRawTotal, findPromo, applyPromo } from '@/utils/pricing';
+import { PAYMENT_METHOD_LABELS, cn } from '@/lib/utils';
+import { ITEM_STATUS } from '@/lib/constants';
+
+const PAYMENT_METHODS = ['cash', 'gcash', 'card', 'bank_deposit'] as const;
 
 async function doPhotoUpload(txnId: number, itemId: number, file: File): Promise<void> {
   const { blob } = await compressWithFallback(file);
@@ -80,9 +85,17 @@ export function NewTransactionForm() {
       customerName: '',
       customerPhone: '',
       customerEmail: '',
+      customerStreetName: '',
+      customerBarangay: '',
+      customerCity: '',
+      customerProvince: '',
+      customerCountry: '',
       pickupDate: '',
       promoId: '',
       note: '',
+      paymentMethod: '',
+      paymentAmount: '',
+      paymentReference: '',
       items: [{ shoeDescription: '', primaryServiceId: '', addonServiceIds: [] }],
     },
   });
@@ -90,12 +103,15 @@ export function NewTransactionForm() {
   const { fields, append, remove } = useFieldArray({ control, name: 'items' });
   const watchedItems = useWatch({ control, name: 'items' });
   const watchedPromoId = useWatch({ control, name: 'promoId' }) ?? 'none';
+  const watchedPaymentMethod = useWatch({ control, name: 'paymentMethod' }) ?? '';
+  const watchedPaymentAmount = useWatch({ control, name: 'paymentAmount' }) ?? '';
 
   const [customerStep, setCustomerStep] = useState<'phone' | 'details'>('phone');
   const [existingCustomer, setExistingCustomer] = useState<Customer | null | undefined>(undefined);
   const [pendingSubmit, setPendingSubmit] = useState<TransactionFormData | null>(null);
   const pendingSubmitStable = useRef<TransactionFormData | null>(null);
   if (pendingSubmit !== null) pendingSubmitStable.current = pendingSubmit;
+  const [createdTxn, setCreatedTxn] = useState<Transaction | null>(null);
 
   // Photo state — keyed by item field index
   const [pendingPhotos, setPendingPhotos] = useState<Map<number, PendingPhoto>>(() => new Map());
@@ -167,6 +183,10 @@ export function NewTransactionForm() {
     setExistingCustomer(undefined);
     setValue('customerName', '');
     setValue('customerEmail', '');
+    setValue('customerStreetName', '');
+    setValue('customerBarangay', '');
+    setValue('customerCity', '');
+    setValue('customerProvince', '');
   }
 
   const rawTotal = calcRawTotal(watchedItems ?? [], services as Service[]);
@@ -181,7 +201,7 @@ export function NewTransactionForm() {
           shoeDescription: i.shoeDescription || undefined,
           serviceId: i.primaryServiceId ? parseInt(i.primaryServiceId, 10) : undefined,
           addonServiceIds: (i.addonServiceIds ?? []).map((id) => parseInt(id, 10)).filter(Boolean),
-          status: 'pending' as const,
+          status: ITEM_STATUS.PENDING,
           price: itemPrice > 0 ? String(itemPrice) : undefined,
         };
       });
@@ -189,6 +209,11 @@ export function NewTransactionForm() {
         customerName: data.customerName || undefined,
         customerPhone: data.customerPhone || undefined,
         customerEmail: data.customerEmail || undefined,
+        customerStreetName: data.customerStreetName || undefined,
+        customerBarangay: data.customerBarangay || undefined,
+        customerCity: data.customerCity || undefined,
+        customerProvince: data.customerProvince || undefined,
+        customerCountry: 'Philippines',
         isExistingCustomer: existingCustomer != null,
         pickupDate: data.pickupDate || undefined,
         note: data.note || undefined,
@@ -198,7 +223,7 @@ export function NewTransactionForm() {
         items: allItems,
       });
     },
-    onSuccess: async (txn) => {
+    onSuccess: async (txn, data) => {
       const items = txn.items ?? [];
       const uploads = items
         .map((item, idx) => ({ item, pending: pendingPhotosRef.current.get(idx) }))
@@ -216,14 +241,31 @@ export function NewTransactionForm() {
         setIsUploadingPhotos(false);
       }
 
+      // Record initial payment if provided
+      const payAmt = parseFloat(data.paymentAmount ?? '0');
+      let paidSoFar = 0;
+      if (payAmt > 0 && data.paymentMethod) {
+        await api.transactions.addPayment(txn.id, {
+          method: data.paymentMethod,
+          amount: payAmt.toFixed(2),
+          ...(data.paymentReference?.trim() ? { referenceNumber: data.paymentReference.trim() } : {}),
+        }).then(() => {
+          paidSoFar = payAmt;
+        }).catch(() => {
+          toast.error('Transaction created but initial payment failed to record');
+        });
+      }
+
       toast.success('Transaction created');
-      router.push(`/transactions/${txn.id}`);
+      setPendingSubmit(null);
+      setCreatedTxn({ ...txn, paid: paidSoFar.toFixed(2) });
     },
     onError: (err: Error) => {
       toast.error('Failed to create transaction', { description: err.message });
     },
   });
 
+  const paymentExceedsTotal = !!watchedPaymentAmount && parseFloat(watchedPaymentAmount) > total;
   const isBusy = createMut.isPending || isUploadingPhotos;
 
   return (
@@ -249,7 +291,16 @@ export function NewTransactionForm() {
       />
 
       <form onSubmit={handleSubmit(
-        (data) => setPendingSubmit(data),
+        (data) => {
+          const missingIdx = data.items.findIndex((_, idx) => !pendingPhotos.has(idx));
+          if (missingIdx !== -1) {
+            toast.error('Before photo required', {
+              description: `Shoe ${missingIdx + 1} is missing a before photo.`,
+            });
+            return;
+          }
+          setPendingSubmit(data);
+        },
         () => {
           // Zod validation failed — if we're still on the phone step the errors are on unmounted
           // fields and won't be visible, so surface a toast instead.
@@ -366,6 +417,66 @@ export function NewTransactionForm() {
             </div>
 
             <div className="bg-white border border-zinc-200 rounded-lg p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <CurrencyDollarIcon size={14} className="text-zinc-400" />
+                <h2 className="text-sm font-semibold text-zinc-950">Payment Details</h2>
+              </div>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-zinc-700">Payment Method</label>
+                    <Select
+                      value={watchedPaymentMethod || 'none'}
+                      onValueChange={(v) => setValue('paymentMethod', v === 'none' ? '' : v)}
+                    >
+                      <SelectTrigger className="h-9 text-sm w-full border-zinc-200">
+                        <SelectValue placeholder="None" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {PAYMENT_METHODS.map((m) => (
+                          <SelectItem key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-zinc-700">Reference #</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. GCash ref"
+                      {...register('paymentReference')}
+                      className="h-9 w-full px-3 py-2 text-sm bg-white border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+                {watchedPaymentMethod && watchedPaymentMethod !== 'none' && (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-zinc-700">Amount Paid</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      {...register('paymentAmount')}
+                      className={cn(
+                        'px-3 py-2 text-sm font-mono bg-white border rounded-md text-right text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500',
+                        watchedPaymentAmount && parseFloat(watchedPaymentAmount) > total
+                          ? 'border-red-400'
+                          : 'border-zinc-200',
+                      )}
+                    />
+                    {watchedPaymentAmount && parseFloat(watchedPaymentAmount) > total && (
+                      <p className="text-xs text-red-500">
+                        Amount cannot exceed total of ₱{total.toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white border border-zinc-200 rounded-lg p-5">
               <h2 className="text-sm font-semibold text-zinc-950 mb-3">Summary</h2>
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
@@ -397,12 +508,24 @@ export function NewTransactionForm() {
                     </span>
                   </div>
                 </div>
+                {watchedPaymentAmount && parseFloat(watchedPaymentAmount) > 0 && (
+                  <>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-zinc-500">Initial Payment</span>
+                      <span className="font-mono text-emerald-600">₱{parseFloat(watchedPaymentAmount).toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-zinc-500">Balance</span>
+                      <span className="font-mono text-zinc-950">₱{Math.max(0, total - parseFloat(watchedPaymentAmount)).toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               <Button
                 type="submit"
                 className="w-full mt-4"
-                disabled={isBusy}
+                disabled={isBusy || paymentExceedsTotal}
               >
                 {isBusy ? <Spinner /> : 'Create Transaction'}
               </Button>
@@ -427,6 +550,14 @@ export function NewTransactionForm() {
           createMut.mutate(pendingSubmit);
         }}
         onCancel={() => { if (!isBusy) setPendingSubmit(null); }}
+      />
+
+      <ClaimStubDialog
+        open={createdTxn !== null}
+        txn={createdTxn}
+        onViewTransaction={() => {
+          if (createdTxn) router.push(`/transactions/${createdTxn.id}`);
+        }}
       />
     </div>
   );

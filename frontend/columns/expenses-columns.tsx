@@ -1,7 +1,7 @@
 'use client';
 
 import { type ColumnDef } from '@tanstack/react-table';
-import { TrashIcon, ReceiptIcon } from '@phosphor-icons/react';
+import { TrashIcon, ReceiptIcon, PencilSimpleIcon } from '@phosphor-icons/react';
 import { formatPeso, PAYMENT_METHOD_LABELS } from '@/lib/utils';
 import { toTitleCase } from '@/utils/text';
 import type { Expense } from '@/lib/types';
@@ -13,20 +13,36 @@ const METHOD_STYLES: Record<string, string> = {
   bank_deposit: 'bg-amber-50 text-amber-700',
 };
 
-interface ExpenseColumnsOptions {
-  onDelete: (expense: Expense) => void;
+export interface ExpenseEditForm {
+  category: string;
+  note: string;
+  method: string;
+  amount: string;
 }
 
-export const createExpenseColumns = ({ onDelete }: ExpenseColumnsOptions): ColumnDef<Expense>[] => [
+interface ExpenseColumnsOptions {
+  onDelete: (expense: Expense) => void;
+  onStartEdit?: (e: Expense) => void;
+  isAdmin?: boolean;
+}
+
+export const createExpenseColumns = ({
+  onDelete,
+  onStartEdit,
+  isAdmin,
+}: ExpenseColumnsOptions): ColumnDef<Expense>[] => [
   {
     accessorKey: 'category',
     header: 'Category',
-    cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        <ReceiptIcon size={13} className="text-zinc-400 shrink-0" />
-        <span className="font-medium text-zinc-950">{toTitleCase(row.original.category) || '—'}</span>
-      </div>
-    ),
+    cell: ({ row }) => {
+      const e = row.original;
+      return (
+        <div className="flex items-center gap-2">
+          <ReceiptIcon size={13} className="text-zinc-400 shrink-0" />
+          <span className="font-medium text-zinc-950">{toTitleCase(e.category) || '—'}</span>
+        </div>
+      );
+    },
   },
   {
     accessorKey: 'note',
@@ -58,13 +74,27 @@ export const createExpenseColumns = ({ onDelete }: ExpenseColumnsOptions): Colum
   {
     id: 'actions',
     header: '',
-    cell: ({ row }) => (
-      <button
-        onClick={(e) => { e.stopPropagation(); onDelete(row.original); }}
-        className="opacity-0 group-hover:opacity-100 p-1.5 text-zinc-400 hover:text-red-500 rounded transition-all"
-      >
-        <TrashIcon size={14} />
-      </button>
-    ),
+    cell: ({ row }) => {
+      const e = row.original;
+      if (!isAdmin) return null;
+      return (
+        <div className="flex items-center justify-end gap-3">
+          {onStartEdit && (
+            <button
+              onClick={(ev) => { ev.stopPropagation(); onStartEdit(e); }}
+              className="p-2 text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 rounded transition-colors"
+            >
+              <PencilSimpleIcon size={16} />
+            </button>
+          )}
+          <button
+            onClick={(ev) => { ev.stopPropagation(); onDelete(e); }}
+            className="p-2 text-red-500 bg-red-50 hover:text-red-600 hover:bg-red-100 rounded transition-all"
+          >
+            <TrashIcon size={16} />
+          </button>
+        </div>
+      );
+    },
   },
 ];

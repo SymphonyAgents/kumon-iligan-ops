@@ -33,13 +33,14 @@ export function useInfiniteTransactionsQuery(params: Record<string, string> = {}
 
 export function useTransactionReportQuery(
   year: number,
-  month: number,
+  month: number, // 0 = full year
   options?: { enabled?: boolean; branchId?: number },
 ) {
-  const from = `${year}-${String(month).padStart(2, '0')}-01`;
-  const lastDay = new Date(year, month, 0).getDate();
-  const to = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-  const params: Record<string, string> = { from, to, limit: '500' };
+  const from = month === 0 ? `${year}-01-01` : `${year}-${String(month).padStart(2, '0')}-01`;
+  const to = month === 0
+    ? `${year}-12-31`
+    : `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
+  const params: Record<string, string> = { from, to, limit: '1000' };
   if (options?.branchId) params.branchId = String(options.branchId);
   return useQuery({
     queryKey: ['transactions-report', year, month, options?.branchId],
@@ -104,7 +105,7 @@ export function useUpdateTransactionMutation(id: string) {
   const numericId = parseInt(id, 10);
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { newPickupDate?: string | null; note?: string | null }) =>
+    mutationFn: (data: { newPickupDate?: string | null; note?: string | null; paid?: string }) =>
       api.transactions.update(numericId, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: transactionDetailKey(id) });
@@ -145,8 +146,8 @@ export function useAddPaymentMutation(txnId: string, onSuccess?: () => void) {
   const numericTxnId = parseInt(txnId, 10);
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ method, amount }: { method: PaymentMethod; amount: string }) =>
-      api.transactions.addPayment(numericTxnId, { method, amount }),
+    mutationFn: ({ method, amount, referenceNumber }: { method: PaymentMethod; amount: string; referenceNumber?: string }) =>
+      api.transactions.addPayment(numericTxnId, { method, amount, referenceNumber }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: transactionDetailKey(txnId) });
       toast.success('Payment recorded');

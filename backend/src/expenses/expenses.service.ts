@@ -19,9 +19,11 @@ export class ExpensesService {
   ) {}
 
   async findByMonth(year: number, month: number) {
-    const from = `${year}-${String(month).padStart(2, '0')}-01`;
-    const lastDay = new Date(year, month, 0).getDate();
-    const to = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    // month=0 means full year
+    const from = month === 0 ? `${year}-01-01` : `${year}-${String(month).padStart(2, '0')}-01`;
+    const to = month === 0
+      ? `${year}-12-31`
+      : `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
     const rows = await this.drizzle.db
       .select()
       .from(expenses)

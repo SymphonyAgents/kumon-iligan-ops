@@ -35,6 +35,21 @@ export function useMonthlyExpensesQuery(year: number, month: number, options?: {
   });
 }
 
+export function useUpdateExpenseMutation(date: string, onSuccess?: () => void) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: number; category?: string; note?: string; method?: string; amount?: string }) =>
+      api.expenses.update(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: expensesKey(date) });
+      qc.invalidateQueries({ queryKey: expensesSummaryKey(date) });
+      toast.success('Expense updated');
+      onSuccess?.();
+    },
+    onError: (err: Error) => toast.error('Failed to update expense', { description: err.message }),
+  });
+}
+
 export function useDeleteExpenseMutation(date: string) {
   const qc = useQueryClient();
   return useMutation({

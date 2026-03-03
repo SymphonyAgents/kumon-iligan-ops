@@ -10,9 +10,11 @@ interface TransactionEmailContext {
   number: string;
   customerName: string | null;
   customerEmail: string | null;
+  customerPhone: string | null;
   pickupDate: string | null;
   total: string;
   paid: string;
+  items?: { shoeDescription: string | null; price: string | null }[];
 }
 
 function balance(ctx: TransactionEmailContext): number {
@@ -23,6 +25,7 @@ export const EMAIL_TEMPLATES = {
   pickup_ready: 'pickup_ready',
   payment_reminder: 'payment_reminder',
   new_pickup_date: 'new_pickup_date',
+  claim_stub: 'claim_stub',
 } as const;
 
 export type EmailTemplateKey = typeof EMAIL_TEMPLATES[keyof typeof EMAIL_TEMPLATES];
@@ -31,6 +34,7 @@ export const EMAIL_TEMPLATE_LABELS: Record<EmailTemplateKey, string> = {
   pickup_ready: 'Shoes Ready for Pickup',
   payment_reminder: 'Payment Reminder',
   new_pickup_date: 'Updated Pickup Date',
+  claim_stub: 'Claim Stub',
 };
 
 function buildTemplate(key: EmailTemplateKey, ctx: TransactionEmailContext): EmailTemplate {
@@ -91,6 +95,36 @@ function buildTemplate(key: EmailTemplateKey, ctx: TransactionEmailContext): Ema
           `— Sneaker Doctor`,
         ].join('\n'),
       };
+
+    case EMAIL_TEMPLATES.claim_stub: {
+      const sep = '--------------------------------';
+      const itemLines = (ctx.items ?? []).map(
+        (item, i) => `${i + 1}. ${item.shoeDescription || 'Item'}`.padEnd(24) + formatPeso(item.price ?? '0'),
+      );
+      return {
+        subject: `Your Claim Stub — #${ctx.number} | Sneaker Doctor`,
+        body: [
+          `         SNEAKER DOCTOR`,
+          `           CLAIM STUB`,
+          sep,
+          `           #${ctx.number}`,
+          sep,
+          `Customer : ${name}`,
+          `Phone    : ${ctx.customerPhone || '—'}`,
+          `Pickup   : ${formatDate(ctx.pickupDate)}`,
+          sep,
+          ...itemLines,
+          sep,
+          `Total    : ${formatPeso(ctx.total)}`,
+          `Paid     : ${formatPeso(ctx.paid)}`,
+          `Balance  : ${bal <= 0 ? 'Fully Paid' : formatPeso(bal)}`,
+          sep,
+          `Present this stub when claiming your shoes.`,
+          '',
+          `— Sneaker Doctor`,
+        ].join('\n'),
+      };
+    }
   }
 }
 
@@ -98,5 +132,13 @@ export function generateGmailLink(ctx: TransactionEmailContext, templateKey: Ema
   if (!ctx.customerEmail) return '';
   const { subject, body } = buildTemplate(templateKey, ctx);
   const params = new URLSearchParams({ view: 'cm', to: ctx.customerEmail, su: subject, body });
+  return `https://mail.google.com/mail/?${params.toString()}`;
+}
+
+// Opens Gmail compose with only to + subject pre-filled (no body) — used when body is pasted manually
+export function generateGmailLinkNoBody(ctx: TransactionEmailContext, templateKey: EmailTemplateKey): string {
+  if (!ctx.customerEmail) return '';
+  const { subject } = buildTemplate(templateKey, ctx);
+  const params = new URLSearchParams({ view: 'cm', to: ctx.customerEmail, su: subject });
   return `https://mail.google.com/mail/?${params.toString()}`;
 }

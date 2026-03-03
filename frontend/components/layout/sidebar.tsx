@@ -11,6 +11,7 @@ import {
   CurrencyDollarIcon,
   ChartBarIcon,
   ClockIcon,
+  CalendarIcon,
   SignOutIcon,
   ListIcon,
   XIcon,
@@ -18,6 +19,7 @@ import {
   GitBranchIcon,
   UsersIcon,
   AddressBookIcon,
+  QrCodeIcon,
 } from '@phosphor-icons/react';
 import { createBrowserClient } from '@supabase/ssr';
 import { cn } from '@/lib/utils';
@@ -33,6 +35,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { QrScanDialog } from '@/components/ui/qr-scan-dialog';
 
 interface NavItem {
   href: string;
@@ -59,6 +62,8 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Operations',
     items: [
       { href: ROUTES.TRANSACTIONS, label: 'Transactions', icon: ReceiptIcon, adminOnly: false, superadminOnly: false },
+      { href: ROUTES.UPCOMING_PICKUPS, label: 'Upcoming Pickups', icon: CalendarIcon, adminOnly: false, superadminOnly: false },
+      { href: ROUTES.EXPENSES, label: 'Expenses', icon: CurrencyDollarIcon, adminOnly: false, superadminOnly: false },
       { href: ROUTES.CUSTOMERS, label: 'Customers', icon: AddressBookIcon, adminOnly: true, superadminOnly: false },
     ],
   },
@@ -68,13 +73,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: ROUTES.SERVICES, label: 'Services', icon: WrenchIcon, adminOnly: true, superadminOnly: false },
       { href: ROUTES.PROMOS, label: 'Promos', icon: TagIcon, adminOnly: true, superadminOnly: false },
-    ],
-  },
-  {
-    label: 'Finance',
-    adminOnly: true,
-    items: [
-      { href: ROUTES.EXPENSES, label: 'Expenses', icon: CurrencyDollarIcon, adminOnly: true, superadminOnly: false },
     ],
   },
   {
@@ -94,6 +92,7 @@ export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [showQrScanner, setShowQrScanner] = useState(false);
   const { data: currentUser } = useCurrentUserQuery();
   const isAdmin = currentUser?.userType === 'admin' || currentUser?.userType === 'superadmin';
   const isSuperadmin = currentUser?.userType === 'superadmin';
@@ -160,6 +159,15 @@ export function Sidebar() {
                   </Link>
                 );
               })}
+              {gi === 0 && (
+                <button
+                  onClick={() => { setMobileOpen(false); setShowQrScanner(true); }}
+                  className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-md text-sm text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 transition-colors duration-150"
+                >
+                  <QrCodeIcon size={16} />
+                  Scan QR
+                </button>
+              )}
             </div>
           </div>
         );
@@ -198,6 +206,8 @@ export function Sidebar() {
 
   return (
     <>
+      <QrScanDialog open={showQrScanner} onClose={() => setShowQrScanner(false)} />
+
       {/* Sign-out confirmation dialog */}
       <Dialog open={showSignOutDialog} onOpenChange={setShowSignOutDialog}>
         <DialogContent showCloseButton={false} className="max-w-sm">

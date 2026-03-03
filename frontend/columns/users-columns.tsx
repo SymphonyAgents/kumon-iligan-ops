@@ -1,6 +1,7 @@
 'use client';
 
 import { type ColumnDef } from '@tanstack/react-table';
+import { TrashIcon } from '@phosphor-icons/react';
 import { formatDatetime, cn } from '@/lib/utils';
 import {
   Select,
@@ -33,6 +34,7 @@ function RoleBadge({ role }: { role: string }) {
 interface UserColumnsOptions {
   onRoleChange: (id: string, newUserType: string, currentUserType: string, email: string) => void;
   onBranchChange?: (id: string, newBranchId: number, currentBranchId: number | null, email: string, newBranchName: string, currentBranchName: string | null) => void;
+  onDelete?: (user: AppUser) => void;
   currentUserId?: string;
   isSuperadmin?: boolean;
   branches?: Branch[];
@@ -41,6 +43,7 @@ interface UserColumnsOptions {
 export const createUserColumns = ({
   onRoleChange,
   onBranchChange,
+  onDelete,
   currentUserId,
   isSuperadmin,
   branches = [],
@@ -133,5 +136,25 @@ export const createUserColumns = ({
     cell: ({ row }) => (
       <span className="text-xs text-zinc-400">{formatDatetime(row.original.createdAt)}</span>
     ),
+  },
+  {
+    id: 'actions',
+    header: '',
+    size: 48,
+    cell: ({ row }) => {
+      const user = row.original;
+      const isSelf = user.id === currentUserId;
+      if (!isSuperadmin || isSelf || !onDelete) return null;
+      return (
+        <div className="flex items-center justify-end">
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(user); }}
+            className="p-2 text-red-500 bg-red-50 hover:text-red-600 hover:bg-red-100 rounded transition-all"
+          >
+            <TrashIcon size={16} />
+          </button>
+        </div>
+      );
+    },
   },
 ];

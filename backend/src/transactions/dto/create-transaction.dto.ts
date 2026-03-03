@@ -12,6 +12,11 @@ export class CreateTransactionDto {
   customerName?: string;
   customerPhone?: string;
   customerEmail?: string;
+  customerStreetName?: string;
+  customerBarangay?: string;
+  customerCity?: string;
+  customerProvince?: string;
+  customerCountry?: string;
   isExistingCustomer?: boolean; // if true, skip customer upsert
   status?: string;
   note?: string;
