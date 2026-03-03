@@ -20,7 +20,11 @@ import { relations } from 'drizzle-orm';
 export const branches = pgTable('branches', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 255 }).unique().notNull(),
-  address: varchar('address', { length: 500 }),
+  streetName: varchar('street_name', { length: 500 }),
+  barangay: varchar('barangay', { length: 255 }),
+  city: varchar('city', { length: 255 }),
+  province: varchar('province', { length: 255 }),
+  country: varchar('country', { length: 100 }),
   phone: varchar('phone', { length: 50 }),
   isActive: boolean('is_active').default(true).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true })
@@ -117,6 +121,7 @@ export const claimPayments = pgTable('claim_payments', {
     .notNull(),
   method: varchar('method', { length: 50 }).notNull(), // cash | gcash | card | bank_deposit
   amount: bigint('amount', { mode: 'number' }).notNull(),
+  referenceNumber: varchar('reference_number', { length: 100 }),
   paidAt: timestamp('paid_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -144,7 +149,11 @@ export const customers = pgTable('customers', {
   phone: varchar('phone', { length: 50 }).unique().notNull(),
   name: varchar('name', { length: 255 }),
   email: varchar('email', { length: 255 }),
+  streetName: varchar('street_name', { length: 500 }),
+  barangay: varchar('barangay', { length: 255 }),
   city: varchar('city', { length: 255 }),
+  province: varchar('province', { length: 255 }),
+  country: varchar('country', { length: 100 }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),

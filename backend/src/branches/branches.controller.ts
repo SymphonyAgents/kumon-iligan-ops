@@ -7,11 +7,13 @@ import {
   Param,
   ParseIntPipe,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import type { AuthedRequest } from '../auth/auth.types';
 import { BranchesService } from './branches.service';
 import { CreateBranchDto } from './dto/create-branch.dto';
 
@@ -35,8 +37,8 @@ export class BranchesController {
   @Post()
   @UseGuards(RolesGuard)
   @Roles('superadmin')
-  create(@Body() dto: CreateBranchDto) {
-    return this.branchesService.create(dto);
+  create(@Body() dto: CreateBranchDto, @Req() req: AuthedRequest) {
+    return this.branchesService.create(dto, req.user?.id);
   }
 
   @Patch(':id')
@@ -45,7 +47,8 @@ export class BranchesController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: Partial<CreateBranchDto> & { isActive?: boolean },
+    @Req() req: AuthedRequest,
   ) {
-    return this.branchesService.update(id, dto);
+    return this.branchesService.update(id, dto, req.user?.id);
   }
 }

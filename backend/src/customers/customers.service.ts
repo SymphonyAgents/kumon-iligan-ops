@@ -14,7 +14,11 @@ export class CustomersService {
         phone: customers.phone,
         name: customers.name,
         email: customers.email,
+        streetName: customers.streetName,
+        barangay: customers.barangay,
         city: customers.city,
+        province: customers.province,
+        country: customers.country,
         createdAt: customers.createdAt,
         updatedAt: customers.updatedAt,
         shoesCount: sql<number>`cast(count(distinct ${transactionItems.id}) as int)`,
@@ -40,14 +44,27 @@ export class CustomersService {
     return customer ?? null;
   }
 
-  async upsert(phone: string, name?: string | null, email?: string | null, city?: string | null) {
+  async upsert(
+    phone: string,
+    name?: string | null,
+    email?: string | null,
+    streetName?: string | null,
+    barangay?: string | null,
+    city?: string | null,
+    province?: string | null,
+    country?: string | null,
+  ) {
     const [result] = await this.drizzle.db
       .insert(customers)
       .values({
         phone,
         name: name ?? null,
         email: email ?? null,
+        streetName: streetName ?? null,
+        barangay: barangay ?? null,
         city: city ?? null,
+        province: province ?? null,
+        country: country ?? null,
         updatedAt: new Date(),
       })
       .onConflictDoUpdate({
@@ -55,7 +72,11 @@ export class CustomersService {
         set: {
           name: name ?? null,
           email: email ?? null,
+          streetName: streetName ?? null,
+          barangay: barangay ?? null,
           city: city ?? null,
+          province: province ?? null,
+          country: country ?? null,
           updatedAt: new Date(),
         },
       })

@@ -8,12 +8,25 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { DataTable } from '@/components/ui/data-table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Spinner } from '@/components/ui/spinner';
 import { ServiceForm } from '@/components/forms/service-form';
 import { createServicesColumns } from '@/columns/services-columns';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   useServicesQuery,
   useUpdateServiceMutation,
-  useToggleServiceMutation,
   useDeleteServiceMutation,
 } from '@/hooks/useServicesQuery';
 import type { Service } from '@/lib/types';
@@ -24,13 +37,11 @@ interface EditForm {
   price: string;
 }
 
-const EMPTY_EDIT: EditForm = { name: '', type: 'primary', price: '' };
-
 export default function ServicesPage() {
   const searchParams = useSearchParams();
   const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState<EditForm>(EMPTY_EDIT);
+  const [editTarget, setEditTarget] = useState<Service | null>(null);
+  const [editForm, setEditForm] = useState<EditForm>({ name: '', type: 'primary', price: '' });
   const [deleteTarget, setDeleteTarget] = useState<Service | null>(null);
 
   useEffect(() => {
@@ -38,41 +49,22 @@ export default function ServicesPage() {
   }, [searchParams]);
 
   const { data: services = [], isLoading } = useServicesQuery();
-
-  const updateMut = useUpdateServiceMutation(() => {
-    setEditId(null);
-    setForm(EMPTY_EDIT);
-  });
+  const updateMut = useUpdateServiceMutation(() => setEditTarget(null));
   const deleteMut = useDeleteServiceMutation();
-  const toggleActive = useToggleServiceMutation();
 
   const startEdit = (s: Service) => {
-    setEditId(s.id);
-    setForm({ name: s.name, type: s.type, price: s.price });
+    setEditTarget(s);
+    setEditForm({ name: s.name, type: s.type, price: s.price });
     setShowForm(false);
-  };
-
-  const cancelEdit = () => {
-    setEditId(null);
-    setForm(EMPTY_EDIT);
   };
 
   const primaryServices = (services as Service[]).filter((s) => s.type === 'primary');
   const addonServices = (services as Service[]).filter((s) => s.type === 'add_on');
 
   const columns = useMemo(
-    () => createServicesColumns({
-      editId,
-      form,
-      setForm,
-      onUpdate: () => updateMut.mutate({ id: editId!, form }),
-      onCancelEdit: cancelEdit,
-      onStartEdit: startEdit,
-      onToggle: (id, isActive) => toggleActive.mutate({ id, isActive }),
-      onDelete: setDeleteTarget,
-    }),
+    () => createServicesColumns({ onStartEdit: startEdit, onDelete: setDeleteTarget }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [editId, form],
+    [],
   );
 
   const renderSection = (title: string, list: Service[]) => (
@@ -96,7 +88,7 @@ export default function ServicesPage() {
         title="Services"
         subtitle="Manage the service catalog"
         action={
-          <Button onClick={() => { setShowForm((v) => !v); cancelEdit(); }}>
+          <Button onClick={() => { setShowForm((v) => !v); setEditTarget(null); }}>
             <PlusIcon size={14} weight="bold" />
             Add Service
           </Button>
@@ -125,10 +117,63 @@ export default function ServicesPage() {
         </>
       )}
 
+      <Dialog open={!!editTarget} onOpenChange={(open) => { if (!open) setEditTarget(null); }}>
+        <DialogContent className="bg-white sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-base">Edit Service</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-zinc-700">Service Name</label>
+              <input
+                value={editForm.name}
+                onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                className="w-full px-3 py-2 text-sm border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-zinc-700">Type</label>
+              <Select value={editForm.type} onValueChange={(v) => setEditForm((f) => ({ ...f, type: v as 'primary' | 'add_on' }))}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="primary">Primary</SelectItem>
+                  <SelectItem value="add_on">Add-on</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-zinc-700">Price (₱)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={editForm.price}
+                onChange={(e) => setEditForm((f) => ({ ...f, price: e.target.value }))}
+                className="w-full px-3 py-2 text-sm font-mono border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button
+                size="sm"
+                className="flex-1"
+                disabled={updateMut.isPending || !editForm.name.trim() || !editForm.price}
+                onClick={() => { if (editTarget) updateMut.mutate({ id: editTarget.id, form: editForm }); }}
+              >
+                {updateMut.isPending ? <Spinner /> : 'Save'}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setEditTarget(null)}>Cancel</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <ConfirmDialog
         open={!!deleteTarget}
-        title="Delete service?"
-        description={`Delete "${deleteTarget?.name}"? This cannot be undone.`}
+        title="Remove service?"
+        description={`"${deleteTarget?.name}" will be removed from the service catalog.`}
+        confirmLabel="Remove"
         onConfirm={() => { if (deleteTarget) deleteMut.mutate(deleteTarget.id); setDeleteTarget(null); }}
         onCancel={() => setDeleteTarget(null)}
         loading={deleteMut.isPending}

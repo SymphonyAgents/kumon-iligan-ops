@@ -1,7 +1,7 @@
 'use client';
 
 import { type ColumnDef } from '@tanstack/react-table';
-import { formatDatetime } from '@/lib/utils';
+import { formatDatetime, formatAddress } from '@/lib/utils';
 import type { Customer } from '@/lib/types';
 
 export const customerColumns: ColumnDef<Customer>[] = [
@@ -20,11 +20,13 @@ export const customerColumns: ColumnDef<Customer>[] = [
     ),
   },
   {
-    accessorKey: 'city',
-    header: 'City',
-    cell: ({ row }) => (
-      <span className="text-sm text-zinc-500 capitalize">{row.original.city ?? '—'}</span>
-    ),
+    id: 'address',
+    header: 'Address',
+    cell: ({ row }) => {
+      const c = row.original;
+      const addr = formatAddress({ streetName: c.streetName, barangay: c.barangay, city: c.city, province: c.province });
+      return <span className="text-sm text-zinc-500">{addr}</span>;
+    },
   },
   {
     accessorKey: 'email',

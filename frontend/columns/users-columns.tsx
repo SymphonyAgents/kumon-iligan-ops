@@ -146,12 +146,12 @@ export const createUserColumns = ({
       const isSelf = user.id === currentUserId;
       if (!isSuperadmin || isSelf || !onDelete) return null;
       return (
-        <div className="flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center justify-end">
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(user); }}
-            className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
+            className="p-2 text-red-500 bg-red-50 hover:text-red-600 hover:bg-red-100 rounded transition-all"
           >
-            <TrashIcon size={14} />
+            <TrashIcon size={16} />
           </button>
         </div>
       );

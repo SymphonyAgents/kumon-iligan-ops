@@ -146,8 +146,8 @@ export function useAddPaymentMutation(txnId: string, onSuccess?: () => void) {
   const numericTxnId = parseInt(txnId, 10);
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ method, amount }: { method: PaymentMethod; amount: string }) =>
-      api.transactions.addPayment(numericTxnId, { method, amount }),
+    mutationFn: ({ method, amount, referenceNumber }: { method: PaymentMethod; amount: string; referenceNumber?: string }) =>
+      api.transactions.addPayment(numericTxnId, { method, amount, referenceNumber }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: transactionDetailKey(txnId) });
       toast.success('Payment recorded');

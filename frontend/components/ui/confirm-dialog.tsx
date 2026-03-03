@@ -32,8 +32,12 @@ export function ConfirmDialog({
   loading = false,
 }: ConfirmDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onCancel()}>
-      <DialogContent className="max-w-sm">
+    <Dialog open={open} onOpenChange={(v) => !v && !loading && onCancel()}>
+      <DialogContent
+        className="max-w-sm"
+        onEscapeKeyDown={(e) => { if (loading) e.preventDefault(); }}
+        onInteractOutside={(e) => { if (loading) e.preventDefault(); }}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}

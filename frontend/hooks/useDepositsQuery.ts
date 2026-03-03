@@ -11,6 +11,14 @@ export function useDepositsQuery(year: number, month: number, branchId?: number)
   });
 }
 
+export function useDepositsAuditQuery(year: number, month: number, branchId?: number, method?: string) {
+  return useQuery({
+    queryKey: ['deposits-audit', year, month, branchId, method],
+    queryFn: () => api.deposits.getAudit(year, month, branchId, method),
+    staleTime: 30 * 1000,
+  });
+}
+
 export function useUpsertDepositMutation(year: number, month: number, branchId?: number) {
   const qc = useQueryClient();
   return useMutation({
@@ -18,6 +26,7 @@ export function useUpsertDepositMutation(year: number, month: number, branchId?:
       api.deposits.upsert({ year, month, method: body.method, amount: body.amount, branchId }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['deposits', year, month, branchId] });
+      void qc.invalidateQueries({ queryKey: ['deposits-audit'] });
     },
   });
 }

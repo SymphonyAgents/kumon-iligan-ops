@@ -1,10 +1,11 @@
 'use client';
 
 import { use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { ArrowLeftIcon, PlusIcon, EnvelopeIcon } from '@phosphor-icons/react';
 import { Lightbox } from '@/components/ui/lightbox';
 import Link from 'next/link';
-import { formatPeso, formatDate, formatDatetime, PAYMENT_METHOD_LABELS, cn } from '@/lib/utils';
+import { formatPeso, formatDate, formatDatetime, formatAddress, PAYMENT_METHOD_LABELS, cn } from '@/lib/utils';
 import { toTitleCase } from '@/utils/text';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
@@ -33,8 +34,11 @@ import {
   useAddPaymentMutation,
 } from '@/hooks/useTransactionsQuery';
 import { useUploadPhotoMutation } from '@/hooks/useUploadPhoto';
-import { PAYMENT_METHOD_VALUES } from '@/lib/constants';
-import { generateGmailLink, EMAIL_TEMPLATES, EMAIL_TEMPLATE_LABELS } from '@/utils/email';
+import { PAYMENT_METHOD_VALUES, TRANSACTION_STATUS } from '@/lib/constants';
+import { toPng } from 'html-to-image';
+import { toast } from 'sonner';
+import { generateGmailLink, generateGmailLinkNoBody, EMAIL_TEMPLATES, EMAIL_TEMPLATE_LABELS } from '@/utils/email';
+import { ClaimStubPreview } from '@/components/transactions/ClaimStubPreview';
 import type { EmailTemplateKey } from '@/utils/email';
 import type { PaymentMethod } from '@/lib/types';
 import { ItemStatusConfirmDialog, type PendingItemChange } from '@/components/transactions/ItemStatusConfirmDialog';
@@ -44,6 +48,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentRef, setPaymentRef] = useState('');
   const [paymentError, setPaymentError] = useState('');
 
   const [emailTemplate, setEmailTemplate] = useState<EmailTemplateKey>(EMAIL_TEMPLATES.pickup_ready);
@@ -51,6 +56,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   const [uploadingItemIds, setUploadingItemIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pendingUploadRef = useRef<{ itemId: number; type: 'before' | 'after' } | null>(null);
+  const stubRef = useRef<HTMLDivElement>(null);
 
   const [rescheduleValue, setRescheduleValue] = useState('');
   const [noteValue, setNoteValue] = useState('');
@@ -156,7 +162,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
 
   const balance = parseFloat(txn.total) - parseFloat(txn.paid);
   const refundAmount = balance < 0 ? Math.abs(balance) : 0;
-  const txnLocked = ['cancelled', 'claimed'].includes(txn.status);
+  const txnLocked = [TRANSACTION_STATUS.CANCELLED, TRANSACTION_STATUS.CLAIMED].includes(txn.status);
 
   return (
     <div>
@@ -180,7 +186,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
             <h2 className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-3">
               Customer
             </h2>
-            <div className={cn('grid grid-cols-1 gap-4', txn.newPickupDate ? 'sm:grid-cols-4' : 'sm:grid-cols-3')}>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div>
                 <p className="text-xs text-zinc-400">Name</p>
                 <p className="text-sm font-medium text-zinc-950">{toTitleCase(txn.customerName) || '—'}</p>
@@ -200,6 +206,19 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                 </div>
               )}
             </div>
+            {(txn.customerStreetName || txn.customerBarangay || txn.customerCity || txn.customerProvince) && (
+              <div className="mt-3 pt-3 border-t border-zinc-100">
+                <p className="text-xs text-zinc-400 mb-1">Address</p>
+                <p className="text-sm text-zinc-700">
+                  {formatAddress({
+                    streetName: txn.customerStreetName,
+                    barangay: txn.customerBarangay,
+                    city: txn.customerCity,
+                    province: txn.customerProvince,
+                  })}
+                </p>
+              </div>
+            )}
 
             {!txnLocked && (
               <div className="mt-3 pt-3 border-t border-zinc-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -260,9 +279,15 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
 
           {/* Items */}
           <div>
-            <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-2">
-              Shoes & Services ({txn.items?.length ?? 0} items)
-            </p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+                Shoes & Services ({txn.items?.length ?? 0} items)
+              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Overall Status</span>
+                <StatusBadge status={txn.status} />
+              </div>
+            </div>
             <DataTable
               columns={itemColumns}
               data={[...(txn.items ?? [])].sort((a, b) => a.id - b.id)}
@@ -338,7 +363,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
             open={paymentDialogOpen}
             onOpenChange={(open) => {
               setPaymentDialogOpen(open);
-              if (!open) { setPaymentAmount(''); setPaymentError(''); }
+              if (!open) { setPaymentAmount(''); setPaymentRef(''); setPaymentError(''); }
             }}
           >
             <DialogContent className="bg-white sm:max-w-sm">
@@ -378,18 +403,30 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-3 pt-1">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-medium text-zinc-700">Method</label>
-                      <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}>
-                        <SelectTrigger className="h-9 text-sm w-full border-zinc-200">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PAYMENT_METHOD_VALUES.map((m) => (
-                            <SelectItem key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-medium text-zinc-700">Method</label>
+                        <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}>
+                          <SelectTrigger className="h-9 text-sm w-full border-zinc-200">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PAYMENT_METHOD_VALUES.map((m) => (
+                              <SelectItem key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-medium text-zinc-700">Reference #</label>
+                        <input
+                          type="text"
+                          value={paymentRef}
+                          onChange={(e) => setPaymentRef(e.target.value)}
+                          className="w-full px-3 py-2 text-sm bg-white border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                          placeholder="e.g. GCash ref"
+                        />
+                      </div>
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-medium text-zinc-700">Amount (₱)</label>
@@ -425,7 +462,11 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                           setPaymentError(`Amount exceeds remaining balance of ${formatPeso(balance)}`);
                           return;
                         }
-                        addPaymentMut.mutate({ method: paymentMethod, amount: paymentAmount });
+                        addPaymentMut.mutate({
+                          method: paymentMethod,
+                          amount: paymentAmount,
+                          ...(paymentRef.trim() ? { referenceNumber: paymentRef.trim() } : {}),
+                        });
                       }}
                     >
                       {addPaymentMut.isPending ? <Spinner /> : 'Record Payment'}
@@ -448,6 +489,9 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                     <div>
                       <p className="text-xs font-medium text-zinc-700">
                         {PAYMENT_METHOD_LABELS[p.method]}
+                        {p.referenceNumber && (
+                          <span className="ml-1.5 font-mono font-normal text-zinc-400">#{p.referenceNumber}</span>
+                        )}
                       </p>
                       <p className="text-xs text-zinc-400">{formatDatetime(p.paidAt)}</p>
                     </div>
@@ -458,12 +502,20 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
             </div>
           )}
 
-          {/* Status */}
+          {/* QR Code */}
           <div className="bg-white border border-zinc-200 rounded-lg p-5">
             <h2 className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-3">
-              Status
+              QR Code
             </h2>
-            <StatusBadge status={txn.status} />
+            <div className="flex flex-col items-center gap-2">
+              <QRCodeSVG
+                value={txn.number}
+                size={140}
+                level="M"
+                className="rounded"
+              />
+              <p className="text-xs font-mono text-zinc-400">#{txn.number}</p>
+            </div>
           </div>
 
           {/* Email customer */}
@@ -484,16 +536,39 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                     ))}
                   </SelectContent>
                 </Select>
-                <a
-                  href={generateGmailLink(txn, emailTemplate)}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
                   className="flex items-center justify-center gap-2 w-full px-3 py-2 text-sm font-medium bg-zinc-950 text-white rounded-md hover:bg-zinc-800 transition-colors duration-150"
+                  onClick={async () => {
+                    if (emailTemplate === EMAIL_TEMPLATES.claim_stub) {
+                      const link = generateGmailLinkNoBody(txn, EMAIL_TEMPLATES.claim_stub);
+                      try {
+                        if (!stubRef.current) throw new Error('ref missing');
+                        const dataUrl = await toPng(stubRef.current, { pixelRatio: 2 });
+                        const res = await fetch(dataUrl);
+                        const blob = await res.blob();
+                        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                        toast.success('Stub image copied', { description: 'Paste into the Gmail compose body' });
+                      } catch {
+                        // fallback silently
+                      }
+                      window.open(link, '_blank');
+                    } else {
+                      window.open(generateGmailLink(txn, emailTemplate), '_blank');
+                    }
+                  }}
                 >
                   <EnvelopeIcon size={13} />
                   Open in Gmail
-                </a>
+                </button>
               </div>
+            </div>
+          )}
+
+          {/* Off-screen stub render used for screenshot capture on claim_stub email */}
+          {txn && emailTemplate === EMAIL_TEMPLATES.claim_stub && (
+            <div style={{ position: 'fixed', left: '-9999px', top: 0, width: '320px' }}>
+              <ClaimStubPreview ref={stubRef} txn={txn} />
             </div>
           )}
         </div>

@@ -11,6 +11,21 @@ import { DepositsService } from './deposits.service';
 export class DepositsController {
   constructor(private readonly depositsService: DepositsService) {}
 
+  @Get('audit')
+  findDepositAudit(
+    @Query('year') year: string,
+    @Query('month') month: string,
+    @Query('branchId') branchId?: string,
+    @Query('method') method?: string,
+  ) {
+    return this.depositsService.findDepositAudit(
+      parseInt(year, 10),
+      parseInt(month, 10),
+      branchId ? parseInt(branchId, 10) : undefined,
+      method || undefined,
+    );
+  }
+
   @Get()
   findByMonth(
     @Query('year') year: string,

@@ -153,11 +153,36 @@ export class TransactionsService {
       .from(claimPayments)
       .where(eq(claimPayments.transactionId, id));
 
+    // Fetch customer address if phone is available
+    let customerAddress: {
+      streetName: string | null;
+      barangay: string | null;
+      city: string | null;
+      province: string | null;
+    } | null = null;
+    if (row.txn.customerPhone) {
+      const [cust] = await this.drizzle.db
+        .select({
+          streetName: customers.streetName,
+          barangay: customers.barangay,
+          city: customers.city,
+          province: customers.province,
+        })
+        .from(customers)
+        .where(eq(customers.phone, row.txn.customerPhone))
+        .limit(1);
+      customerAddress = cust ?? null;
+    }
+
     return {
       ...mapTxn(row.txn),
       promo: row.promo ?? null,
       items,
       payments: payments.map((p) => ({ ...p, amount: fromScaled(p.amount) })),
+      customerStreetName: customerAddress?.streetName ?? null,
+      customerBarangay: customerAddress?.barangay ?? null,
+      customerCity: customerAddress?.city ?? null,
+      customerProvince: customerAddress?.province ?? null,
     };
   }
 
@@ -234,7 +259,11 @@ export class TransactionsService {
           phone: dto.customerPhone,
           name: dto.customerName ?? null,
           email: dto.customerEmail ?? null,
+          streetName: dto.customerStreetName ?? null,
+          barangay: dto.customerBarangay ?? null,
           city: dto.customerCity ?? null,
+          province: dto.customerProvince ?? null,
+          country: dto.customerCountry ?? null,
           updatedAt: new Date(),
         })
         .onConflictDoUpdate({
@@ -242,7 +271,11 @@ export class TransactionsService {
           set: {
             name: dto.customerName ?? null,
             email: dto.customerEmail ?? null,
+            streetName: dto.customerStreetName ?? null,
+            barangay: dto.customerBarangay ?? null,
             city: dto.customerCity ?? null,
+            province: dto.customerProvince ?? null,
+            country: dto.customerCountry ?? null,
             updatedAt: new Date(),
           },
         });
@@ -322,6 +355,7 @@ export class TransactionsService {
         auditType = AUDIT_TYPE.TRANSACTION_CLAIMED;
       } else if (dto.status === TRANSACTION_STATUS.CANCELLED) {
         auditType = AUDIT_TYPE.TRANSACTION_CANCELLED;
+        auditDetails = { from: prevStatus, to: dto.status, refundedAmount: existing.paid };
       } else {
         auditType = AUDIT_TYPE.TRANSACTION_STATUS_CHANGED;
       }
@@ -560,6 +594,9 @@ export class TransactionsService {
           from: existing.status,
           to: dto.status,
           shoe: existing.shoeDescription,
+          ...(dto.status === 'cancelled' && existing.price !== null
+            ? { refundedAmount: fromScaled(existing.price) }
+            : {}),
         },
       });
 
@@ -581,6 +618,7 @@ export class TransactionsService {
         transactionId: id,
         method: dto.method,
         amount: scaledAmount,
+        referenceNumber: dto.referenceNumber ?? null,
       })
       .returning();
 
@@ -607,6 +645,7 @@ export class TransactionsService {
         method: dto.method,
         amount: payment.amount,
         newPaid: newPaidScaled,
+        ...(dto.referenceNumber ? { referenceNumber: dto.referenceNumber } : {}),
       },
     });
 

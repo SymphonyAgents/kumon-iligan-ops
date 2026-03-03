@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { DrizzleService } from '../db/drizzle.service';
 import { AuditService } from '../audit/audit.service';
-import { deposits } from '../db/schema';
+import { auditLog, deposits, users } from '../db/schema';
 import { toScaled, fromScaled } from '../utils/money';
 
 @Injectable()
@@ -76,5 +76,30 @@ export class DepositsService {
     });
 
     return { ...result, amount: fromScaled(result.amount) };
+  }
+
+  async findDepositAudit(year: number, month: number, branchId?: number, method?: string) {
+    const conditions = [
+      eq(auditLog.entityType, 'deposit'),
+      sql`${auditLog.details}->>'year' = ${String(year)}`,
+      sql`${auditLog.details}->>'month' = ${String(month)}`,
+    ];
+
+    if (branchId) conditions.push(eq(auditLog.branchId, branchId));
+    if (method) conditions.push(sql`${auditLog.details}->>'method' = ${method}`);
+
+    return this.drizzle.db
+      .select({
+        id: auditLog.id,
+        createdAt: auditLog.createdAt,
+        performedBy: auditLog.performedBy,
+        performedByEmail: users.email,
+        branchId: auditLog.branchId,
+        details: auditLog.details,
+      })
+      .from(auditLog)
+      .leftJoin(users, eq(auditLog.performedBy, users.id))
+      .where(and(...conditions))
+      .orderBy(desc(auditLog.createdAt));
   }
 }

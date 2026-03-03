@@ -1,7 +1,8 @@
 'use client';
 
 import { type ColumnDef } from '@tanstack/react-table';
-import { formatDatetime } from '@/lib/utils';
+import { formatDatetime, formatPeso, PAYMENT_METHOD_LABELS, STATUS_LABELS } from '@/lib/utils';
+import { ITEM_STATUS } from '@/lib/constants';
 import type { AuditEntry } from '@/lib/types';
 
 const AUDIT_TYPE_LABELS: Record<string, string> = {
@@ -70,13 +71,37 @@ export const auditColumns: ColumnDef<AuditEntry>[] = [
   {
     accessorKey: 'auditType',
     header: 'Event',
-    cell: ({ row }) => (
-      <span
-        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${getEventStyle(row.original)}`}
-      >
-        {getEventLabel(row.original)}
-      </span>
-    ),
+    cell: ({ row }) => {
+      const entry = row.original;
+      const isDeposit = entry.entityType === 'deposit';
+      const details = entry.details as { method?: string; added?: string; to?: string; refundedAmount?: string } | null;
+      const depositMethod = isDeposit && details?.method ? (PAYMENT_METHOD_LABELS[details.method] ?? details.method) : null;
+      const depositAdded = isDeposit && details?.added ? formatPeso(details.added) : null;
+      const isItemStatusChanged = entry.auditType === 'ITEM_STATUS_CHANGED' && details?.to;
+      const toStatusLabel = isItemStatusChanged ? (STATUS_LABELS[details!.to!] ?? details!.to) : null;
+      const isCancelledWithRefund = isItemStatusChanged && details?.to === ITEM_STATUS.CANCELLED && details?.refundedAmount;
+      const isTxnCancelledWithRefund = entry.auditType === 'TRANSACTION_CANCELLED' && details?.refundedAmount;
+      return (
+        <div className="flex flex-col items-start gap-0.5">
+          <span
+            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${getEventStyle(entry)}`}
+          >
+            {isDeposit ? 'Recorded deposit' : getEventLabel(entry)}
+          </span>
+          {isDeposit && depositMethod && depositAdded && (
+            <span className="text-[10px] text-zinc-400 pl-0.5">{depositMethod} +{depositAdded}</span>
+          )}
+          {isItemStatusChanged && toStatusLabel && (
+            <span className={`text-[10px] pl-0.5 ${details?.to === ITEM_STATUS.CANCELLED ? 'text-red-400' : 'text-zinc-400'}`}>
+              {toStatusLabel}{isCancelledWithRefund ? ` · Refunded ${formatPeso(details!.refundedAmount!)}` : ''}
+            </span>
+          )}
+          {isTxnCancelledWithRefund && (
+            <span className="text-[10px] text-red-400 pl-0.5">Refunded {formatPeso(details!.refundedAmount!)}</span>
+          )}
+        </div>
+      );
+    },
   },
   {
     accessorKey: 'entityType',

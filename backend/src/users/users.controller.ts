@@ -7,10 +7,12 @@ import {
   Body,
   Param,
   Request,
+  Req,
   UseGuards,
   NotFoundException,
   HttpCode,
 } from '@nestjs/common';
+import type { AuthedRequest } from '../auth/auth.types';
 import { SupabaseAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -52,22 +54,22 @@ export class UsersController {
   @Patch(':id/role')
   @UseGuards(RolesGuard)
   @Roles('admin', 'superadmin')
-  updateRole(@Param('id') id: string, @Body() body: { userType: UserType }) {
-    return this.usersService.updateUserType(id, body.userType);
+  updateRole(@Param('id') id: string, @Body() body: { userType: UserType }, @Req() req: AuthedRequest) {
+    return this.usersService.updateUserType(id, body.userType, req.user?.id);
   }
 
   @Patch(':id/branch')
   @UseGuards(RolesGuard)
   @Roles('superadmin')
-  updateBranch(@Param('id') id: string, @Body() body: { branchId: number }) {
-    return this.usersService.updateBranch(id, body.branchId);
+  updateBranch(@Param('id') id: string, @Body() body: { branchId: number }, @Req() req: AuthedRequest) {
+    return this.usersService.updateBranch(id, body.branchId, req.user?.id);
   }
 
   @Delete(':id')
   @HttpCode(204)
   @UseGuards(RolesGuard)
   @Roles('superadmin')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  remove(@Param('id') id: string, @Req() req: AuthedRequest) {
+    return this.usersService.remove(id, req.user?.id);
   }
 }

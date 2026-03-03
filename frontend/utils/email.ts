@@ -10,9 +10,11 @@ interface TransactionEmailContext {
   number: string;
   customerName: string | null;
   customerEmail: string | null;
+  customerPhone: string | null;
   pickupDate: string | null;
   total: string;
   paid: string;
+  items?: { shoeDescription: string | null; price: string | null }[];
 }
 
 function balance(ctx: TransactionEmailContext): number {
@@ -94,27 +96,35 @@ function buildTemplate(key: EmailTemplateKey, ctx: TransactionEmailContext): Ema
         ].join('\n'),
       };
 
-    case EMAIL_TEMPLATES.claim_stub:
+    case EMAIL_TEMPLATES.claim_stub: {
+      const sep = '--------------------------------';
+      const itemLines = (ctx.items ?? []).map(
+        (item, i) => `${i + 1}. ${item.shoeDescription || 'Item'}`.padEnd(24) + formatPeso(item.price ?? '0'),
+      );
       return {
-        subject: `Claim Stub — Transaction #${ctx.number} — Sneaker Doctor`,
+        subject: `Your Claim Stub — #${ctx.number} | Sneaker Doctor`,
         body: [
-          `Hi ${name},`,
+          `         SNEAKER DOCTOR`,
+          `           CLAIM STUB`,
+          sep,
+          `           #${ctx.number}`,
+          sep,
+          `Customer : ${name}`,
+          `Phone    : ${ctx.customerPhone || '—'}`,
+          `Pickup   : ${formatDate(ctx.pickupDate)}`,
+          sep,
+          ...itemLines,
+          sep,
+          `Total    : ${formatPeso(ctx.total)}`,
+          `Paid     : ${formatPeso(ctx.paid)}`,
+          `Balance  : ${bal <= 0 ? 'Fully Paid' : formatPeso(bal)}`,
+          sep,
+          `Present this stub when claiming your shoes.`,
           '',
-          `Thank you for choosing Sneaker Doctor! Here is your claim stub for reference.`,
-          '',
-          `Transaction: #${ctx.number}`,
-          `Pickup date: ${formatDate(ctx.pickupDate)}`,
-          `Total: ${formatPeso(ctx.total)}`,
-          ...(bal > 0
-            ? [`Balance due: ${formatPeso(bal)}`]
-            : [`Balance: Fully paid`]),
-          '',
-          `Please present your transaction number #${ctx.number} when picking up your shoes.`,
-          '',
-          `See you on ${formatDate(ctx.pickupDate)}!`,
           `— Sneaker Doctor`,
         ].join('\n'),
       };
+    }
   }
 }
 
@@ -122,5 +132,13 @@ export function generateGmailLink(ctx: TransactionEmailContext, templateKey: Ema
   if (!ctx.customerEmail) return '';
   const { subject, body } = buildTemplate(templateKey, ctx);
   const params = new URLSearchParams({ view: 'cm', to: ctx.customerEmail, su: subject, body });
+  return `https://mail.google.com/mail/?${params.toString()}`;
+}
+
+// Opens Gmail compose with only to + subject pre-filled (no body) — used when body is pasted manually
+export function generateGmailLinkNoBody(ctx: TransactionEmailContext, templateKey: EmailTemplateKey): string {
+  if (!ctx.customerEmail) return '';
+  const { subject } = buildTemplate(templateKey, ctx);
+  const params = new URLSearchParams({ view: 'cm', to: ctx.customerEmail, su: subject });
   return `https://mail.google.com/mail/?${params.toString()}`;
 }

@@ -29,6 +29,7 @@ import { ClaimStubDialog } from '@/components/transactions/ClaimStubDialog';
 import type { Service, Promo, Customer, Transaction } from '@/lib/types';
 import { calcItemPrice, calcRawTotal, findPromo, applyPromo } from '@/utils/pricing';
 import { PAYMENT_METHOD_LABELS, cn } from '@/lib/utils';
+import { ITEM_STATUS } from '@/lib/constants';
 
 const PAYMENT_METHODS = ['cash', 'gcash', 'card', 'bank_deposit'] as const;
 
@@ -84,12 +85,17 @@ export function NewTransactionForm() {
       customerName: '',
       customerPhone: '',
       customerEmail: '',
+      customerStreetName: '',
+      customerBarangay: '',
       customerCity: '',
+      customerProvince: '',
+      customerCountry: '',
       pickupDate: '',
       promoId: '',
       note: '',
       paymentMethod: '',
       paymentAmount: '',
+      paymentReference: '',
       items: [{ shoeDescription: '', primaryServiceId: '', addonServiceIds: [] }],
     },
   });
@@ -177,7 +183,10 @@ export function NewTransactionForm() {
     setExistingCustomer(undefined);
     setValue('customerName', '');
     setValue('customerEmail', '');
+    setValue('customerStreetName', '');
+    setValue('customerBarangay', '');
     setValue('customerCity', '');
+    setValue('customerProvince', '');
   }
 
   const rawTotal = calcRawTotal(watchedItems ?? [], services as Service[]);
@@ -192,7 +201,7 @@ export function NewTransactionForm() {
           shoeDescription: i.shoeDescription || undefined,
           serviceId: i.primaryServiceId ? parseInt(i.primaryServiceId, 10) : undefined,
           addonServiceIds: (i.addonServiceIds ?? []).map((id) => parseInt(id, 10)).filter(Boolean),
-          status: 'pending' as const,
+          status: ITEM_STATUS.PENDING,
           price: itemPrice > 0 ? String(itemPrice) : undefined,
         };
       });
@@ -200,7 +209,11 @@ export function NewTransactionForm() {
         customerName: data.customerName || undefined,
         customerPhone: data.customerPhone || undefined,
         customerEmail: data.customerEmail || undefined,
+        customerStreetName: data.customerStreetName || undefined,
+        customerBarangay: data.customerBarangay || undefined,
         customerCity: data.customerCity || undefined,
+        customerProvince: data.customerProvince || undefined,
+        customerCountry: 'Philippines',
         isExistingCustomer: existingCustomer != null,
         pickupDate: data.pickupDate || undefined,
         note: data.note || undefined,
@@ -230,10 +243,14 @@ export function NewTransactionForm() {
 
       // Record initial payment if provided
       const payAmt = parseFloat(data.paymentAmount ?? '0');
+      let paidSoFar = 0;
       if (payAmt > 0 && data.paymentMethod) {
         await api.transactions.addPayment(txn.id, {
           method: data.paymentMethod,
           amount: payAmt.toFixed(2),
+          ...(data.paymentReference?.trim() ? { referenceNumber: data.paymentReference.trim() } : {}),
+        }).then(() => {
+          paidSoFar = payAmt;
         }).catch(() => {
           toast.error('Transaction created but initial payment failed to record');
         });
@@ -241,7 +258,7 @@ export function NewTransactionForm() {
 
       toast.success('Transaction created');
       setPendingSubmit(null);
-      setCreatedTxn(txn);
+      setCreatedTxn({ ...txn, paid: paidSoFar.toFixed(2) });
     },
     onError: (err: Error) => {
       toast.error('Failed to create transaction', { description: err.message });
@@ -274,7 +291,16 @@ export function NewTransactionForm() {
       />
 
       <form onSubmit={handleSubmit(
-        (data) => setPendingSubmit(data),
+        (data) => {
+          const missingIdx = data.items.findIndex((_, idx) => !pendingPhotos.has(idx));
+          if (missingIdx !== -1) {
+            toast.error('Before photo required', {
+              description: `Shoe ${missingIdx + 1} is missing a before photo.`,
+            });
+            return;
+          }
+          setPendingSubmit(data);
+        },
         () => {
           // Zod validation failed — if we're still on the phone step the errors are on unmounted
           // fields and won't be visible, so surface a toast instead.
@@ -396,22 +422,33 @@ export function NewTransactionForm() {
                 <h2 className="text-sm font-semibold text-zinc-950">Payment Details</h2>
               </div>
               <div className="space-y-3">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-zinc-700">Payment Method</label>
-                  <Select
-                    value={watchedPaymentMethod || 'none'}
-                    onValueChange={(v) => setValue('paymentMethod', v === 'none' ? '' : v)}
-                  >
-                    <SelectTrigger className="h-9 text-sm w-full border-zinc-200">
-                      <SelectValue placeholder="None" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {PAYMENT_METHODS.map((m) => (
-                        <SelectItem key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-zinc-700">Payment Method</label>
+                    <Select
+                      value={watchedPaymentMethod || 'none'}
+                      onValueChange={(v) => setValue('paymentMethod', v === 'none' ? '' : v)}
+                    >
+                      <SelectTrigger className="h-9 text-sm w-full border-zinc-200">
+                        <SelectValue placeholder="None" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {PAYMENT_METHODS.map((m) => (
+                          <SelectItem key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-zinc-700">Reference #</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. GCash ref"
+                      {...register('paymentReference')}
+                      className="h-9 w-full px-3 py-2 text-sm bg-white border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
                 </div>
                 {watchedPaymentMethod && watchedPaymentMethod !== 'none' && (
                   <div className="flex flex-col gap-1.5">

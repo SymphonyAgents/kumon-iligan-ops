@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { desc, eq, getTableColumns } from 'drizzle-orm';
+import { and, desc, eq, gte, getTableColumns, lte } from 'drizzle-orm';
 import { DrizzleService } from '../db/drizzle.service';
 import { auditLog, users } from '../db/schema';
 import type { AuditType } from '../db/constants';
@@ -19,7 +19,24 @@ interface LogActionParams {
 export class AuditService {
   constructor(private readonly drizzle: DrizzleService) {}
 
-  async findAll(limit = 200) {
+  async findAll(params: { limit?: number; month?: number; year?: number; performedBy?: string } = {}) {
+    const { limit = 200, month, year, performedBy } = params;
+    const conditions: ReturnType<typeof eq>[] = [];
+
+    if (month && year) {
+      const from = new Date(`${year}-${String(month).padStart(2, '0')}-01T00:00:00`);
+      const lastDay = new Date(year, month, 0).getDate();
+      const to = new Date(`${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}T23:59:59`);
+      conditions.push(
+        gte(auditLog.createdAt, from) as ReturnType<typeof eq>,
+        lte(auditLog.createdAt, to) as ReturnType<typeof eq>,
+      );
+    }
+
+    if (performedBy) {
+      conditions.push(eq(auditLog.performedBy, performedBy));
+    }
+
     return this.drizzle.db
       .select({
         ...getTableColumns(auditLog),
@@ -27,6 +44,7 @@ export class AuditService {
       })
       .from(auditLog)
       .leftJoin(users, eq(auditLog.performedBy, users.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(auditLog.createdAt))
       .limit(limit);
   }

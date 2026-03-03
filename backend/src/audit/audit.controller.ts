@@ -11,7 +11,17 @@ export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
   @Get()
-  findAll(@Query('limit') limit?: string) {
-    return this.auditService.findAll(limit ? parseInt(limit, 10) : 200);
+  findAll(
+    @Query('limit') limit?: string,
+    @Query('month') month?: string,
+    @Query('year') year?: string,
+    @Query('performedBy') performedBy?: string,
+  ) {
+    return this.auditService.findAll({
+      limit: limit ? parseInt(limit, 10) : 200,
+      month: month ? parseInt(month, 10) : undefined,
+      year: year ? parseInt(year, 10) : undefined,
+      performedBy,
+    });
   }
 }

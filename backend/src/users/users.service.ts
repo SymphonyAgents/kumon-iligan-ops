@@ -1,12 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { asc, eq, and } from 'drizzle-orm';
 import { DrizzleService } from '../db/drizzle.service';
+import { AuditService } from '../audit/audit.service';
 import { users } from '../db/schema';
 import type { UserType } from '../db/constants';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly drizzle: DrizzleService) {}
+  constructor(
+    private readonly drizzle: DrizzleService,
+    private readonly audit: AuditService,
+  ) {}
 
   async findOrCreate(id: string, email: string) {
     const [existing] = await this.drizzle.db
@@ -55,7 +59,7 @@ export class UsersService {
       .orderBy(asc(users.createdAt));
   }
 
-  async remove(id: string) {
+  async remove(id: string, performedBy?: string) {
     const user = await this.findById(id);
     if (!user) throw new NotFoundException('User not found');
 
@@ -63,9 +67,18 @@ export class UsersService {
       .update(users)
       .set({ isActive: false })
       .where(and(eq(users.id, id), eq(users.isActive, true)));
+
+    await this.audit.log({
+      action: `Deactivated user: ${user.email}`,
+      entityType: 'user',
+      entityId: id,
+      source: 'admin',
+      performedBy,
+      details: { email: user.email },
+    });
   }
 
-  async updateUserType(id: string, userType: UserType) {
+  async updateUserType(id: string, userType: UserType, performedBy?: string) {
     const user = await this.findById(id);
     if (!user) throw new NotFoundException('User not found');
 
@@ -74,10 +87,20 @@ export class UsersService {
       .set({ userType })
       .where(eq(users.id, id))
       .returning();
+
+    await this.audit.log({
+      action: `Updated user role: ${user.email} → ${userType}`,
+      entityType: 'user',
+      entityId: id,
+      source: 'admin',
+      performedBy,
+      details: { email: user.email, prevRole: user.userType, newRole: userType },
+    });
+
     return updated;
   }
 
-  async updateBranch(id: string, branchId: number) {
+  async updateBranch(id: string, branchId: number, performedBy?: string) {
     const user = await this.findById(id);
     if (!user) throw new NotFoundException('User not found');
 
@@ -86,6 +109,16 @@ export class UsersService {
       .set({ branchId })
       .where(eq(users.id, id))
       .returning();
+
+    await this.audit.log({
+      action: `Updated user branch: ${user.email} → branch ${branchId}`,
+      entityType: 'user',
+      entityId: id,
+      source: 'admin',
+      performedBy,
+      details: { email: user.email, prevBranchId: user.branchId, newBranchId: branchId },
+    });
+
     return updated;
   }
 }
