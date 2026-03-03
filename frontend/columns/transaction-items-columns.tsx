@@ -200,7 +200,7 @@ export const createTransactionItemColumns = ({ onStatusChange, onImageClick, onU
     header: 'Status',
     cell: ({ row }) => {
       const isUpdating = loadingItemIds?.has(row.original.id) ?? false;
-      const locked = [ITEM_STATUS.CANCELLED, ITEM_STATUS.CLAIMED].includes(row.original.status);
+      const locked = ([ITEM_STATUS.CANCELLED, ITEM_STATUS.CLAIMED] as string[]).includes(row.original.status);
 
       if (isUpdating) {
         return <StatusLoadingPill status={row.original.status} />;

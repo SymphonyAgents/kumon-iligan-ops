@@ -6,6 +6,9 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
 
+  // Use the public app URL env var so it works correctly behind a reverse proxy
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+
   if (code) {
     const cookieStore = await cookies();
     const supabase = createServerClient(
@@ -29,12 +32,9 @@ export async function GET(request: Request) {
         headers: { Authorization: `Bearer ${data.session.access_token}` },
       }).catch(() => null);
 
-      // Use the public app URL env var so it works correctly behind a reverse proxy
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
       return NextResponse.redirect(`${appUrl}/`);
     }
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
   return NextResponse.redirect(`${appUrl}/login?error=auth_failed`);
 }

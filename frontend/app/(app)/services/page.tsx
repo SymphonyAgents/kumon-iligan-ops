@@ -63,7 +63,6 @@ export default function ServicesPage() {
 
   const columns = useMemo(
     () => createServicesColumns({ onStartEdit: startEdit, onDelete: setDeleteTarget }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 

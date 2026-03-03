@@ -74,7 +74,7 @@ export default function UsersPage() {
         return (groups.get(a)!.label).localeCompare(groups.get(b)!.label);
       })
       .map(([, group]) => group);
-  }, [users, branches]);
+  }, [users, branches, currentUser?.id]);
 
   if (userLoaded && !isAdmin) {
     return (

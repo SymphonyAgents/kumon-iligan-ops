@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Dialog,
@@ -18,19 +18,12 @@ interface QrScanDialogProps {
   onClose: () => void;
 }
 
-// BarcodeDetector is not yet in TypeScript's lib — declare it
-declare class BarcodeDetector {
-  constructor(options: { formats: string[] });
-  detect(source: HTMLVideoElement): Promise<Array<{ rawValue: string }>>;
-}
-
 export function QrScanDialog({ open, onClose }: QrScanDialogProps) {
   const router = useRouter();
-
   const inputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const rafRef = useRef<number>(0);
+  const animFrameRef = useRef<number>(0);
 
   const [mode, setMode] = useState<'camera' | 'manual'>('camera');
   const [cameraActive, setCameraActive] = useState(false);
@@ -38,71 +31,103 @@ export function QrScanDialog({ open, onClose }: QrScanDialogProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
+  const stopCamera = useCallback(() => {
+    cancelAnimationFrame(animFrameRef.current);
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    setCameraActive(false);
+  }, []);
 
-  useEffect(() => {
-    if (open) {
-      setValue('');
-      setError('');
-      if (hasBarcodeDetector) {
-        setMode('camera');
-        startCamera();
-      } else {
-        setMode('manual');
-        setTimeout(() => inputRef.current?.focus(), 50);
-      }
-    } else {
-      stopCamera();
-    }
-    return () => stopCamera();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  async function startCamera() {
+  const startCamera = useCallback(async (userInitiated = false) => {
     setError('');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' },
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-      setCameraActive(true);
-      startScanning();
-    } catch {
-      setMode('manual');
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }
-  }
 
-  function stopCamera() {
-    cancelAnimationFrame(rafRef.current);
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-    setCameraActive(false);
-  }
-
-  function startScanning() {
-    if (!hasBarcodeDetector) return;
-    const detector = new BarcodeDetector({ formats: ['qr_code'] });
-
-    async function tick() {
-      if (!videoRef.current || videoRef.current.readyState < 2) {
-        rafRef.current = requestAnimationFrame(tick);
+      // Wait for video element to be ready
+      const video = videoRef.current;
+      if (!video) {
+        stream.getTracks().forEach((t) => t.stop());
+        setMode('manual');
         return;
       }
-      try {
-        const barcodes = await detector.detect(videoRef.current);
-        if (barcodes.length > 0) {
-          await handleResult(barcodes[0].rawValue);
+
+      video.srcObject = stream;
+      video.setAttribute('playsinline', 'true');
+
+      await new Promise<void>((resolve, reject) => {
+        video.onloadedmetadata = () => resolve();
+        video.onerror = reject;
+        setTimeout(reject, 5000); // 5s timeout
+      });
+
+      await video.play();
+      setCameraActive(true);
+      startScanning(video);
+    } catch (err) {
+      const isDenied =
+        err instanceof DOMException &&
+        (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError');
+      if (userInitiated && isDenied) {
+        setError('Camera access was denied. Allow camera access in your browser settings.');
+      } else {
+        setMode('manual');
+        setTimeout(() => inputRef.current?.focus(), 50);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function startScanning(video: HTMLVideoElement) {
+    // Use BarcodeDetector if available (Chrome/Android), else canvas-based fallback
+    if ('BarcodeDetector' in window) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+      const tick = async () => {
+        if (!video || video.readyState < 2) {
+          animFrameRef.current = requestAnimationFrame(tick);
           return;
         }
-      } catch {}
-      rafRef.current = requestAnimationFrame(tick);
+        try {
+          const barcodes = await detector.detect(video);
+          if (barcodes.length > 0) {
+            await handleResult(barcodes[0].rawValue);
+            return;
+          }
+        } catch { /* continue */ }
+        animFrameRef.current = requestAnimationFrame(tick);
+      };
+      animFrameRef.current = requestAnimationFrame(tick);
+    } else {
+      // Canvas-based fallback for Safari
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      const tick = async () => {
+        if (!video || video.readyState < 2 || !ctx) {
+          animFrameRef.current = requestAnimationFrame(tick);
+          return;
+        }
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+
+        try {
+          // Dynamically import jsQR as a canvas-based fallback
+          const jsQR = (await import('jsqr')).default;
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+          if (code) {
+            await handleResult(code.data);
+            return;
+          }
+        } catch { /* continue */ }
+        animFrameRef.current = requestAnimationFrame(tick);
+      };
+      animFrameRef.current = requestAnimationFrame(tick);
     }
-    rafRef.current = requestAnimationFrame(tick);
   }
 
   async function handleResult(number: string) {
@@ -127,6 +152,19 @@ export function QrScanDialog({ open, onClose }: QrScanDialogProps) {
     }
   }
 
+  // Start camera with a small delay to let the dialog finish mounting
+  useEffect(() => {
+    if (open) {
+      setValue('');
+      setError('');
+      setMode('camera');
+      const timer = setTimeout(() => startCamera(), 300);
+      return () => clearTimeout(timer);
+    } else {
+      stopCamera();
+    }
+  }, [open, startCamera, stopCamera]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!value.trim()) return;
@@ -143,7 +181,7 @@ export function QrScanDialog({ open, onClose }: QrScanDialogProps) {
     setValue('');
     setError('');
     setMode('camera');
-    startCamera();
+    setTimeout(() => startCamera(true), 100);
   }
 
   return (
@@ -158,16 +196,16 @@ export function QrScanDialog({ open, onClose }: QrScanDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
-        {/* Camera view */}
-        {mode === 'camera' && (
+        {/* Camera view — always rendered so videoRef is always in DOM */}
+        <div className={mode === 'camera' ? 'block' : 'hidden'}>
           <div className="relative bg-zinc-950 rounded-lg overflow-hidden aspect-square w-full">
             <video
               ref={videoRef}
               className="w-full h-full object-cover"
               playsInline
               muted
+              autoPlay
             />
-            {/* Scan reticle */}
             {cameraActive && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="w-48 h-48 relative">
@@ -189,7 +227,7 @@ export function QrScanDialog({ open, onClose }: QrScanDialogProps) {
               </div>
             )}
           </div>
-        )}
+        </div>
 
         {/* Manual input */}
         {mode === 'manual' && (
@@ -221,13 +259,12 @@ export function QrScanDialog({ open, onClose }: QrScanDialogProps) {
           <p className="text-xs text-red-500 text-center -mt-1">{error}</p>
         )}
 
-        {/* Toggle */}
         <button
           type="button"
           onClick={mode === 'camera' ? switchToManual : switchToCamera}
           className="text-xs text-zinc-400 hover:text-zinc-600 text-center w-full transition-colors"
         >
-          {mode === 'camera' ? 'Enter number manually' : hasBarcodeDetector ? 'Use camera instead' : null}
+          {mode === 'camera' ? 'Enter number manually' : 'Use camera instead'}
         </button>
       </DialogContent>
     </Dialog>

@@ -162,7 +162,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
 
   const balance = parseFloat(txn.total) - parseFloat(txn.paid);
   const refundAmount = balance < 0 ? Math.abs(balance) : 0;
-  const txnLocked = [TRANSACTION_STATUS.CANCELLED, TRANSACTION_STATUS.CLAIMED].includes(txn.status);
+  const txnLocked = ([TRANSACTION_STATUS.CANCELLED, TRANSACTION_STATUS.CLAIMED] as string[]).includes(txn.status);
 
   return (
     <div>

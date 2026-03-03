@@ -16,7 +16,6 @@ import {
   MoneyIcon,
   CreditCardIcon,
   BankIcon,
-  PlusIcon,
   QrCodeIcon,
 } from '@phosphor-icons/react';
 import {
@@ -149,7 +148,7 @@ export default function DashboardPage() {
   const { data: recentTxns = [] } = useRecentTransactionsQuery(20);
   const { data: upcomingPickups = [] } = useUpcomingPickupsQuery();
   const { data: expenses = [], isLoading: expensesLoading } = useMonthlyExpensesQuery(year, month, { enabled: isAdmin });
-  const { data: collectionsSummary, isLoading: collectionsLoading } = useCollectionsSummaryQuery(year, month, {
+  useCollectionsSummaryQuery(year, month, {
     branchId,
     enabled: isAdmin,
   });
