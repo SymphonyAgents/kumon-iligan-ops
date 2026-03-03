@@ -17,3 +17,4 @@ node_modules/
 
 # local docs — not for commits
 *.md
+!AGENTS.md
