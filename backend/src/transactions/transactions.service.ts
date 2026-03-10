@@ -861,9 +861,27 @@ export class TransactionsService {
     const dateStr = pickupDate
       ? new Date(pickupDate).toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })
       : null;
+
+    const allItems = txn.items ?? [];
+    const doneItems = allItems.filter((i) => i.status === 'done');
+    const totalActive = allItems.filter((i) => i.status !== 'cancelled').length;
+    const itemListStr = doneItems.length > 0
+      ? doneItems.map((i) => {
+          const shoe = i.shoeDescription ?? 'Item';
+          const svc = i.service?.name ? ` (${i.service.name})` : '';
+          return `${shoe}${svc}`;
+        }).join(', ')
+      : null;
+
+    const isPartial = doneItems.length > 0 && doneItems.length < totalActive;
+    const readyLine = isPartial
+      ? `${doneItems.length} of your item(s) are ready for pickup.`
+      : `Your shoe(s) are ready for pickup at Sneaker Doctor.`;
+
     const message = [
-      `Hi ${name}! Your shoe(s) are ready for pickup at Sneaker Doctor.`,
+      `Hi ${name}! ${readyLine}`,
       `Transaction #${txn.number}.`,
+      ...(itemListStr ? [`Ready: ${itemListStr}.`] : []),
       ...(dateStr ? [`Pickup Date: ${dateStr}.`] : []),
       `See you soon!`,
     ].join(' ');

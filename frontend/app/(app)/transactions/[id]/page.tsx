@@ -810,7 +810,14 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                     {smsSending ? 'Sending SMS' : 'Send SMS — Ready for Pickup'}
                   </p>
                   <p className="text-xs text-zinc-400 mt-1">
-                    Notifying {txn.customerName ?? 'customer'} that their shoes are ready for pickup.
+                    {(() => {
+                      const doneItems = (txn.items ?? []).filter((i) => i.status === 'done');
+                      if (doneItems.length === 0) {
+                        return `Notifying ${txn.customerName ?? 'customer'} that their shoes are ready for pickup.`;
+                      }
+                      const names = doneItems.map((i) => i.shoeDescription ?? 'Item').join(', ');
+                      return `${doneItems.length} item${doneItems.length !== 1 ? 's' : ''} ready — ${names}`;
+                    })()}
                   </p>
                 </div>
                 {!smsSending && (
