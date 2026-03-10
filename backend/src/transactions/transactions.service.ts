@@ -466,13 +466,32 @@ export class TransactionsService {
       dto.newPickupDate !== existing.newPickupDate &&
       updated.customerPhone
     ) {
+      const sender = performedBy ? await this.users.findById(performedBy) : null;
       this.sms.sendScheduleChangedSms({
         customerPhone: updated.customerPhone,
         customerName: updated.customerName,
         number: updated.number,
         newPickupDate: dto.newPickupDate,
+      }).then(() => {
+        return this.audit.log({
+          action: 'sms_sent',
+          auditType: AUDIT_TYPE.SMS_SENT,
+          entityType: 'transaction',
+          entityId: updated.number,
+          source: 'pos',
+          performedBy,
+          branchId: branchId ?? undefined,
+          details: {
+            sentAt: new Date().toISOString(),
+            smsType: 'schedule_changed',
+            customerPhone: updated.customerPhone,
+            txnNumber: updated.number,
+            sentById: performedBy ?? null,
+            sentByFullName: sender?.fullName ?? null,
+            sentByEmail: sender?.email ?? null,
+          },
+        });
       }).catch((err) => {
-        // Fire-and-forget — don't fail the update if SMS fails
         console.error('Failed to send reschedule SMS:', err);
       });
     }
