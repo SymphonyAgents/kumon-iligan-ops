@@ -433,7 +433,16 @@ export class TransactionsService {
     } else if ('staffId' in dto && dto.staffId !== existing.staffId) {
       auditType = AUDIT_TYPE.TRANSACTION_ASSIGNED;
       action = 'assign';
-      auditDetails = { from: existing.staffId ?? null, to: dto.staffId ?? null };
+      let assignedStaff: { fullName: string | null; email: string } | null = null;
+      if (dto.staffId) {
+        assignedStaff = await this.users.findById(dto.staffId);
+      }
+      auditDetails = {
+        from: existing.staffId ?? null,
+        to: dto.staffId ?? null,
+        assignedFullName: assignedStaff?.fullName ?? null,
+        assignedEmail: assignedStaff?.email ?? null,
+      };
     }
 
     const branchId = performedBy
@@ -821,7 +830,7 @@ export class TransactionsService {
     return { ...payment, amount: fromScaled(payment.amount) };
   }
 
-  async sendPickupReadySms(id: number): Promise<{ phone: string }> {
+  async sendPickupReadySms(id: number, performedBy?: string): Promise<{ phone: string }> {
     const txn = await this.findOne(id);
 
     if (!txn.customerPhone) {
@@ -841,6 +850,28 @@ export class TransactionsService {
     ].join(' ');
 
     await this.sms.send({ to: txn.customerPhone, message });
+
+    const sentAt = new Date().toISOString();
+    const sender = performedBy ? await this.users.findById(performedBy) : null;
+    const branchId = performedBy ? await this.users.getBranchId(performedBy) : null;
+
+    await this.audit.log({
+      action: 'sms_sent',
+      auditType: AUDIT_TYPE.SMS_SENT,
+      entityType: 'transaction',
+      entityId: txn.number,
+      source: 'pos',
+      performedBy,
+      branchId: branchId ?? undefined,
+      details: {
+        sentAt,
+        customerPhone: txn.customerPhone,
+        txnNumber: txn.number,
+        sentById: performedBy ?? null,
+        sentByFullName: sender?.fullName ?? null,
+        sentByEmail: sender?.email ?? null,
+      },
+    });
 
     return { phone: txn.customerPhone };
   }

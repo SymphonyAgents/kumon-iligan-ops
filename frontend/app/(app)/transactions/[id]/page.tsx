@@ -940,13 +940,15 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
         confirmLabel={txn.customerPhone ? 'Save & Send SMS' : 'Save'}
         confirmVariant="dark"
         onConfirm={() => {
-          setRescheduleConfirmOpen(false);
           updateTxnMut.mutate(
             { newPickupDate: rescheduleValue },
-            { onSuccess: () => { if (txn.customerPhone) void autoSendSms(); } },
+            {
+              onSuccess: () => { setRescheduleConfirmOpen(false); if (txn.customerPhone) void autoSendSms(); },
+              onError: () => setRescheduleConfirmOpen(false),
+            },
           );
         }}
-        onCancel={() => setRescheduleConfirmOpen(false)}
+        onCancel={() => { if (!updateTxnMut.isPending) setRescheduleConfirmOpen(false); }}
         loading={updateTxnMut.isPending}
       />
 
