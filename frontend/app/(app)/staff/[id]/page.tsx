@@ -28,11 +28,10 @@ import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 import { ROUTES } from '@/lib/routes';
 import type { AppUser } from '@/lib/types';
 
-type Section = 'profile' | 'emergency' | 'documents';
+type Section = 'profile' | 'documents';
 
 const SECTIONS: { id: Section; label: string }[] = [
   { id: 'profile', label: 'Profile' },
-  { id: 'emergency', label: 'Emergency Contact' },
   { id: 'documents', label: 'Documents' },
 ];
 
@@ -74,34 +73,48 @@ export default function StaffProfilePage() {
 
   const [section, setSection] = useState<Section>('profile');
 
-  const [profileForm, setProfileForm] = useState({
+  const [form, setForm] = useState({
     fullName: '',
     nickname: '',
     contactNumber: '',
     birthday: '',
     address: '',
-  });
-
-  const [emergencyForm, setEmergencyForm] = useState({
     emergencyContactName: '',
     emergencyContactNumber: '',
   });
 
   useEffect(() => {
     if (user) {
-      setProfileForm({
+      setForm({
         fullName: user.fullName ?? '',
         nickname: user.nickname ?? '',
         contactNumber: user.contactNumber ?? '',
         birthday: user.birthday ?? '',
         address: user.address ?? '',
-      });
-      setEmergencyForm({
         emergencyContactName: user.emergencyContactName ?? '',
         emergencyContactNumber: user.emergencyContactNumber ?? '',
       });
     }
   }, [user]);
+
+  function set(field: keyof typeof form, value: string) {
+    setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  function handleSave() {
+    updateMut.mutate({
+      id: userId,
+      data: {
+        fullName: form.fullName || undefined,
+        nickname: form.nickname || undefined,
+        contactNumber: form.contactNumber || undefined,
+        birthday: form.birthday || undefined,
+        address: form.address || undefined,
+        emergencyContactName: form.emergencyContactName || undefined,
+        emergencyContactNumber: form.emergencyContactNumber || undefined,
+      },
+    });
+  }
 
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -199,7 +212,6 @@ export default function StaffProfilePage() {
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Nav — horizontal tabs on mobile, vertical list on desktop */}
         <nav className="lg:w-44 shrink-0">
-          {/* Mobile horizontal strip */}
           <div className="flex lg:hidden gap-1 overflow-x-auto pb-2 -mx-1 px-1">
             {SECTIONS.map(({ id, label }) => (
               <button
@@ -207,17 +219,13 @@ export default function StaffProfilePage() {
                 onClick={() => setSection(id)}
                 className={cn(
                   'whitespace-nowrap px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 shrink-0',
-                  section === id
-                    ? 'bg-zinc-950 text-white'
-                    : 'text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100',
+                  section === id ? 'bg-zinc-950 text-white' : 'text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100',
                 )}
               >
                 {label}
               </button>
             ))}
           </div>
-
-          {/* Desktop vertical list */}
           <div className="hidden lg:flex flex-col gap-0.5">
             {SECTIONS.map(({ id, label }) => (
               <button
@@ -225,9 +233,7 @@ export default function StaffProfilePage() {
                 onClick={() => setSection(id)}
                 className={cn(
                   'text-left w-full px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150',
-                  section === id
-                    ? 'bg-zinc-950 text-white'
-                    : 'text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100',
+                  section === id ? 'bg-zinc-950 text-white' : 'text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100',
                 )}
               >
                 {label}
@@ -237,121 +243,94 @@ export default function StaffProfilePage() {
         </nav>
 
         {/* Section content */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 space-y-4">
 
-          {/* Profile */}
+          {/* Profile + Emergency Contact + Save */}
           {section === 'profile' && (
-            <div className="bg-white border border-zinc-200 rounded-lg p-6 space-y-4">
-              <h2 className="text-sm font-semibold text-zinc-950 mb-1">Profile</h2>
-              <Input
-                label="Email"
-                value={user.email}
-                readOnly
-                className="bg-zinc-50 text-zinc-500"
-              />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <>
+              {/* Profile card */}
+              <div className="bg-white border border-zinc-200 rounded-lg p-5 sm:p-6 space-y-4">
+                <h2 className="text-sm font-semibold text-zinc-950">Profile</h2>
                 <Input
-                  label="Full Name"
-                  value={profileForm.fullName}
-                  onChange={(e) => setProfileForm((f) => ({ ...f, fullName: e.target.value }))}
-                  placeholder="Juan dela Cruz"
-                  readOnly={!isAdmin}
+                  label="Email"
+                  value={user.email}
+                  readOnly
+                  className="bg-zinc-50 text-zinc-500"
                 />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="Full Name"
+                    value={form.fullName}
+                    onChange={(e) => set('fullName', e.target.value)}
+                    placeholder="Juan dela Cruz"
+                    readOnly={!isAdmin}
+                  />
+                  <Input
+                    label="Nickname"
+                    value={form.nickname}
+                    onChange={(e) => set('nickname', e.target.value)}
+                    placeholder="Juan"
+                    readOnly={!isAdmin}
+                  />
+                  <Input
+                    label="Contact Number"
+                    value={form.contactNumber}
+                    onChange={(e) => set('contactNumber', e.target.value)}
+                    placeholder="09XX XXX XXXX"
+                    readOnly={!isAdmin}
+                  />
+                  <Input
+                    label="Birthday"
+                    type="date"
+                    value={form.birthday}
+                    onChange={(e) => set('birthday', e.target.value)}
+                    readOnly={!isAdmin}
+                  />
+                </div>
                 <Input
-                  label="Nickname"
-                  value={profileForm.nickname}
-                  onChange={(e) => setProfileForm((f) => ({ ...f, nickname: e.target.value }))}
-                  placeholder="Juan"
-                  readOnly={!isAdmin}
-                />
-                <Input
-                  label="Contact Number"
-                  value={profileForm.contactNumber}
-                  onChange={(e) => setProfileForm((f) => ({ ...f, contactNumber: e.target.value }))}
-                  placeholder="09XX XXX XXXX"
-                  readOnly={!isAdmin}
-                />
-                <Input
-                  label="Birthday"
-                  type="date"
-                  value={profileForm.birthday}
-                  onChange={(e) => setProfileForm((f) => ({ ...f, birthday: e.target.value }))}
+                  label="Address"
+                  value={form.address}
+                  onChange={(e) => set('address', e.target.value)}
+                  placeholder="Street, Barangay, City"
                   readOnly={!isAdmin}
                 />
               </div>
-              <Input
-                label="Address"
-                value={profileForm.address}
-                onChange={(e) => setProfileForm((f) => ({ ...f, address: e.target.value }))}
-                placeholder="Street, Barangay, City"
-                readOnly={!isAdmin}
-              />
-              {isAdmin && (
-                <div className="flex justify-end pt-2">
-                  <Button
-                    size="sm"
-                    disabled={updateMut.isPending}
-                    onClick={() => updateMut.mutate({
-                      id: userId,
-                      data: {
-                        fullName: profileForm.fullName || undefined,
-                        nickname: profileForm.nickname || undefined,
-                        contactNumber: profileForm.contactNumber || undefined,
-                        birthday: profileForm.birthday || undefined,
-                        address: profileForm.address || undefined,
-                      },
-                    })}
-                  >
-                    {updateMut.isPending ? <Spinner size={14} /> : 'Save'}
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
 
-          {/* Emergency Contact */}
-          {section === 'emergency' && (
-            <div className="bg-white border border-zinc-200 rounded-lg p-6 space-y-4">
-              <h2 className="text-sm font-semibold text-zinc-950 mb-1">Emergency Contact</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input
-                  label="Name"
-                  value={emergencyForm.emergencyContactName}
-                  onChange={(e) => setEmergencyForm((f) => ({ ...f, emergencyContactName: e.target.value }))}
-                  placeholder="Full name"
-                  readOnly={!isAdmin}
-                />
-                <Input
-                  label="Number"
-                  value={emergencyForm.emergencyContactNumber}
-                  onChange={(e) => setEmergencyForm((f) => ({ ...f, emergencyContactNumber: e.target.value }))}
-                  placeholder="09XX XXX XXXX"
-                  readOnly={!isAdmin}
-                />
+              {/* Emergency Contact card */}
+              <div className="bg-white border border-zinc-200 rounded-lg p-5 sm:p-6 space-y-4">
+                <h2 className="text-sm font-semibold text-zinc-950">Emergency Contact</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="Name"
+                    value={form.emergencyContactName}
+                    onChange={(e) => set('emergencyContactName', e.target.value)}
+                    placeholder="Full name"
+                    readOnly={!isAdmin}
+                  />
+                  <Input
+                    label="Number"
+                    value={form.emergencyContactNumber}
+                    onChange={(e) => set('emergencyContactNumber', e.target.value)}
+                    placeholder="09XX XXX XXXX"
+                    readOnly={!isAdmin}
+                  />
+                </div>
               </div>
+
+              {/* Single save button for all profile changes */}
               {isAdmin && (
-                <div className="flex justify-end pt-2">
-                  <Button
-                    size="sm"
-                    disabled={updateMut.isPending}
-                    onClick={() => updateMut.mutate({
-                      id: userId,
-                      data: {
-                        emergencyContactName: emergencyForm.emergencyContactName || undefined,
-                        emergencyContactNumber: emergencyForm.emergencyContactNumber || undefined,
-                      },
-                    })}
-                  >
-                    {updateMut.isPending ? <Spinner size={14} /> : 'Save'}
+                <div className="flex justify-end">
+                  <Button size="sm" disabled={updateMut.isPending} onClick={handleSave}>
+                    {updateMut.isPending ? <Spinner size={14} /> : 'Save Changes'}
                   </Button>
                 </div>
               )}
-            </div>
+            </>
           )}
 
           {/* Documents */}
           {section === 'documents' && (
-            <div className="bg-white border border-zinc-200 rounded-lg p-6 space-y-4">
+            <div className="bg-white border border-zinc-200 rounded-lg p-5 sm:p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-zinc-950">Documents</h2>
                 {isAdmin && (
