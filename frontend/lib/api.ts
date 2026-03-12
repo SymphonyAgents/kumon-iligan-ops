@@ -73,7 +73,7 @@ export const api = {
     },
     get: (id: number) => apiFetch<Transaction>(`/transactions/${id}`),
     getByNumber: (number: string) => apiFetch<Transaction>(`/transactions/number/${number}`),
-    create: (body: Partial<Omit<Transaction, 'items'>> & { items?: Record<string, unknown>[]; isExistingCustomer?: boolean; customerStreetName?: string; customerBarangay?: string; customerCity?: string; customerProvince?: string; customerCountry?: string }) =>
+    create: (body: Partial<Omit<Transaction, 'items'>> & { items?: Record<string, unknown>[]; isExistingCustomer?: boolean; customerStreetName?: string; customerCity?: string; customerCountry?: string }) =>
       apiFetch<Transaction>('/transactions', { method: 'POST', body: JSON.stringify(body) }),
     update: (id: number, body: Partial<Transaction>) =>
       apiFetch<Transaction>(`/transactions/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
@@ -192,7 +192,7 @@ export const api = {
       if (branchId) qs.set('branchId', String(branchId));
       return apiFetch<Record<string, string>>(`/deposits?${qs}`);
     },
-    upsert: (body: { year: number; month: number; method: string; amount: string; branchId?: number }) =>
+    upsert: (body: { year: number; month: number; method: string; amount: string; branchId?: number; origin?: string }) =>
       apiFetch<{ id: number; amount: string }>('/deposits', { method: 'PATCH', body: JSON.stringify(body) }),
     getAudit: (year: number, month: number, branchId?: number, method?: string) => {
       const qs = new URLSearchParams({ year: String(year), month: String(month) });

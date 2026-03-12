@@ -131,6 +131,7 @@ export default function DashboardPage() {
   const [depositDialog, setDepositDialog] = useState<string | null>(null);
   const [depositAmount, setDepositAmount] = useState('');
   const [depositError, setDepositError] = useState('');
+  const [depositSource, setDepositSource] = useState<'gcash' | 'cash' | 'card'>('gcash');
 
   const { data: currentUser } = useCurrentUserQuery();
   const isAdmin = currentUser?.userType === 'admin' || currentUser?.userType === 'superadmin';
@@ -543,7 +544,7 @@ export default function DashboardPage() {
       {/* Add deposit dialog */}
       <Dialog
         open={depositDialog !== null}
-        onOpenChange={(open) => { if (!open && !upsertDepositMut.isPending) setDepositDialog(null); }}
+        onOpenChange={(open) => { if (!open && !upsertDepositMut.isPending) { setDepositDialog(null); setDepositSource('gcash'); } }}
       >
         <DialogContent className="bg-white sm:max-w-sm">
           <DialogHeader>
@@ -553,9 +554,28 @@ export default function DashboardPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 pt-1">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-zinc-700">Source</label>
+              <div className="flex gap-2">
+                {(['gcash', 'cash', 'card'] as const).map((src) => (
+                  <button
+                    key={src}
+                    type="button"
+                    onClick={() => setDepositSource(src)}
+                    className={`flex-1 px-3 py-2 text-xs font-medium rounded-md border transition-all ${
+                      depositSource === src
+                        ? 'bg-zinc-950 text-white border-zinc-950'
+                        : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400'
+                    }`}
+                  >
+                    {src === 'gcash' ? 'GCash' : src === 'card' ? 'Card' : 'Cash'}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="rounded-md bg-amber-50 border border-amber-100 px-3 py-2">
               <p className="text-xs text-amber-700">
-                Recording a bank deposit will subtract the same amount from the GCash balance — this reflects a GCash → bank transfer.
+                Recording this deposit will subtract the same amount from the {depositSource === 'gcash' ? 'GCash' : depositSource === 'card' ? 'Card' : 'Cash'} balance — reflecting a {depositSource === 'gcash' ? 'GCash' : depositSource === 'card' ? 'Card' : 'Cash'} → bank transfer.
               </p>
             </div>
             <div className="flex flex-col gap-1.5">
@@ -572,9 +592,9 @@ export default function DashboardPage() {
               />
               {depositError && <p className="text-xs text-red-500">{depositError}</p>}
             </div>
-            {collectionsData && parseFloat(collectionsData['gcash'] ?? '0') > 0 && (
+            {collectionsData && parseFloat(collectionsData[depositSource] ?? '0') > 0 && (
               <p className="text-xs text-zinc-400">
-                GCash balance: <span className="font-mono">{formatPeso(collectionsData['gcash'])}</span>
+                {depositSource === 'gcash' ? 'GCash' : depositSource === 'card' ? 'Card' : 'Cash'} balance: <span className="font-mono">{formatPeso(collectionsData[depositSource])}</span>
                 {' '}— will be reduced by this amount.
               </p>
             )}
@@ -593,8 +613,8 @@ export default function DashboardPage() {
                 const amt = parseFloat(depositAmount);
                 if (isNaN(amt) || amt <= 0) { setDepositError('Enter a valid amount'); return; }
                 upsertDepositMut.mutate(
-                  { method: depositDialog!, amount: depositAmount },
-                  { onSuccess: () => { setDepositDialog(null); toast.success('Deposit recorded'); } },
+                  { method: depositDialog!, amount: depositAmount, origin: depositSource },
+                  { onSuccess: () => { setDepositDialog(null); setDepositSource('gcash'); toast.success('Deposit recorded'); } },
                 );
               }}
             >

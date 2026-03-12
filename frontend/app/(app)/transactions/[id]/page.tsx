@@ -352,15 +352,13 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                 </div>
               )}
             </div>
-            {(txn.customerStreetName || txn.customerBarangay || txn.customerCity || txn.customerProvince) && (
+            {(txn.customerStreetName || txn.customerCity) && (
               <div className="mt-3 pt-3 border-t border-zinc-100">
                 <p className="text-xs text-zinc-400 mb-1">Address</p>
                 <p className="text-sm text-zinc-700">
                   {formatAddress({
                     streetName: txn.customerStreetName,
-                    barangay: txn.customerBarangay,
                     city: txn.customerCity,
-                    province: txn.customerProvince,
                   })}
                 </p>
               </div>

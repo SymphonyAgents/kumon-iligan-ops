@@ -70,14 +70,15 @@ export class DepositsService {
     }
   }
 
-  async upsert(year: number, month: number, method: string, amount: string, branchId?: number, performedBy?: string) {
+  async upsert(year: number, month: number, method: string, amount: string, branchId?: number, performedBy?: string, origin?: string) {
     const addScaled = toScaled(amount);
+    const depositOrigin = method === 'bank_deposit' ? (origin ?? 'gcash') : undefined;
 
-    const result = await this.upsertSingle(year, month, method, addScaled, branchId, method === 'bank_deposit' ? 'gcash' : undefined);
+    const result = await this.upsertSingle(year, month, method, addScaled, branchId, depositOrigin);
 
-    // When recording a bank deposit, subtract the same amount from GCash (owner transferred GCash funds to bank)
-    if (method === 'bank_deposit') {
-      await this.upsertSingle(year, month, 'gcash', -addScaled, branchId);
+    // When recording a bank deposit, subtract the same amount from the source channel
+    if (method === 'bank_deposit' && depositOrigin) {
+      await this.upsertSingle(year, month, depositOrigin, -addScaled, branchId);
     }
 
     await this.audit.log({
@@ -86,7 +87,7 @@ export class DepositsService {
       entityId: String(result.id),
       performedBy,
       branchId,
-      details: { year, month, method, added: fromScaled(addScaled), total: fromScaled(result.amount), ...(method === 'bank_deposit' ? { origin: 'gcash', gcashSubtracted: fromScaled(addScaled) } : {}) },
+      details: { year, month, method, added: fromScaled(addScaled), total: fromScaled(result.amount), ...(depositOrigin ? { origin: depositOrigin, subtractedFrom: depositOrigin, subtracted: fromScaled(addScaled) } : {}) },
     });
 
     return { ...result, amount: fromScaled(result.amount) };

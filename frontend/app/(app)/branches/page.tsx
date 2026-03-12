@@ -12,6 +12,7 @@ import {
   useBranchesQuery,
   useCreateBranchMutation,
   useDeleteBranchMutation,
+  useUpdateBranchMutation,
 } from '@/hooks/useBranchesQuery';
 import { COUNTRY_DEFAULT } from '@/lib/ph-geo';
 import type { Branch } from '@/lib/types';
@@ -42,6 +43,7 @@ export default function BranchesPage() {
   });
 
   const deleteMut = useDeleteBranchMutation(() => setDeleteTarget(null));
+  const activateMut = useUpdateBranchMutation();
 
   function set(field: keyof NewForm, value: string) {
     setNewForm((f) => ({ ...f, [field]: value }));
@@ -67,7 +69,11 @@ export default function BranchesPage() {
   }
 
   const columns = useMemo(
-    () => createBranchesColumns({ onDelete: setDeleteTarget }),
+    () => createBranchesColumns({
+      onDelete: setDeleteTarget,
+      onActivate: (b) => activateMut.mutate({ id: b.id, isActive: true }),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 

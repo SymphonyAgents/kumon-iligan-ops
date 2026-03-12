@@ -59,7 +59,7 @@ export class DepositsController {
 
   @Patch()
   async upsert(
-    @Body() body: { year: number; month: number; method: string; amount: string; branchId?: number },
+    @Body() body: { year: number; month: number; method: string; amount: string; branchId?: number; origin?: string },
     @Req() req: AuthedRequest,
   ) {
     const user = await this.usersService.findById(req.user.id);
@@ -79,6 +79,7 @@ export class DepositsController {
       body.amount,
       user.branchId,
       req.user?.id,
+      body.origin,
     );
   }
 }

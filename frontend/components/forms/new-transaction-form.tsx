@@ -376,7 +376,7 @@ export function NewTransactionForm() {
                   </div>
                 </div>
                 {pendingPhotos.length === 0 ? (
-                  <p className="text-xs text-zinc-400">No photos yet — add a group shot of all shoes.</p>
+                  <p className="text-xs text-amber-600">At least one before photo is required to create a transaction.</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {pendingPhotos.map((photo, idx) => (
@@ -616,7 +616,7 @@ export function NewTransactionForm() {
               <Button
                 type="submit"
                 className="w-full mt-4"
-                disabled={isBusy || paymentExceedsTotal}
+                disabled={isBusy || paymentExceedsTotal || pendingPhotos.length === 0}
               >
                 {isBusy ? <Spinner /> : 'Create Transaction'}
               </Button>

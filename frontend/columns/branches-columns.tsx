@@ -1,16 +1,18 @@
 'use client';
 
 import { type ColumnDef } from '@tanstack/react-table';
-import { TrashIcon } from '@phosphor-icons/react';
+import { TrashIcon, ArrowCounterClockwiseIcon } from '@phosphor-icons/react';
 import { cn, formatAddress } from '@/lib/utils';
 import type { Branch } from '@/lib/types';
 
 interface BranchesColumnsOptions {
   onDelete: (b: Branch) => void;
+  onActivate: (b: Branch) => void;
 }
 
 export const createBranchesColumns = ({
   onDelete,
+  onActivate,
 }: BranchesColumnsOptions): ColumnDef<Branch>[] => [
   {
     accessorKey: 'name',
@@ -62,15 +64,29 @@ export const createBranchesColumns = ({
   {
     id: 'actions',
     header: '',
-    cell: ({ row }) => (
-      <div className="flex items-center justify-end">
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(row.original); }}
-          className="p-2 text-red-500 bg-red-50 hover:text-red-600 hover:bg-red-100 rounded transition-all"
-        >
-          <TrashIcon size={16} />
-        </button>
-      </div>
-    ),
+    cell: ({ row }) => {
+      const b = row.original;
+      return (
+        <div className="flex items-center justify-end gap-1">
+          {b.isActive ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(b); }}
+              className="p-2 text-red-500 bg-red-50 hover:text-red-600 hover:bg-red-100 rounded transition-all"
+              title="Deactivate branch"
+            >
+              <TrashIcon size={16} />
+            </button>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); onActivate(b); }}
+              className="p-2 text-emerald-600 bg-emerald-50 hover:text-emerald-700 hover:bg-emerald-100 rounded transition-all"
+              title="Reactivate branch"
+            >
+              <ArrowCounterClockwiseIcon size={16} />
+            </button>
+          )}
+        </div>
+      );
+    },
   },
 ];

@@ -158,9 +158,7 @@ export const customers = pgTable('customers', {
   name: varchar('name', { length: 255 }),
   email: varchar('email', { length: 255 }),
   streetName: varchar('street_name', { length: 500 }),
-  barangay: varchar('barangay', { length: 255 }),
   city: varchar('city', { length: 255 }),
-  province: varchar('province', { length: 255 }),
   country: varchar('country', { length: 100 }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()

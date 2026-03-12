@@ -14,23 +14,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PH_GEO, getLocationByBarangay, getAllBarangays } from '@/lib/ph-geo';
 import type { Customer } from '@/lib/types';
 
 type ShoesSort = 'default' | 'asc' | 'desc';
 
 const INPUT_CLS = 'h-9 px-3 text-sm bg-white border border-zinc-200 rounded-md text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-36';
-
-const allBarangays = getAllBarangays();
-const allCities = [...new Set(Object.values(PH_GEO).flatMap((cities) => Object.keys(cities)))].sort();
-const allProvinces = Object.keys(PH_GEO).sort();
-
-function getProvinceForCity(city: string): string | null {
-  for (const [province, cities] of Object.entries(PH_GEO)) {
-    if (cities[city]) return province;
-  }
-  return null;
-}
 
 export default function CustomersPage() {
   const { data: currentUser, isSuccess: userLoaded } = useCurrentUserQuery();
@@ -38,52 +26,35 @@ export default function CustomersPage() {
 
   const { data: customers = [], isLoading } = useCustomersQuery();
 
-  const [filterBarangay, setFilterBarangay] = useState('');
   const [filterCity, setFilterCity] = useState('');
-  const [filterProvince, setFilterProvince] = useState('');
+  const [filterSearch, setFilterSearch] = useState('');
   const [shoesSort, setShoesSort] = useState<ShoesSort>('default');
 
-  function handleBarangayChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const val = e.target.value;
-    setFilterBarangay(val);
-    const loc = getLocationByBarangay(val);
-    if (loc) {
-      setFilterCity(loc.city);
-      setFilterProvince(loc.province);
-    }
-  }
-
-  function handleCityChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const val = e.target.value;
-    setFilterCity(val);
-    const province = getProvinceForCity(val);
-    if (province) setFilterProvince(province);
-  }
-
-  function handleProvinceChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setFilterProvince(e.target.value);
-  }
-
   function clearFilters() {
-    setFilterBarangay('');
     setFilterCity('');
-    setFilterProvince('');
+    setFilterSearch('');
   }
 
-  const hasFilter = filterBarangay || filterCity || filterProvince;
+  const hasFilter = filterCity || filterSearch;
 
   const filtered = useMemo(() => {
     let list = customers as Customer[];
-    if (filterBarangay) list = list.filter((c) => c.barangay?.toLowerCase() === filterBarangay.toLowerCase());
-    if (filterCity) list = list.filter((c) => c.city?.toLowerCase() === filterCity.toLowerCase());
-    if (filterProvince) list = list.filter((c) => c.province?.toLowerCase() === filterProvince.toLowerCase());
+    if (filterSearch) {
+      const q = filterSearch.toLowerCase();
+      list = list.filter((c) =>
+        c.name?.toLowerCase().includes(q) ||
+        c.phone?.includes(q) ||
+        c.email?.toLowerCase().includes(q),
+      );
+    }
+    if (filterCity) list = list.filter((c) => c.city?.toLowerCase().includes(filterCity.toLowerCase()));
     if (shoesSort === 'desc') {
       list = [...list].sort((a, b) => (b.shoesCount ?? 0) - (a.shoesCount ?? 0));
     } else if (shoesSort === 'asc') {
       list = [...list].sort((a, b) => (a.shoesCount ?? 0) - (b.shoesCount ?? 0));
     }
     return list;
-  }, [customers, filterBarangay, filterCity, filterProvince, shoesSort]);
+  }, [customers, filterSearch, filterCity, shoesSort]);
 
   if (userLoaded && !isAdmin) {
     return (
@@ -107,47 +78,21 @@ export default function CustomersPage() {
       />
 
       <div className="flex items-center gap-2 mb-5 flex-wrap">
-        {/* Barangay */}
-        <div className="relative">
-          <input
-            list="filter-brgy-list"
-            value={filterBarangay}
-            onChange={handleBarangayChange}
-            placeholder="Barangay"
-            className={INPUT_CLS}
-          />
-          <datalist id="filter-brgy-list">
-            {allBarangays.map((b) => <option key={b} value={b} />)}
-          </datalist>
-        </div>
+        {/* Name / phone / email search */}
+        <input
+          value={filterSearch}
+          onChange={(e) => setFilterSearch(e.target.value)}
+          placeholder="Search name, phone, email"
+          className="h-9 px-3 text-sm bg-white border border-zinc-200 rounded-md text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-52"
+        />
 
         {/* City */}
-        <div className="relative">
-          <input
-            list="filter-city-list"
-            value={filterCity}
-            onChange={handleCityChange}
-            placeholder="City / Municipality"
-            className={INPUT_CLS}
-          />
-          <datalist id="filter-city-list">
-            {allCities.map((c) => <option key={c} value={c} />)}
-          </datalist>
-        </div>
-
-        {/* Province */}
-        <div className="relative">
-          <input
-            list="filter-province-list"
-            value={filterProvince}
-            onChange={handleProvinceChange}
-            placeholder="Province"
-            className={INPUT_CLS}
-          />
-          <datalist id="filter-province-list">
-            {allProvinces.map((p) => <option key={p} value={p} />)}
-          </datalist>
-        </div>
+        <input
+          value={filterCity}
+          onChange={(e) => setFilterCity(e.target.value)}
+          placeholder="City"
+          className={INPUT_CLS}
+        />
 
         {/* Clear */}
         {hasFilter && (

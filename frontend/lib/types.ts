@@ -27,9 +27,7 @@ export interface Customer {
   name: string | null;
   email: string | null;
   streetName: string | null;
-  barangay: string | null;
   city: string | null;
-  province: string | null;
   country: string | null;
   createdAt: string;
   updatedAt: string | null;
@@ -104,9 +102,7 @@ export interface Transaction {
   customerPhone: string | null;
   customerEmail: string | null;
   customerStreetName: string | null;
-  customerBarangay: string | null;
   customerCity: string | null;
-  customerProvince: string | null;
   status: TransactionStatus;
   note: string | null;
   pickupDate: string | null;

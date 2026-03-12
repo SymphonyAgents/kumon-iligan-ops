@@ -24,7 +24,7 @@ export const customerColumns: ColumnDef<Customer>[] = [
     header: 'Address',
     cell: ({ row }) => {
       const c = row.original;
-      const addr = formatAddress({ streetName: c.streetName, barangay: c.barangay, city: c.city, province: c.province });
+      const addr = formatAddress({ streetName: c.streetName, city: c.city });
       return <span className="text-sm text-zinc-500">{addr}</span>;
     },
   },

@@ -9,7 +9,7 @@ export const PROMOS_KEY = ['promos'] as const;
 export function usePromosQuery() {
   return useQuery({
     queryKey: PROMOS_KEY,
-    queryFn: () => api.promos.list(),
+    queryFn: () => api.promos.list(true),
   });
 }
 

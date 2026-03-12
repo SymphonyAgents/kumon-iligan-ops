@@ -21,8 +21,8 @@ export function useDepositsAuditQuery(year: number, month: number, branchId?: nu
 export function useUpsertDepositMutation(year: number, month: number, branchId?: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { method: string; amount: string }) =>
-      api.deposits.upsert({ year, month, method: body.method, amount: body.amount, branchId }),
+    mutationFn: (body: { method: string; amount: string; origin?: string }) =>
+      api.deposits.upsert({ year, month, method: body.method, amount: body.amount, branchId, origin: body.origin }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['deposits', year, month, branchId] });
       void qc.invalidateQueries({ queryKey: ['deposits-audit'] });
