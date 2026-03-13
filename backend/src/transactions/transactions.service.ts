@@ -591,6 +591,7 @@ export class TransactionsService {
       .where(and(...conditions))
       .groupBy(claimPayments.method);
 
+    // NOTE: PostgreSQL SUM() returns strings via Drizzle — always coerce with Number()
     const collected: Record<string, number> = {
       cash: 0,
       gcash: 0,
@@ -598,38 +599,45 @@ export class TransactionsService {
       bank_deposit: 0,
     };
     rows.forEach((r) => {
-      collected[r.method] = r.total;
+      collected[r.method] = Number(r.total);
     });
 
-    // Fetch ALL deposit adjustments grouped by method.
-    // The deposits table stores positive bank_deposit rows AND negative source-channel
-    // rows (e.g. gcash -X when a gcash→bank transfer is recorded). Summing by method
-    // gives us the net adjustment per channel.
+    // Fetch bank deposit total separately (the deposits table tracks bank_deposit
+    // amounts directly). Source-channel deductions are unreliable (upsertSingle
+    // clamps new rows to 0 via Math.max), so we subtract from the correct channel
+    // using the origin field.
     const depositConditions: ReturnType<typeof eq>[] = [
       eq(deposits.year, year),
+      eq(deposits.method, 'bank_deposit'),
       ...(branchId ? [eq(deposits.branchId, branchId)] : []),
       ...(month !== 0 ? [eq(deposits.month, month)] : []),
     ];
     const depositRows = await this.drizzle.db
       .select({
-        method: deposits.method,
+        origin: deposits.origin,
         total: sql<number>`COALESCE(SUM(${deposits.amount}), 0)`,
       })
       .from(deposits)
       .where(and(...depositConditions))
-      .groupBy(deposits.method);
+      .groupBy(deposits.origin);
 
-    // Apply deposit adjustments to collected amounts
-    const adjusted = { ...collected };
+    // Sum bank deposits and subtract from their respective source channels
+    let bankDepositTotal = 0;
     depositRows.forEach((r) => {
-      adjusted[r.method] = (adjusted[r.method] ?? 0) + r.total;
+      const amount = Number(r.total);
+      bankDepositTotal += amount;
+      // Subtract from the source channel (gcash, cash, card)
+      const origin = r.origin ?? 'gcash';
+      if (origin in collected) {
+        collected[origin] = Math.max(0, collected[origin] - amount);
+      }
     });
 
     return {
-      cash: fromScaled(Math.max(0, adjusted.cash)),
-      gcash: fromScaled(Math.max(0, adjusted.gcash)),
-      card: fromScaled(Math.max(0, adjusted.card)),
-      bank_deposit: fromScaled(Math.max(0, adjusted.bank_deposit)),
+      cash: fromScaled(collected.cash),
+      gcash: fromScaled(collected.gcash),
+      card: fromScaled(collected.card),
+      bank_deposit: fromScaled(bankDepositTotal),
     };
   }
 
