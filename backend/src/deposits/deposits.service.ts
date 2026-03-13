@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { DrizzleService } from '../db/drizzle.service';
 import { AuditService } from '../audit/audit.service';
@@ -55,6 +55,9 @@ export class DepositsService {
 
     if (existing.length > 0) {
       const newTotal = existing[0].amount + deltaScaled;
+      if (newTotal < 0) {
+        throw new BadRequestException(`Deposit balance for ${method} cannot go below zero.`);
+      }
       const [updated] = await this.drizzle.db
         .update(deposits)
         .set({ amount: newTotal, updatedAt: new Date() })
