@@ -29,6 +29,7 @@ import {
   services,
   branches,
   deposits,
+  expenses,
   users as usersTable, // alias to avoid conflict with this.users (UsersService)
 } from '../db/schema';
 import {
@@ -600,27 +601,35 @@ export class TransactionsService {
       collected[r.method] = r.total;
     });
 
-    // Fetch bank deposit total to compute net GCash (gcash collected - deposited to bank)
-    // month=0 means full year — sum across all months
+    // Fetch ALL deposit adjustments grouped by method.
+    // The deposits table stores positive bank_deposit rows AND negative source-channel
+    // rows (e.g. gcash -X when a gcash→bank transfer is recorded). Summing by method
+    // gives us the net adjustment per channel.
     const depositConditions: ReturnType<typeof eq>[] = [
       eq(deposits.year, year),
-      eq(deposits.method, 'bank_deposit'),
       (branchId ? eq(deposits.branchId, branchId) : isNull(deposits.branchId)) as ReturnType<typeof eq>,
       ...(month !== 0 ? [eq(deposits.month, month)] : []),
     ];
     const depositRows = await this.drizzle.db
-      .select({ total: sql<number>`COALESCE(SUM(${deposits.amount}), 0)` })
+      .select({
+        method: deposits.method,
+        total: sql<number>`COALESCE(SUM(${deposits.amount}), 0)`,
+      })
       .from(deposits)
-      .where(and(...depositConditions));
-    const bankDepositedScaled = depositRows[0]?.total ?? 0;
+      .where(and(...depositConditions))
+      .groupBy(deposits.method);
 
-    const gcashNet = Math.max(0, collected.gcash - bankDepositedScaled);
+    // Apply deposit adjustments to collected amounts
+    const adjusted = { ...collected };
+    depositRows.forEach((r) => {
+      adjusted[r.method] = (adjusted[r.method] ?? 0) + r.total;
+    });
 
     return {
-      cash: fromScaled(collected.cash),
-      gcash: fromScaled(gcashNet),
-      card: fromScaled(collected.card),
-      bank_deposit: fromScaled(bankDepositedScaled),
+      cash: fromScaled(Math.max(0, adjusted.cash)),
+      gcash: fromScaled(Math.max(0, adjusted.gcash)),
+      card: fromScaled(Math.max(0, adjusted.card)),
+      bank_deposit: fromScaled(Math.max(0, adjusted.bank_deposit)),
     };
   }
 
@@ -787,6 +796,40 @@ export class TransactionsService {
             : {}),
         },
       });
+
+      // Auto-create refund expense when an item is cancelled
+      if (dto.status === 'cancelled' && existing.price !== null && existing.price > 0) {
+        const todayKey = new Date().toISOString().split('T')[0];
+        const refundAmount = existing.price; // already scaled
+        const [refundExpense] = await this.drizzle.db
+          .insert(expenses)
+          .values({
+            dateKey: todayKey,
+            category: 'Refund',
+            note: `Refund — Txn #${txn.number} — ${existing.shoeDescription || 'Item'}`,
+            method: 'cash',
+            source: 'system',
+            amount: refundAmount,
+            staffId: performedBy ?? null,
+          })
+          .returning();
+
+        await this.audit.log({
+          action: 'create',
+          auditType: AUDIT_TYPE.ITEM_STATUS_CHANGED,
+          entityType: 'expense',
+          entityId: String(refundExpense.id),
+          source: 'system',
+          performedBy,
+          branchId: branchId ?? undefined,
+          details: {
+            reason: 'item_cancellation_refund',
+            transactionNumber: txn.number,
+            shoe: existing.shoeDescription,
+            refundAmount: fromScaled(refundAmount),
+          },
+        });
+      }
 
       // Auto-sync parent transaction status
       await this.syncTransactionStatus(transactionId);
