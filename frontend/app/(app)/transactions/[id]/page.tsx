@@ -730,8 +730,8 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
             </div>
           )}
 
-          {/* Assigned Staff */}
-          {isAdmin && (
+          {/* Assigned Staff — all roles can assign */}
+          {assignableUsers.length > 0 && (
             <div className="bg-white border border-zinc-200 rounded-lg p-5">
               <h2 className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-3">
                 Assigned To

@@ -738,6 +738,16 @@ export class TransactionsService {
 
     if (!existing) throw new NotFoundException(`Item ${itemId} not found`);
 
+    // Validate BEFORE writing — guards must run before any DB mutation
+    if (dto.status && dto.status !== existing.status && dto.status === 'claimed') {
+      const otherClaimable = (txn.items ?? []).filter(
+        (i) => i.id !== itemId && i.status !== 'claimed' && i.status !== 'cancelled',
+      );
+      if (otherClaimable.length === 0 && txn.total > txn.paid) {
+        throw new BadRequestException('Balance must be fully settled before the last item can be claimed.');
+      }
+    }
+
     const [updated] = await this.drizzle.db
       .update(transactionItems)
       .set(dto)
@@ -745,15 +755,6 @@ export class TransactionsService {
       .returning();
 
     if (dto.status && dto.status !== existing.status) {
-      // Guard: last claimable item cannot be claimed if there's an outstanding balance
-      if (dto.status === 'claimed') {
-        const otherClaimable = (txn.items ?? []).filter(
-          (i) => i.id !== itemId && i.status !== 'claimed' && i.status !== 'cancelled',
-        );
-        if (otherClaimable.length === 0 && txn.total > txn.paid) {
-          throw new BadRequestException('Balance must be fully settled before the last item can be claimed.');
-        }
-      }
 
       const branchId = performedBy
         ? await this.users.getBranchId(performedBy)
