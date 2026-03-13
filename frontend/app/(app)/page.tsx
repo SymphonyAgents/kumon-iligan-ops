@@ -470,13 +470,15 @@ export default function DashboardPage() {
       {/* Upcoming pickups + Recent transactions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         <div className="bg-white border border-zinc-200 rounded-lg p-5">
-          <h2 className="text-sm font-semibold text-zinc-950 mb-4 flex items-center gap-1.5">
-            <CalendarIcon size={14} className="text-amber-500" />
-            Upcoming Pickups
+          <Link href="/upcoming-pickups" className="flex items-center gap-1.5 mb-4 group">
+            <h2 className="text-sm font-semibold text-zinc-950 flex items-center gap-1.5 group-hover:text-amber-600 transition-colors">
+              <CalendarIcon size={14} className="text-amber-500" />
+              Upcoming Pickups
+            </h2>
             {upcomingPickups.length > 0 && (
               <span className="ml-auto text-xs font-normal text-zinc-400">{upcomingPickups.length} within 3 days</span>
             )}
-          </h2>
+          </Link>
           {upcomingPickups.length === 0 ? (
             <p className="text-sm text-zinc-400">No pickups in the next 3 days.</p>
           ) : (
