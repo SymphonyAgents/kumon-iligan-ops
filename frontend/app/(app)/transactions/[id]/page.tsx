@@ -154,6 +154,12 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
 
   const txnBalance = txn ? parseFloat(txn.total) - parseFloat(txn.paid) : 0;
 
+  // Transaction-level after photo — satisfies the "after photo" claiming requirement
+  const hasTransactionAfterPhoto = useMemo(
+    () => (txn?.photos ?? []).some((p) => p.type === 'after'),
+    [txn?.photos],
+  );
+
   // The single remaining non-claimed, non-cancelled item — balance gates only this one
   const lastClaimableItemId = useMemo(() => {
     if (!txn?.items) return null;
@@ -230,8 +236,9 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
       disableUploadBefore: true,
       txnBalance,
       lastClaimableItemId,
+      hasTransactionAfterPhoto,
     }),
-    [loadingItemIds, uploadingItemIds, handleUploadClick, handleCameraClick, txnBalance, lastClaimableItemId],
+    [loadingItemIds, uploadingItemIds, handleUploadClick, handleCameraClick, txnBalance, lastClaimableItemId, hasTransactionAfterPhoto],
   );
   const addPaymentMut = useAddPaymentMutation(id, () => {
     setPaymentDialogOpen(false);

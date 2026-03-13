@@ -47,6 +47,8 @@ interface TransactionItemColumnsOptions {
   txnBalance?: number;
   // ID of the single remaining claimable item — only this one is balance-gated
   lastClaimableItemId?: number | null;
+  // True if the transaction has at least one transaction-level "after" photo
+  hasTransactionAfterPhoto?: boolean;
 }
 
 const ITEM_STATUSES = ITEM_STATUS_VALUES;
@@ -145,7 +147,7 @@ function ImageCell({
   );
 }
 
-export const createTransactionItemColumns = ({ onStatusChange, onImageClick, onUploadClick, onCameraClick, loadingItemIds, uploadingItemIds, disableUploadBefore, txnBalance, lastClaimableItemId }: TransactionItemColumnsOptions): ColumnDef<TransactionItem>[] => [
+export const createTransactionItemColumns = ({ onStatusChange, onImageClick, onUploadClick, onCameraClick, loadingItemIds, uploadingItemIds, disableUploadBefore, txnBalance, lastClaimableItemId, hasTransactionAfterPhoto }: TransactionItemColumnsOptions): ColumnDef<TransactionItem>[] => [
   {
     accessorKey: 'shoeDescription',
     header: 'Shoe',
@@ -213,7 +215,8 @@ export const createTransactionItemColumns = ({ onStatusChange, onImageClick, onU
         return <StatusBadge status={row.original.status} />;
       }
 
-      const missingAfter = !row.original.afterImageUrl;
+      // After photo can be either per-item (afterImageUrl) or transaction-level (photos with type=after)
+      const missingAfter = !row.original.afterImageUrl && !hasTransactionAfterPhoto;
       // Balance only blocks the very last claimable item — others can be claimed freely
       const isLastClaimable = lastClaimableItemId === row.original.id;
       const balanceBlocked = isLastClaimable && (txnBalance ?? 0) > 0;
