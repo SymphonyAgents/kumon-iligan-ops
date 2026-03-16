@@ -177,6 +177,7 @@ export interface AppUser {
   emergencyContactName: string | null;
   emergencyContactNumber: string | null;
   userType: 'admin' | 'staff' | 'superadmin';
+  status: 'active' | 'pending' | 'rejected';
   branchId: number | null;
   isActive: boolean;
   createdAt: string;

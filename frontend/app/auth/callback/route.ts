@@ -27,10 +27,20 @@ export async function GET(request: Request) {
 
     if (!error && data.user && data.session) {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
-      await fetch(`${apiUrl}/users/provision`, {
+      const provisionRes = await fetch(`${apiUrl}/users/provision`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${data.session.access_token}` },
       }).catch(() => null);
+
+      // If user is pending/rejected, redirect to pending page instead of app
+      if (provisionRes?.ok) {
+        try {
+          const user = await provisionRes.json() as { status?: string };
+          if (user.status === 'pending' || user.status === 'rejected') {
+            return NextResponse.redirect(`${appUrl}/pending`);
+          }
+        } catch { /* fall through to default redirect */ }
+      }
 
       return NextResponse.redirect(`${appUrl}/`);
     }

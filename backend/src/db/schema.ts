@@ -197,6 +197,7 @@ export const users = pgTable('users', {
   emergencyContactName: varchar('emergency_contact_name', { length: 255 }),
   emergencyContactNumber: varchar('emergency_contact_number', { length: 50 }),
   userType: varchar('user_type', { length: 20 }).default('staff').notNull(), // admin | staff | superadmin
+  status: varchar('status', { length: 20 }).default('active').notNull(), // active | pending | rejected
   branchId: integer('branch_id').references(() => branches.id, {
     onDelete: 'set null',
   }),

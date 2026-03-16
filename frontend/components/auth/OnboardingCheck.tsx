@@ -10,7 +10,9 @@ export function OnboardingCheck() {
   const router = useRouter();
   const { data: user, isLoading } = useCurrentUserQuery();
 
-  const needsOnboarding = !isLoading && !!user && user.branchId === null;
+  const isPending = !isLoading && !!user && user.status === 'pending';
+  const isRejected = !isLoading && !!user && user.status === 'rejected';
+  const needsOnboarding = !isLoading && !!user && user.status === 'active' && user.branchId === null;
 
   // Force logout + redirect when Supabase refresh token is invalid/expired
   useEffect(() => {
@@ -27,12 +29,14 @@ export function OnboardingCheck() {
   }, [router]);
 
   useEffect(() => {
-    if (needsOnboarding) {
+    if (isPending || isRejected) {
+      router.push('/pending');
+    } else if (needsOnboarding) {
       router.push('/onboarding');
     }
-  }, [needsOnboarding, router]);
+  }, [isPending, isRejected, needsOnboarding, router]);
 
-  if (isLoading || needsOnboarding) {
+  if (isLoading || needsOnboarding || isPending || isRejected) {
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white">
         <Spinner size={24} className="text-zinc-400" />

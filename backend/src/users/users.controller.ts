@@ -119,6 +119,20 @@ export class UsersController {
     return this.usersService.removeDocument(id, docId);
   }
 
+  @Patch(':id/approve')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin')
+  approve(@Param('id') id: string, @Req() req: AuthedRequest) {
+    return this.usersService.approve(id, req.user?.id);
+  }
+
+  @Patch(':id/reject')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin')
+  reject(@Param('id') id: string, @Req() req: AuthedRequest) {
+    return this.usersService.reject(id, req.user?.id);
+  }
+
   @Patch(':id/role')
   @UseGuards(RolesGuard)
   @Roles('superadmin')

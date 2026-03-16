@@ -56,6 +56,32 @@ export function useUpdateUserBranchMutation() {
   });
 }
 
+export function useApproveUserMutation(onSuccess?: () => void) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.users.approve(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: USERS_KEY });
+      toast.success('User approved');
+      onSuccess?.();
+    },
+    onError: (err: Error) => toast.error('Failed to approve user', { description: err.message }),
+  });
+}
+
+export function useRejectUserMutation(onSuccess?: () => void) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.users.reject(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: USERS_KEY });
+      toast.success('User rejected');
+      onSuccess?.();
+    },
+    onError: (err: Error) => toast.error('Failed to reject user', { description: err.message }),
+  });
+}
+
 export function useDeleteUserMutation(onSuccess?: () => void) {
   const qc = useQueryClient();
   return useMutation({

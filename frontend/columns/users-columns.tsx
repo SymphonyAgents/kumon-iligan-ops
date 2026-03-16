@@ -1,7 +1,7 @@
 'use client';
 
 import { type ColumnDef } from '@tanstack/react-table';
-import { TrashIcon, PencilSimpleIcon, FolderOpenIcon } from '@phosphor-icons/react';
+import { TrashIcon, PencilSimpleIcon, FolderOpenIcon, CheckCircleIcon, XCircleIcon } from '@phosphor-icons/react';
 import { formatDatetime, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,6 +21,11 @@ const ROLE_STYLES: Record<string, string> = {
   superadmin: 'bg-violet-50 text-violet-700',
 };
 
+const STATUS_STYLES: Record<string, string> = {
+  pending: 'bg-amber-50 text-amber-600',
+  rejected: 'bg-red-50 text-red-600',
+};
+
 function RoleBadge({ role }: { role: string }) {
   return (
     <span className={cn(
@@ -32,12 +37,26 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
+function StatusBadge({ status }: { status: string }) {
+  if (status === 'active') return null;
+  return (
+    <span className={cn(
+      'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium uppercase tracking-wide',
+      STATUS_STYLES[status] ?? 'bg-zinc-100 text-zinc-600',
+    )}>
+      {status}
+    </span>
+  );
+}
+
 interface UserColumnsOptions {
   onRoleChange: (id: string, newUserType: string, currentUserType: string, email: string) => void;
   onBranchChange?: (id: string, newBranchId: number, currentBranchId: number | null, email: string, newBranchName: string, currentBranchName: string | null) => void;
   onDelete?: (user: AppUser) => void;
   onEdit?: (user: AppUser) => void;
   onDocuments?: (user: AppUser) => void;
+  onApprove?: (user: AppUser) => void;
+  onReject?: (user: AppUser) => void;
   currentUserId?: string;
   isSuperadmin?: boolean;
   branches?: Branch[];
@@ -49,6 +68,8 @@ export const createUserColumns = ({
   onDelete,
   onEdit,
   onDocuments,
+  onApprove,
+  onReject,
   currentUserId,
   isSuperadmin,
   branches = [],
@@ -60,7 +81,12 @@ export const createUserColumns = ({
       const u = row.original;
       const name = u.fullName ?? u.nickname ?? null;
       const primary = name ? toTitleCase(name) : u.email;
-      return <span className="text-sm text-zinc-950">{primary}</span>;
+      return (
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-zinc-950">{primary}</span>
+          <StatusBadge status={u.status} />
+        </div>
+      );
     },
   },
   {
@@ -70,9 +96,10 @@ export const createUserColumns = ({
     cell: ({ row }) => {
       const user = row.original;
       const isSelf = user.id === currentUserId;
+      const isPending = user.status === 'pending';
       return (
         <div className="flex items-center">
-          {isSelf ? (
+          {isSelf || isPending ? (
             <RoleBadge role={user.userType} />
           ) : (
             <Select value={user.userType} onValueChange={(v) => onRoleChange(user.id, v, user.userType, user.email)}>
@@ -101,7 +128,7 @@ export const createUserColumns = ({
       const isSelf = user.id === currentUserId;
       const currentBranch = branches.find((b) => b.id === user.branchId) ?? null;
 
-      if (isSelf || !isSuperadmin || !onBranchChange) {
+      if (isSelf || !isSuperadmin || !onBranchChange || user.status === 'pending') {
         return (
           <span className={cn('text-sm', currentBranch ? 'text-zinc-700' : 'text-zinc-400')}>
             {toTitleCase(currentBranch?.name) || 'No branch'}
@@ -146,13 +173,36 @@ export const createUserColumns = ({
   {
     id: 'actions',
     header: '',
-    size: 200,
+    size: 240,
     cell: ({ row }) => {
       const user = row.original;
       const isSelf = user.id === currentUserId;
+      const isPending = user.status === 'pending';
       return (
         <div className="flex items-center justify-end gap-2">
-          {onEdit && (
+          {isPending && isSuperadmin && onApprove && (
+            <Button
+              size="sm"
+              variant="secondary"
+              className="text-emerald-600 hover:text-emerald-700"
+              onClick={(e) => { e.stopPropagation(); onApprove(user); }}
+            >
+              <CheckCircleIcon size={13} weight="bold" />
+              Approve
+            </Button>
+          )}
+          {isPending && isSuperadmin && onReject && (
+            <Button
+              size="sm"
+              variant="secondary"
+              className="text-red-500 hover:text-red-600"
+              onClick={(e) => { e.stopPropagation(); onReject(user); }}
+            >
+              <XCircleIcon size={13} weight="bold" />
+              Reject
+            </Button>
+          )}
+          {!isPending && onEdit && (
             <Button
               size="sm"
               variant="secondary"
@@ -162,7 +212,7 @@ export const createUserColumns = ({
               Edit
             </Button>
           )}
-          {onDocuments && (
+          {!isPending && onDocuments && (
             <Button
               size="sm"
               variant="secondary"
@@ -172,7 +222,7 @@ export const createUserColumns = ({
               Docs
             </Button>
           )}
-          {!isSelf && isSuperadmin && onDelete && (
+          {!isSelf && !isPending && isSuperadmin && onDelete && (
             <Button
               size="sm"
               variant="danger"

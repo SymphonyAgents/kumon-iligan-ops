@@ -186,6 +186,10 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify(body),
       }),
+    approve: (id: string) =>
+      apiFetch<AppUser>(`/users/${id}/approve`, { method: 'PATCH' }),
+    reject: (id: string) =>
+      apiFetch<AppUser>(`/users/${id}/reject`, { method: 'PATCH' }),
     delete: (id: string) => apiFetch<void>(`/users/${id}`, { method: 'DELETE' }),
     getDocuments: (id: string) => apiFetch<StaffDocument[]>(`/users/${id}/documents`),
     addDocument: (id: string, body: { url: string; label?: string }) =>

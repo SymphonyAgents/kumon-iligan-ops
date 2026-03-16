@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { asc, eq, and } from 'drizzle-orm';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { asc, eq, and, sql, ne } from 'drizzle-orm';
 import { DrizzleService } from '../db/drizzle.service';
 import { AuditService } from '../audit/audit.service';
 import { users, staffDocuments, branches } from '../db/schema';
+import { AUDIT_TYPE } from '../db/constants';
 import type { UserType } from '../db/constants';
 import type { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 
@@ -20,9 +21,20 @@ export class UsersService {
       .where(eq(users.id, id));
     if (existing) return existing;
 
+    // First user ever → auto-superadmin + active (prevents lockout)
+    const [{ count: userCount }] = await this.drizzle.db
+      .select({ count: sql<number>`count(*)` })
+      .from(users);
+    const isFirstUser = Number(userCount) === 0;
+
     const [created] = await this.drizzle.db
       .insert(users)
-      .values({ id, email, userType: 'staff' })
+      .values({
+        id,
+        email,
+        userType: isFirstUser ? 'superadmin' : 'staff',
+        status: isFirstUser ? 'active' : 'pending',
+      })
       .returning();
     return created;
   }
@@ -60,14 +72,69 @@ export class UsersService {
   }
 
   async findAll(branchId?: number) {
+    // Show active + pending users (not rejected or deactivated)
+    const activeOrPending = and(
+      eq(users.isActive, true),
+      ne(users.status, 'rejected'),
+    );
     const whereClause = branchId
-      ? and(eq(users.isActive, true), eq(users.branchId, branchId))
-      : eq(users.isActive, true);
+      ? and(activeOrPending, eq(users.branchId, branchId))
+      : activeOrPending;
     return this.drizzle.db
       .select()
       .from(users)
       .where(whereClause)
       .orderBy(asc(users.createdAt));
+  }
+
+  async approve(id: string, performedBy?: string) {
+    const user = await this.findById(id);
+    if (!user) throw new NotFoundException('User not found');
+    if (user.status === 'active') throw new BadRequestException('User is already active');
+
+    const [updated] = await this.drizzle.db
+      .update(users)
+      .set({ status: 'active' })
+      .where(eq(users.id, id))
+      .returning();
+
+    await this.audit.log({
+      action: `Approved user: ${user.email}`,
+      auditType: AUDIT_TYPE.USER_APPROVED,
+      entityType: 'user',
+      entityId: id,
+      source: 'admin',
+      performedBy,
+      branchId: user.branchId ?? undefined,
+      details: { email: user.email },
+    });
+
+    return updated;
+  }
+
+  async reject(id: string, performedBy?: string) {
+    const user = await this.findById(id);
+    if (!user) throw new NotFoundException('User not found');
+    if (user.status === 'rejected') throw new BadRequestException('User is already rejected');
+
+    const [updated] = await this.drizzle.db
+      .update(users)
+      .set({ status: 'rejected' })
+      .where(eq(users.id, id))
+      .returning();
+
+    await this.audit.log({
+      action: `Rejected user: ${user.email}`,
+      auditType: AUDIT_TYPE.USER_REJECTED,
+      entityType: 'user',
+      entityId: id,
+      source: 'admin',
+      performedBy,
+      branchId: user.branchId ?? undefined,
+      details: { email: user.email },
+    });
+
+    return updated;
   }
 
   // Returns active users for transaction assignment dropdowns

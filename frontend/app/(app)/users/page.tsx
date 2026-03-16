@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { PageHeader } from '@/components/ui/page-header';
 import { DataTable } from '@/components/ui/data-table';
 import { createUserColumns } from '@/columns/users-columns';
-import { useUsersQuery, useUpdateUserRoleMutation, useUpdateUserBranchMutation, useDeleteUserMutation } from '@/hooks/useUsersQuery';
+import { useUsersQuery, useUpdateUserRoleMutation, useUpdateUserBranchMutation, useDeleteUserMutation, useApproveUserMutation, useRejectUserMutation } from '@/hooks/useUsersQuery';
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 import { useBranchesQuery } from '@/hooks/useBranchesQuery';
 import { toTitleCase } from '@/utils/text';
@@ -26,10 +26,14 @@ export default function UsersPage() {
   const updateRoleMut = useUpdateUserRoleMutation();
   const updateBranchMut = useUpdateUserBranchMutation();
   const deleteMut = useDeleteUserMutation(() => setDeleteTarget(null));
+  const approveMut = useApproveUserMutation(() => setApproveTarget(null));
+  const rejectMut = useRejectUserMutation(() => setRejectTarget(null));
 
   const [pendingRoleChange, setPendingRoleChange] = useState<PendingRoleChange | null>(null);
   const [pendingBranchChange, setPendingBranchChange] = useState<PendingBranchChange | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AppUser | null>(null);
+  const [approveTarget, setApproveTarget] = useState<AppUser | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<AppUser | null>(null);
   const [editTarget, setEditTarget] = useState<AppUser | null>(null);
   const [docsTarget, setDocsTarget] = useState<AppUser | null>(null);
 
@@ -46,6 +50,8 @@ export default function UsersPage() {
           }
         : undefined,
       onDelete: isSuperadmin ? setDeleteTarget : undefined,
+      onApprove: isSuperadmin ? setApproveTarget : undefined,
+      onReject: isSuperadmin ? setRejectTarget : undefined,
       onEdit: setEditTarget,
       onDocuments: setDocsTarget,
       currentUserId: currentUser?.id,
@@ -55,13 +61,16 @@ export default function UsersPage() {
     [currentUser?.id, isSuperadmin, branches],
   );
 
-  const grouped = useMemo(() => {
+  // Separate pending users from active ones
+  const { pendingUsers, grouped } = useMemo(() => {
     const allUsers = (users as AppUser[]).filter((u) => u.id !== currentUser?.id);
+    const pending = allUsers.filter((u) => u.status === 'pending');
+    const active = allUsers.filter((u) => u.status !== 'pending');
     const branchMap = new Map(branches.map((b) => [b.id, b.name]));
 
     const groups = new Map<string, { label: string; users: AppUser[] }>();
 
-    for (const user of allUsers) {
+    for (const user of active) {
       const key = user.branchId !== null ? String(user.branchId) : '__none__';
       if (!groups.has(key)) {
         const label = user.branchId !== null
@@ -73,13 +82,15 @@ export default function UsersPage() {
     }
 
     // Sort: named branches first (alphabetically), unassigned last
-    return [...groups.entries()]
+    const sorted = [...groups.entries()]
       .sort(([a], [b]) => {
         if (a === '__none__') return 1;
         if (b === '__none__') return -1;
         return (groups.get(a)!.label).localeCompare(groups.get(b)!.label);
       })
       .map(([, group]) => group);
+
+    return { pendingUsers: pending, grouped: sorted };
   }, [users, branches, currentUser?.id]);
 
   if (userLoaded && !isAdmin) {
@@ -106,6 +117,24 @@ export default function UsersPage() {
         onConfirm={() => { if (deleteTarget) deleteMut.mutate(deleteTarget.id); }}
         onCancel={() => setDeleteTarget(null)}
         loading={deleteMut.isPending}
+      />
+      <ConfirmDialog
+        open={!!approveTarget}
+        title="Approve user?"
+        description={`Approve ${approveTarget?.email}? They will be able to sign in and access the system.`}
+        confirmLabel="Approve"
+        onConfirm={() => { if (approveTarget) approveMut.mutate(approveTarget.id); }}
+        onCancel={() => setApproveTarget(null)}
+        loading={approveMut.isPending}
+      />
+      <ConfirmDialog
+        open={!!rejectTarget}
+        title="Reject user?"
+        description={`Reject ${rejectTarget?.email}? They will not be able to access the system.`}
+        confirmLabel="Reject"
+        onConfirm={() => { if (rejectTarget) rejectMut.mutate(rejectTarget.id); }}
+        onCancel={() => setRejectTarget(null)}
+        loading={rejectMut.isPending}
       />
       <UserRoleConfirmDialog
         open={pendingRoleChange !== null}
@@ -140,6 +169,26 @@ export default function UsersPage() {
         title="Users"
         subtitle="Manage team roles and access"
       />
+
+      {/* Pending approvals section */}
+      {pendingUsers.length > 0 && (
+        <div className="mb-8">
+          <p className="text-xs font-semibold uppercase tracking-widest text-amber-500 mb-3">
+            Pending Approval
+            <span className="ml-2 font-normal normal-case tracking-normal text-amber-400">
+              {pendingUsers.length} {pendingUsers.length === 1 ? 'user' : 'users'}
+            </span>
+          </p>
+          <DataTable
+            columns={columns}
+            data={pendingUsers}
+            isLoading={false}
+            emptyTitle="No pending users"
+            emptyDescription=""
+          />
+        </div>
+      )}
+
       {isLoading ? (
         <DataTable
           columns={columns}
@@ -149,7 +198,7 @@ export default function UsersPage() {
           emptyTitle="No users found"
           emptyDescription="Users appear here once they sign in."
         />
-      ) : grouped.length === 0 ? (
+      ) : grouped.length === 0 && pendingUsers.length === 0 ? (
         <p className="text-sm text-zinc-400">No users found.</p>
       ) : (
         <div className="space-y-8">

@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { DbModule } from '../db/db.module';
 import { SupabaseAuthGuard } from './auth.guard';
 
 @Module({
-  imports: [SupabaseModule],
+  imports: [SupabaseModule, DbModule],
   providers: [SupabaseAuthGuard],
   exports: [SupabaseAuthGuard, SupabaseModule],
 })
