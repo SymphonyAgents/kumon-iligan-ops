@@ -60,11 +60,11 @@ export class SmsService {
       ? new Date(txn.newPickupDate).toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })
       : null;
     const lines = [
-      `Hi! Your pickup for Txn #${txn.number} has been moved${dateStr ? ` to ${dateStr}` : ''}. Sorry for the inconvenience.`,
+      `Hello. We're sorry, your pickup for Txn #${txn.number} is rescheduled${dateStr ? ` to ${dateStr}` : ''}.`,
       '',
-      'Help:',
+      'Assistance',
       'Mon-Fri: 0962 990 3989',
-      'Sat-Sun: FB Chat',
+      'Sat-Sun: Facebook Chat',
     ];
     const message = lines.join('\n');
     await this.send({ to: txn.customerPhone, message });
