@@ -56,15 +56,17 @@ export class SmsService {
     number: string;
     newPickupDate?: string | null;
   }): Promise<void> {
-    const name = txn.customerName ?? 'Customer';
     const dateStr = txn.newPickupDate
       ? new Date(txn.newPickupDate).toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })
       : null;
-    const message = [
-      `Hi ${name}! Your pickup for Transaction #${txn.number} has been rescheduled.`,
-      ...(dateStr ? [`New pickup date: ${dateStr}.`] : []),
-      `See you then!`,
-    ].join(' ');
+    const lines = [
+      `Hello! We're sorry, your pickup for Transaction #${txn.number} has been rescheduled.${dateStr ? ` New date: ${dateStr}.` : ''}`,
+      '',
+      'Need Help?',
+      'Mon-Fri: 0962 990 3989',
+      'Sat-Sun: Facebook Chat',
+    ];
+    const message = lines.join('\n');
     await this.send({ to: txn.customerPhone, message });
   }
 

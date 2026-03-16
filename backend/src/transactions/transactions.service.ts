@@ -1121,34 +1121,16 @@ export class TransactionsService {
     }
 
     const name = txn.customerName ?? 'Customer';
-    const pickupDate = txn.newPickupDate ?? txn.pickupDate;
-    const dateStr = pickupDate
-      ? new Date(pickupDate).toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })
-      : null;
 
-    const allItems = txn.items ?? [];
-    const doneItems = allItems.filter((i) => i.status === 'done');
-    const totalActive = allItems.filter((i) => i.status !== 'cancelled').length;
-    const itemListStr = doneItems.length > 0
-      ? doneItems.map((i) => {
-          const shoe = i.shoeDescription ?? 'Item';
-          const svc = i.service?.name ? ` (${i.service.name})` : '';
-          return `${shoe}${svc}`;
-        }).join(', ')
-      : null;
-
-    const isPartial = doneItems.length > 0 && doneItems.length < totalActive;
-    const readyLine = isPartial
-      ? `${doneItems.length} of your item(s) are ready for pickup.`
-      : `Your shoe(s) are ready for pickup at Sneaker Doctor.`;
-
-    const message = [
-      `Hi ${name}! ${readyLine}`,
-      `Transaction #${txn.number}.`,
-      ...(itemListStr ? [`Ready: ${itemListStr}.`] : []),
-      ...(dateStr ? [`Pickup Date: ${dateStr}.`] : []),
-      `See you soon!`,
-    ].join(' ');
+    const lines = [
+      `Good day! Your shoe(s) for Transaction #${txn.number} are ready for pickup. Unclaimed after 5 days: ₱100/week.`,
+      '',
+      'Need Help?',
+      'Mon-Fri: 0962 990 3989',
+      'Sat-Sun: Facebook Chat',
+      name,
+    ];
+    const message = lines.join('\n');
 
     await this.sms.send({ to: txn.customerPhone, message });
 

@@ -957,7 +957,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
           updateTxnMut.mutate(
             { newPickupDate: rescheduleValue },
             {
-              onSuccess: () => { setRescheduleConfirmOpen(false); if (txn.customerPhone) void autoSendSms(); },
+              onSuccess: () => { setRescheduleConfirmOpen(false); },
               onError: () => setRescheduleConfirmOpen(false),
             },
           );
