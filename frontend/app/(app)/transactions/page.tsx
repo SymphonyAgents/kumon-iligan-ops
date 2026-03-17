@@ -230,35 +230,59 @@ export default function TransactionsPage() {
       </div>
 
       {statusFilter === 'trash' ? (
-        <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden">
-          {deletedLoading ? (
-            <div className="flex justify-center py-12"><Spinner /></div>
-          ) : (deletedTxns as Transaction[]).length === 0 ? (
-            <p className="text-sm text-zinc-400 text-center py-12">Trash is empty.</p>
-          ) : (
-            <div className="divide-y divide-zinc-100">
-              {(deletedTxns as Transaction[]).map((txn) => (
-                <div key={txn.id} className="flex items-center gap-3 px-4 py-3">
-                  <Link href={`/transactions/${txn.id}`} className="flex-1 min-w-0 hover:opacity-70 transition-opacity duration-150">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="font-mono text-xs text-zinc-400">#{txn.number}</span>
-                      <span className="text-xs text-zinc-400">deleted {formatDate(txn.deletedAt)}</span>
-                    </div>
-                    <p className="text-sm font-medium text-zinc-950 truncate">
-                      {toTitleCase(txn.customerName) || '—'}
-                    </p>
-                  </Link>
-                  <button
-                    onClick={() => setRestoreTarget(txn)}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-md transition-colors shrink-0"
-                  >
-                    <ArrowCounterClockwiseIcon size={12} />
-                    Restore
-                  </button>
-                </div>
-              ))}
+        <div>
+          {/* Warning banner */}
+          {(deletedTxns as Transaction[]).length > 0 && (
+            <div className="flex items-start gap-2.5 p-3 mb-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500 shrink-0 mt-0.5">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              <p className="text-xs text-amber-700">
+                Deleted transactions are permanently removed after <span className="font-semibold">30 days</span>. Restore them before then if needed.
+              </p>
             </div>
           )}
+          <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden">
+            {deletedLoading ? (
+              <div className="flex justify-center py-12"><Spinner /></div>
+            ) : (deletedTxns as Transaction[]).length === 0 ? (
+              <p className="text-sm text-zinc-400 text-center py-12">Trash is empty.</p>
+            ) : (
+              <div className="divide-y divide-zinc-100">
+                {(deletedTxns as Transaction[]).map((txn) => {
+                  const deletedDate = new Date(txn.deletedAt!);
+                  const purgeDate = new Date(deletedDate);
+                  purgeDate.setDate(purgeDate.getDate() + 30);
+                  const daysLeft = Math.max(0, Math.ceil((purgeDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+                  return (
+                    <div key={txn.id} className="flex items-center gap-3 px-4 py-3">
+                      <Link href={`/transactions/${txn.id}`} className="flex-1 min-w-0 hover:opacity-70 transition-opacity duration-150">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-mono text-xs text-zinc-400">#{txn.number}</span>
+                          <span className="text-xs text-zinc-400">deleted {formatDate(txn.deletedAt)}</span>
+                          <span className={`text-xs font-medium ${daysLeft <= 7 ? 'text-red-500' : 'text-amber-500'}`}>
+                            {daysLeft === 0 ? 'removing soon' : `${daysLeft}d left`}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium text-zinc-950 truncate">
+                          {toTitleCase(txn.customerName) || '—'}
+                        </p>
+                      </Link>
+                      <button
+                        onClick={() => setRestoreTarget(txn)}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-md transition-colors shrink-0"
+                      >
+                        <ArrowCounterClockwiseIcon size={12} />
+                        Restore
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <>

@@ -8,10 +8,13 @@ import {
   Param,
   ParseIntPipe,
   Query,
+  Headers,
   UseGuards,
   Req,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SupabaseAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -27,6 +30,7 @@ import { AddPhotoDto } from './dto/add-photo.dto';
 @Controller('transactions')
 export class TransactionsController {
   constructor(
+    private readonly config: ConfigService,
     private readonly transactionsService: TransactionsService,
     private readonly usersService: UsersService,
   ) {}
@@ -285,5 +289,15 @@ export class TransactionsController {
     const txn = await this.transactionsService.findOne(id);
     await this.verifyBranchAccess(req.user.id, txn.branchId);
     return this.transactionsService.remove(id, req.user?.id);
+  }
+
+  // Called by Cloud Scheduler — no Supabase auth, uses CRON_SECRET header
+  @Post('purge-deleted')
+  async purgeDeleted(@Headers('x-cron-secret') cronSecret: string) {
+    const expected = this.config.get<string>('CRON_SECRET');
+    if (!expected || cronSecret !== expected) {
+      throw new UnauthorizedException('Invalid cron secret');
+    }
+    return this.transactionsService.purgeOldDeleted();
   }
 }

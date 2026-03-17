@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -1269,5 +1270,42 @@ export class TransactionsService {
     });
 
     return mapTxn(restored);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Purge: hard-delete soft-deleted transactions older than 30 days
+  // Called by POST /transactions/purge-deleted (triggered by Cloud Scheduler)
+  // Child rows (items, payments, photos) cascade-delete via FK constraints
+  // ---------------------------------------------------------------------------
+  private readonly logger = new Logger(TransactionsService.name);
+
+  async purgeOldDeleted() {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+
+    const deleted = await this.drizzle.db
+      .delete(transactions)
+      .where(
+        and(
+          isNotNull(transactions.deletedAt) as ReturnType<typeof eq>,
+          lte(transactions.deletedAt, cutoff),
+        ),
+      )
+      .returning({ id: transactions.id, number: transactions.number });
+
+    if (deleted.length > 0) {
+      this.logger.log(
+        `Purged ${deleted.length} soft-deleted transaction(s) older than 30 days: ${deleted.map((t) => `#${t.number}`).join(', ')}`,
+      );
+
+      await this.audit.log({
+        action: `Purged ${deleted.length} deleted transaction(s) older than 30 days`,
+        auditType: AUDIT_TYPE.TRANSACTION_DELETED,
+        entityType: 'transaction',
+        entityId: deleted.map((t) => t.number).join(','),
+        source: 'system-cron',
+        performedBy: undefined,
+      });
+    }
   }
 }
