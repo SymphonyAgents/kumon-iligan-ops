@@ -142,18 +142,20 @@ export function useUpdateItemStatusMutation(txnId: string) {
   });
 }
 
-export function useUpdateItemMutation(txnId: string, onSuccess?: () => void) {
+export function useEditTransactionMutation(txnId: string, onSuccess?: () => void) {
   const numericTxnId = parseInt(txnId, 10);
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ itemId, shoeDescription, serviceId }: { itemId: number; shoeDescription?: string; serviceId?: number }) =>
-      api.transactions.updateItem(numericTxnId, itemId, { shoeDescription, serviceId }),
+    mutationFn: (body: {
+      items?: Array<{ id: number; shoeDescription?: string; serviceId?: number }>;
+      payments?: Array<{ id: number; method: string; referenceNumber?: string; cardBank?: string }>;
+    }) => api.transactions.edit(numericTxnId, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: transactionDetailKey(txnId) });
-      toast.success('Item updated');
+      toast.success('Transaction updated');
       onSuccess?.();
     },
-    onError: (err: Error) => toast.error('Failed to update item', { description: err.message }),
+    onError: (err: Error) => toast.error('Failed to update transaction', { description: err.message }),
   });
 }
 

@@ -32,7 +32,7 @@ import {
   useTransactionDetailQuery,
   useUpdateTransactionMutation,
   useUpdateItemStatusMutation,
-  useUpdateItemMutation,
+  useEditTransactionMutation,
   useAddPaymentMutation,
   useUpdatePaymentMethodMutation,
   useDeleteTransactionMutation,
@@ -43,6 +43,7 @@ import { useUploadPhotoMutation, useUploadTxnPhotoMutation } from '@/hooks/useUp
 import { useAssignableUsersQuery } from '@/hooks/useUsersQuery';
 import { usePromosQuery } from '@/hooks/usePromosQuery';
 import { useServicesQuery } from '@/hooks/useServicesQuery';
+import type { Service } from '@/lib/types';
 import { PAYMENT_METHOD_VALUES, TRANSACTION_STATUS, CARD_BANK_OPTIONS, getCardFeeRatePreview } from '@/lib/constants';
 import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
@@ -100,20 +101,19 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   const [pendingStaffId, setPendingStaffId] = useState<string | null>(null);
   const initializedRef = useRef<string | null>(null);
 
-  // Superadmin: edit item (shoe description + service)
-  const [editItemDialog, setEditItemDialog] = useState<{
-    open: boolean;
-    itemId: number | null;
-    shoeDescription: string;
-    serviceId: string;
-  }>({ open: false, itemId: null, shoeDescription: '', serviceId: '' });
+  // Superadmin: bulk edit transaction (items + payments)
+  type EditItemDraft = { id: number; shoeDescription: string; serviceId: string };
+  type EditPaymentDraft = { id: number; method: string; referenceNumber: string; cardBank: string };
+  const [editTxnOpen, setEditTxnOpen] = useState(false);
+  const [editDraftItems, setEditDraftItems] = useState<EditItemDraft[]>([]);
+  const [editDraftPayments, setEditDraftPayments] = useState<EditPaymentDraft[]>([]);
 
   const { data: currentUser } = useCurrentUserQuery();
   const isAdmin = currentUser?.userType === 'admin' || currentUser?.userType === 'superadmin';
   const isSuperadmin = currentUser?.userType === 'superadmin';
   const { data: assignableUsers = [] } = useAssignableUsersQuery();
   const { data: activePromos = [] } = usePromosQuery();
-  const { data: services = [] } = useServicesQuery();
+  const { data: allServices = [] } = useServicesQuery();
   const [promoEditing, setPromoEditing] = useState(false);
   const [promoSelected, setPromoSelected] = useState('none');
 
@@ -122,7 +122,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   const deleteTxnMut = useDeleteTransactionMutation(() => router.replace('/transactions'));
   const restoreTxnMut = useRestoreTransactionMutation(() => router.replace('/transactions'));
   const updateItemStatusMut = useUpdateItemStatusMutation(id);
-  const updateItemMut = useUpdateItemMutation(id, () => setEditItemDialog({ open: false, itemId: null, shoeDescription: '', serviceId: '' }));
+  const editTxnMut = useEditTransactionMutation(id, () => setEditTxnOpen(false));
   const uploadPhotoMut = useUploadPhotoMutation(id);
   const uploadTxnPhotoMut = useUploadTxnPhotoMutation(id);
 
@@ -253,17 +253,11 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
       onImageClick: (src, label) => setLightbox({ src, label }),
       onUploadClick: handleUploadClick,
       onCameraClick: handleCameraClick,
-      onEditItem: isSuperadmin ? (item) => setEditItemDialog({
-        open: true,
-        itemId: item.id,
-        shoeDescription: item.shoeDescription ?? '',
-        serviceId: item.service ? String(item.service.id) : '',
-      }) : undefined,
       loadingItemIds,
       uploadingItemIds,
       disableUploadBefore: true,
     }),
-    [loadingItemIds, uploadingItemIds, handleUploadClick, handleCameraClick, isSuperadmin],
+    [loadingItemIds, uploadingItemIds, handleUploadClick, handleCameraClick],
   );
   const addPaymentMut = useAddPaymentMutation(id, () => {
     setPaymentDialogOpen(false);
@@ -333,16 +327,41 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
             ? 'Only Pending or Cancelled transactions can be deleted'
             : undefined;
           return (
-            <Button
-              variant="danger"
-              size="sm"
-              disabled={cantDelete || deleteTxnMut.isPending}
-              title={deleteTitle}
-              onClick={() => !cantDelete && setDeleteConfirmOpen(true)}
-            >
-              <TrashIcon size={14} />
-              Delete
-            </Button>
+            <div className="flex items-center gap-2">
+              {isSuperadmin && (
+                <button
+                  onClick={() => {
+                    const nonCancelledItems = (txn.items ?? []).filter((i) => i.status !== 'cancelled');
+                    setEditDraftItems(nonCancelledItems.map((i) => ({
+                      id: i.id,
+                      shoeDescription: i.shoeDescription ?? '',
+                      serviceId: i.service ? String(i.service.id) : '',
+                    })));
+                    setEditDraftPayments((txn.payments ?? []).map((p) => ({
+                      id: p.id,
+                      method: p.method,
+                      referenceNumber: p.referenceNumber ?? '',
+                      cardBank: p.cardBank ?? '',
+                    })));
+                    setEditTxnOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 bg-blue-500 text-white rounded-md px-3.5 py-1.5 text-xs font-semibold hover:bg-blue-600 transition-colors duration-150"
+                >
+                  <PencilSimpleIcon size={13} weight="bold" />
+                  Edit
+                </button>
+              )}
+              <Button
+                variant="danger"
+                size="sm"
+                disabled={cantDelete || deleteTxnMut.isPending}
+                title={deleteTitle}
+                onClick={() => !cantDelete && setDeleteConfirmOpen(true)}
+              >
+                <TrashIcon size={14} />
+                Delete
+              </Button>
+            </div>
           );
         })() : undefined}
       />
@@ -1328,65 +1347,166 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
         loading={updateTxnMut.isPending}
       />
 
-      {/* Superadmin: edit item shoe description + service */}
+      {/* Superadmin: Edit Transaction modal */}
       {isSuperadmin && (
         <Dialog
-          open={editItemDialog.open}
-          onOpenChange={(open) => {
-            if (!open && !updateItemMut.isPending) {
-              setEditItemDialog({ open: false, itemId: null, shoeDescription: '', serviceId: '' });
-            }
-          }}
+          open={editTxnOpen}
+          onOpenChange={(open) => { if (!open && !editTxnMut.isPending) setEditTxnOpen(false); }}
         >
-          <DialogContent className="bg-white sm:max-w-sm">
+          <DialogContent className="bg-white sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="text-base">Edit Item</DialogTitle>
-              <DialogDescription className="text-xs text-zinc-400">Superadmin only</DialogDescription>
+              <DialogTitle className="text-base">Edit Transaction #{txn.number}</DialogTitle>
+              <DialogDescription className="text-xs text-zinc-400">Superadmin only · Changes are audited</DialogDescription>
             </DialogHeader>
-            <div className="space-y-3 pt-1">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-zinc-700">Shoe Description</label>
-                <input
-                  type="text"
-                  value={editItemDialog.shoeDescription}
-                  onChange={(e) => setEditItemDialog((prev) => ({ ...prev, shoeDescription: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm bg-white border border-zinc-200 rounded-md text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                  placeholder="e.g. Nike Air Max 1"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-zinc-700">Service</label>
-                <Select
-                  value={editItemDialog.serviceId}
-                  onValueChange={(v) => setEditItemDialog((prev) => ({ ...prev, serviceId: v }))}
+
+            <div className="space-y-5 pt-1">
+              {/* Items */}
+              {editDraftItems.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Items</p>
+                  <div className="space-y-3">
+                    {editDraftItems.map((item, idx) => {
+                      const hasAnyPayment = (txn.payments ?? []).length > 0;
+                      return (
+                        <div key={item.id} className="rounded-lg border border-zinc-200 p-3 space-y-2">
+                          <p className="text-[11px] font-medium text-zinc-400">Item {idx + 1}</p>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-xs font-medium text-zinc-700">Shoe Description</label>
+                            <input
+                              type="text"
+                              value={item.shoeDescription}
+                              onChange={(e) => setEditDraftItems((prev) => prev.map((x) => x.id === item.id ? { ...x, shoeDescription: e.target.value } : x))}
+                              className="w-full px-3 py-2 text-sm bg-white border border-zinc-200 rounded-md text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              placeholder="e.g. Nike Air Max 1"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-xs font-medium text-zinc-700">Service</label>
+                            {hasAnyPayment ? (
+                              <div className="px-3 py-2 text-xs text-zinc-400 bg-zinc-50 border border-zinc-200 rounded-md">
+                                Service locked — payment already recorded
+                              </div>
+                            ) : (
+                              <Select
+                                value={item.serviceId}
+                                onValueChange={(v) => setEditDraftItems((prev) => prev.map((x) => x.id === item.id ? { ...x, serviceId: v } : x))}
+                              >
+                                <SelectTrigger className="h-9 text-sm border-zinc-200">
+                                  <SelectValue placeholder="Select service…" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="">— No change —</SelectItem>
+                                  {(allServices as Service[]).map((s) => (
+                                    <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Payments */}
+              {editDraftPayments.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Payments</p>
+                  <div className="space-y-3">
+                    {editDraftPayments.map((pay) => {
+                      const original = (txn.payments ?? []).find((p) => p.id === pay.id);
+                      return (
+                        <div key={pay.id} className="rounded-lg border border-zinc-200 p-3 space-y-2">
+                          <p className="text-[11px] font-medium text-zinc-400">
+                            {PAYMENT_METHOD_LABELS[original?.method ?? pay.method] ?? pay.method} · {formatPeso(original?.amount ?? '0')}
+                          </p>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-xs font-medium text-zinc-700">Method</label>
+                            <Select
+                              value={pay.method}
+                              onValueChange={(v) => setEditDraftPayments((prev) => prev.map((x) => x.id === pay.id ? { ...x, method: v, cardBank: v !== 'card' ? '' : x.cardBank } : x))}
+                            >
+                              <SelectTrigger className="h-9 text-sm border-zinc-200">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(['cash', 'gcash', 'card'] as const).map((m) => (
+                                  <SelectItem key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {pay.method === 'card' && (
+                            <div className="flex flex-col gap-1">
+                              <label className="text-xs font-medium text-zinc-700">Card Bank</label>
+                              <Select
+                                value={pay.cardBank}
+                                onValueChange={(v) => setEditDraftPayments((prev) => prev.map((x) => x.id === pay.id ? { ...x, cardBank: v } : x))}
+                              >
+                                <SelectTrigger className="h-9 text-sm border-zinc-200">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {CARD_BANK_OPTIONS.map((o) => (
+                                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                          <div className="flex flex-col gap-1">
+                            <label className="text-xs font-medium text-zinc-700">Reference No. (optional)</label>
+                            <input
+                              type="text"
+                              value={pay.referenceNumber}
+                              onChange={(e) => setEditDraftPayments((prev) => prev.map((x) => x.id === pay.id ? { ...x, referenceNumber: e.target.value } : x))}
+                              className="w-full px-3 py-2 text-sm bg-white border border-zinc-200 rounded-md text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                              placeholder="e.g. GCash ref 123456"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="flex-1"
+                  disabled={editTxnMut.isPending}
+                  onClick={() => setEditTxnOpen(false)}
                 >
-                  <SelectTrigger className="h-9 text-sm border-zinc-200">
-                    <SelectValue placeholder="Select service…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">— No service —</SelectItem>
-                    {services.map((s) => (
-                      <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  Cancel
+                </Button>
+                <Button
+                  variant="dark"
+                  size="sm"
+                  className="flex-1"
+                  disabled={editTxnMut.isPending}
+                  onClick={() => {
+                    editTxnMut.mutate({
+                      items: editDraftItems.map((i) => ({
+                        id: i.id,
+                        ...(i.shoeDescription.trim() && { shoeDescription: i.shoeDescription.trim() }),
+                        ...(i.serviceId && { serviceId: parseInt(i.serviceId, 10) }),
+                      })),
+                      payments: editDraftPayments.map((p) => ({
+                        id: p.id,
+                        method: p.method,
+                        ...(p.referenceNumber.trim() && { referenceNumber: p.referenceNumber.trim() }),
+                        ...(p.cardBank && { cardBank: p.cardBank }),
+                      })),
+                    });
+                  }}
+                >
+                  {editTxnMut.isPending ? <Spinner /> : 'Save Changes'}
+                </Button>
               </div>
-              <Button
-                variant="dark"
-                size="sm"
-                className="w-full"
-                disabled={updateItemMut.isPending || (!editItemDialog.shoeDescription.trim() && !editItemDialog.serviceId)}
-                onClick={() => {
-                  if (!editItemDialog.itemId) return;
-                  updateItemMut.mutate({
-                    itemId: editItemDialog.itemId,
-                    ...(editItemDialog.shoeDescription.trim() && { shoeDescription: editItemDialog.shoeDescription.trim() }),
-                    ...(editItemDialog.serviceId && { serviceId: parseInt(editItemDialog.serviceId, 10) }),
-                  });
-                }}
-              >
-                {updateItemMut.isPending ? <Spinner /> : 'Save Changes'}
-              </Button>
             </div>
           </DialogContent>
         </Dialog>

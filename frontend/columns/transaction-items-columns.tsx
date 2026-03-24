@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
-import { CameraIcon, UploadSimpleIcon, PencilSimpleIcon } from '@phosphor-icons/react';
+import { CameraIcon, UploadSimpleIcon } from '@phosphor-icons/react';
 import { Spinner } from '@/components/ui/spinner';
 import { formatPeso, STATUS_COLORS, cn } from '@/lib/utils';
 import { toTitleCase } from '@/utils/text';
@@ -40,7 +40,6 @@ interface TransactionItemColumnsOptions {
   onImageClick?: (url: string, label: string) => void;
   onUploadClick?: (itemId: number, type: 'before' | 'after') => void;
   onCameraClick?: (itemId: number, type: 'before' | 'after') => void;
-  onEditItem?: (item: TransactionItem) => void;
   loadingItemIds?: Set<number>;
   uploadingItemIds?: Set<string>; // `${itemId}-${type}`
   disableUploadBefore?: boolean;
@@ -142,7 +141,7 @@ function ImageCell({
   );
 }
 
-export const createTransactionItemColumns = ({ onStatusChange, onImageClick, onUploadClick, onCameraClick, onEditItem, loadingItemIds, uploadingItemIds, disableUploadBefore }: TransactionItemColumnsOptions): ColumnDef<TransactionItem>[] => [
+export const createTransactionItemColumns = ({ onStatusChange, onImageClick, onUploadClick, onCameraClick, loadingItemIds, uploadingItemIds, disableUploadBefore }: TransactionItemColumnsOptions): ColumnDef<TransactionItem>[] => [
   {
     accessorKey: 'shoeDescription',
     header: 'Shoe',
@@ -245,20 +244,9 @@ export const createTransactionItemColumns = ({ onStatusChange, onImageClick, onU
     accessorKey: 'price',
     header: () => <span className="block text-right">Price</span>,
     cell: ({ row }) => (
-      <div className="flex items-center justify-end gap-2">
-        <span className="font-mono text-zinc-700">
-          {row.original.price ? formatPeso(row.original.price) : '—'}
-        </span>
-        {onEditItem && (
-          <button
-            title="Edit item"
-            onClick={(e) => { e.stopPropagation(); onEditItem(row.original); }}
-            className="p-1.5 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 rounded transition-colors shrink-0"
-          >
-            <PencilSimpleIcon size={13} />
-          </button>
-        )}
-      </div>
+      <span className="block text-right font-mono text-zinc-700">
+        {row.original.price ? formatPeso(row.original.price) : '—'}
+      </span>
     ),
   },
 ];

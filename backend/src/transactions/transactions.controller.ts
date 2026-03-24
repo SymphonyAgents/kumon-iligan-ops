@@ -27,6 +27,7 @@ import { AddPaymentDto } from './dto/add-payment.dto';
 import { UpdatePaymentMethodDto } from './dto/update-payment-method.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
 import { AddPhotoDto } from './dto/add-photo.dto';
+import { EditTransactionDto } from './dto/edit-transaction.dto';
 
 @Controller('transactions')
 export class TransactionsController {
@@ -268,6 +269,23 @@ export class TransactionsController {
       (txn.payments?.find((p) => p.id === paymentId)?.method === 'bank_deposit') ||
       dto.method === 'bank_deposit';
     return { ...result, bankDepositWarning };
+  }
+
+  /**
+   * Superadmin batch-edit: update item shoe descriptions, services, and/or payment methods
+   * in a single atomic operation. Service changes are blocked if payments already exist.
+   */
+  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @Roles('superadmin')
+  @Patch(':id/edit')
+  async editTransaction(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: EditTransactionDto,
+    @Req() req: AuthedRequest,
+  ) {
+    const txn = await this.transactionsService.findOne(id);
+    await this.verifyBranchAccess(req.user.id, txn.branchId);
+    return this.transactionsService.editTransaction(id, dto, req.user?.id);
   }
 
   @UseGuards(SupabaseAuthGuard)

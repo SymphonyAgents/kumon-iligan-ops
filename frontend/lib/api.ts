@@ -93,6 +93,11 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify(body),
       }),
+    edit: (id: number, body: {
+      items?: Array<{ id: number; shoeDescription?: string; serviceId?: number }>;
+      payments?: Array<{ id: number; method: string; referenceNumber?: string; cardBank?: string }>;
+    }) =>
+      apiFetch<Transaction>(`/transactions/${id}/edit`, { method: 'PATCH', body: JSON.stringify(body) }),
     addPayment: (id: number, body: { method: string; amount: string; referenceNumber?: string; cardBank?: string }) =>
       apiFetch<ClaimPayment>(`/transactions/${id}/payments`, {
         method: 'POST',

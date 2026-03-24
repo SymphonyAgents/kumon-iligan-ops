@@ -48,6 +48,7 @@ import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { AddPaymentDto } from './dto/add-payment.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
 import { AddPhotoDto } from './dto/add-photo.dto';
+import { EditTransactionDto } from './dto/edit-transaction.dto';
 import { toScaled, fromScaled } from '../utils/money';
 import { PromosService } from '../promos/promos.service';
 
@@ -1306,6 +1307,158 @@ export class TransactionsService {
     });
 
     return { ...updated, amount: fromScaled(updated.amount) };
+  }
+
+  async editTransaction(id: number, dto: EditTransactionDto, performedBy?: string) {
+    const txn = await this.findOne(id);
+    const hasPayments = (txn.payments ?? []).length > 0;
+
+    // Snapshot before state for audit
+    const beforeItems = (txn.items ?? []).map((i) => ({
+      id: i.id,
+      shoeDescription: i.shoeDescription ?? null,
+      serviceId: i.service?.id ?? null,
+      serviceName: i.service?.name ?? null,
+    }));
+    const beforePayments = (txn.payments ?? []).map((p) => ({
+      id: p.id,
+      method: p.method,
+      referenceNumber: p.referenceNumber ?? null,
+      cardBank: p.cardBank ?? null,
+    }));
+
+    let recalcTotal = false;
+
+    // ── Item updates ─────────────────────────────────────────────────────────
+    if (dto.items?.length) {
+      for (const itemDto of dto.items) {
+        const existing = (txn.items ?? []).find((i) => i.id === itemDto.id);
+        if (!existing) continue;
+
+        const serviceChanged = itemDto.serviceId !== undefined && itemDto.serviceId !== existing.service?.id;
+        if (serviceChanged && hasPayments) {
+          throw new BadRequestException(
+            'Cannot change service after a payment has been recorded — this would cause accounting inconsistencies.',
+          );
+        }
+
+        const setValues: Record<string, unknown> = {};
+        if (itemDto.shoeDescription !== undefined) {
+          setValues.shoeDescription = itemDto.shoeDescription.trim() || null;
+        }
+        if (serviceChanged && itemDto.serviceId) {
+          // Look up the service's current price directly
+          const [svc] = await this.drizzle.db
+            .select()
+            .from(services)
+            .where(eq(services.id, itemDto.serviceId));
+          if (!svc) throw new BadRequestException(`Service ${itemDto.serviceId} not found`);
+          setValues.serviceId = itemDto.serviceId;
+          setValues.price = svc.price; // already scaled bigint in DB
+          recalcTotal = true;
+        }
+
+        if (Object.keys(setValues).length > 0) {
+          await this.drizzle.db
+            .update(transactionItems)
+            .set(setValues)
+            .where(eq(transactionItems.id, itemDto.id));
+        }
+      }
+    }
+
+    // ── Recalculate total if any service changed and no payments ────────────
+    if (recalcTotal && !hasPayments) {
+      const allItems = await this.drizzle.db
+        .select()
+        .from(transactionItems)
+        .where(eq(transactionItems.transactionId, id));
+      const subtotalScaled = allItems
+        .filter((i) => i.status !== 'cancelled')
+        .reduce((sum, i) => sum + (i.price ?? 0), 0);
+
+      let newTotalScaled = subtotalScaled;
+      if (txn.promoId) {
+        const [promo] = await this.drizzle.db
+          .select()
+          .from(promos)
+          .where(eq(promos.id, txn.promoId));
+        if (promo) {
+          newTotalScaled = Math.round(subtotalScaled * (1 - parseFloat(promo.percent) / 100));
+        }
+      }
+      await this.drizzle.db
+        .update(transactions)
+        .set({ total: newTotalScaled, updatedAt: new Date() })
+        .where(eq(transactions.id, id));
+    }
+
+    // ── Payment updates ──────────────────────────────────────────────────────
+    if (dto.payments?.length) {
+      for (const payDto of dto.payments) {
+        const existing = (txn.payments ?? []).find((p) => p.id === payDto.id);
+        if (!existing) continue;
+
+        const isCard = payDto.method === 'card';
+        // existing.amount is fromScaled (string) — re-scale for fee computation
+        const scaledAmt = toScaled(parseFloat(existing.amount ?? '0'));
+        const { fee, feePercent } = isCard
+          ? computeCardFee(scaledAmt, payDto.cardBank)
+          : { fee: 0, feePercent: 0 };
+
+        await this.drizzle.db
+          .update(claimPayments)
+          .set({
+            method: payDto.method,
+            referenceNumber: payDto.referenceNumber ?? null,
+            cardBank: isCard ? (payDto.cardBank ?? null) : null,
+            fee: isCard ? fee : 0,
+            feePercent: isCard ? String(feePercent) : '0',
+          })
+          .where(eq(claimPayments.id, payDto.id));
+      }
+    }
+
+    // ── Audit ────────────────────────────────────────────────────────────────
+    const updatedTxn = await this.findOne(id);
+    const branchId = performedBy ? await this.users.getBranchId(performedBy) : null;
+    const performer = performedBy ? await this.users.findById(performedBy) : null;
+
+    await this.audit.log({
+      action: 'edit',
+      auditType: AUDIT_TYPE.TRANSACTION_EDITED,
+      entityType: 'transaction',
+      entityId: txn.number,
+      source: 'admin',
+      performedBy,
+      branchId: branchId ?? undefined,
+      details: {
+        txnNumber: txn.number,
+        before: { items: beforeItems, payments: beforePayments },
+        after: {
+          items: (updatedTxn.items ?? []).map((i) => ({
+            id: i.id,
+            shoeDescription: i.shoeDescription ?? null,
+            serviceId: i.service?.id ?? null,
+            serviceName: i.service?.name ?? null,
+          })),
+          payments: (updatedTxn.payments ?? []).map((p) => ({
+            id: p.id,
+            method: p.method,
+            referenceNumber: p.referenceNumber ?? null,
+            cardBank: p.cardBank ?? null,
+          })),
+        },
+        ...(recalcTotal && !hasPayments && { totalAfter: fromScaled(updatedTxn.total) }),
+        performedBy: {
+          id: performedBy ?? null,
+          email: performer?.email ?? null,
+          fullName: (performer as { fullName?: string | null } | null)?.fullName ?? null,
+        },
+      },
+    });
+
+    return updatedTxn;
   }
 
   async sendPickupReadySms(id: number, performedBy?: string): Promise<{ phone: string }> {
