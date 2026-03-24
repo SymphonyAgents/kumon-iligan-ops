@@ -31,7 +31,7 @@ import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 import type { Service, Promo, Customer, Transaction } from '@/lib/types';
 import { calcItemPrice, calcRawTotal, findPromo, applyPromo } from '@/utils/pricing';
 import { PAYMENT_METHOD_LABELS, cn } from '@/lib/utils';
-import { ITEM_STATUS } from '@/lib/constants';
+import { ITEM_STATUS, CARD_BANK_OPTIONS, getCardFeeRatePreview } from '@/lib/constants';
 import { toTitleCase } from '@/utils/text';
 
 const PAYMENT_METHODS = ['cash', 'gcash', 'card', 'bank_deposit'] as const;
@@ -94,6 +94,7 @@ export function NewTransactionForm() {
       paymentMethod: '',
       paymentAmount: '',
       paymentReference: '',
+      paymentCardBank: '',
       items: [{ shoeDescription: '', primaryServiceId: '', addonServiceIds: [] }],
     },
   });
@@ -104,6 +105,7 @@ export function NewTransactionForm() {
   const watchedPromoId = useWatch({ control, name: 'promoId' }) ?? 'none';
   const watchedPaymentMethod = useWatch({ control, name: 'paymentMethod' }) ?? '';
   const watchedPaymentAmount = useWatch({ control, name: 'paymentAmount' }) ?? '';
+  const watchedPaymentCardBank = useWatch({ control, name: 'paymentCardBank' }) ?? '';
   const watchedStaffId = useWatch({ control, name: 'staffId' }) ?? '';
 
   const { data: currentUser } = useCurrentUserQuery();
@@ -258,6 +260,7 @@ export function NewTransactionForm() {
           method: variables.paymentMethod,
           amount: payAmt.toFixed(2),
           ...(variables.paymentReference?.trim() ? { referenceNumber: variables.paymentReference.trim() } : {}),
+          ...(variables.paymentMethod === 'card' ? { cardBank: variables.paymentCardBank || undefined } : {}),
         }).then(() => {
           paidSoFar = payAmt;
           void qc.invalidateQueries({ queryKey: ['today-collections'] });
@@ -522,6 +525,24 @@ export function NewTransactionForm() {
                     />
                   </div>
                 </div>
+                {watchedPaymentMethod === 'card' && (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-zinc-700">Card Bank</label>
+                    <Select
+                      value={watchedPaymentCardBank || '__default__'}
+                      onValueChange={(v) => setValue('paymentCardBank', v === '__default__' ? '' : v)}
+                    >
+                      <SelectTrigger className="h-9 text-sm w-full border-zinc-200">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CARD_BANK_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value || '__default__'} value={opt.value || '__default__'}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 {watchedPaymentMethod && watchedPaymentMethod !== 'none' && (
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-medium text-zinc-700">Amount Paid</label>
@@ -542,6 +563,22 @@ export function NewTransactionForm() {
                       <p className="text-xs text-red-500">
                         Amount cannot exceed total of ₱{total.toFixed(2)}
                       </p>
+                    )}
+                    {watchedPaymentMethod === 'card' && watchedPaymentAmount && parseFloat(watchedPaymentAmount) > 0 && (
+                      (() => {
+                        const rate = getCardFeeRatePreview(watchedPaymentCardBank);
+                        const fee = parseFloat(watchedPaymentAmount) * rate;
+                        const net = parseFloat(watchedPaymentAmount) - fee;
+                        return (
+                          <div className="flex items-center justify-between text-xs px-1">
+                            <span className="text-zinc-400">{(rate * 100).toFixed(1)}% card fee</span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-red-400 font-mono">-₱{fee.toFixed(2)}</span>
+                              <span className="text-zinc-500">net <span className="font-mono text-zinc-700">₱{net.toFixed(2)}</span></span>
+                            </div>
+                          </div>
+                        );
+                      })()
                     )}
                   </div>
                 )}

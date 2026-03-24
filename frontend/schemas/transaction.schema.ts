@@ -25,6 +25,7 @@ export const transactionSchema = z.object({
   paymentMethod: z.string().optional(),
   paymentAmount: z.string().optional(),
   paymentReference: z.string().optional(),
+  paymentCardBank: z.string().optional(), // '' = default (3%), 'bpi' = 3.5%
   staffId: z.string().optional(),
   items: z.array(itemSchema).min(1, 'Add at least one item'),
 });
