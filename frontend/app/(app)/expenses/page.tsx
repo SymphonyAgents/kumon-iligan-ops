@@ -58,7 +58,8 @@ export default function ExpensesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null);
 
   const [photoUploading, setPhotoUploading] = useState(false);
-  const photoInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);   // gallery picker
+  const photoCameraRef = useRef<HTMLInputElement>(null);  // camera capture
 
   const { data: currentUser } = useCurrentUserQuery();
   const isAdmin = currentUser?.userType === 'admin' || currentUser?.userType === 'superadmin';
@@ -249,10 +250,20 @@ export default function ExpensesPage() {
             {/* Receipt photo */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-zinc-700">Receipt Photo <span className="text-zinc-400 font-normal">(optional)</span></label>
+              {/* Gallery picker — no capture, lets OS show full file browser */}
               <input
                 ref={photoInputRef}
                 type="file"
                 accept="image/*"
+                className="hidden"
+                onChange={handlePhotoSelect}
+              />
+              {/* Camera capture — opens camera directly on mobile */}
+              <input
+                ref={photoCameraRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
                 className="hidden"
                 onChange={handlePhotoSelect}
               />
@@ -269,15 +280,26 @@ export default function ExpensesPage() {
                   </button>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  disabled={photoUploading}
-                  onClick={() => photoInputRef.current?.click()}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-500 border border-dashed border-zinc-300 rounded-md hover:border-zinc-400 hover:text-zinc-700 transition-colors disabled:opacity-50"
-                >
-                  {photoUploading ? <Spinner /> : <CameraIcon size={15} />}
-                  {photoUploading ? 'Uploading…' : 'Attach receipt'}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={photoUploading}
+                    onClick={() => photoInputRef.current?.click()}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm text-zinc-500 border border-dashed border-zinc-300 rounded-md hover:border-zinc-400 hover:text-zinc-700 transition-colors disabled:opacity-50"
+                  >
+                    {photoUploading ? <Spinner /> : <CameraIcon size={15} />}
+                    {photoUploading ? 'Uploading…' : 'Gallery'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={photoUploading}
+                    onClick={() => photoCameraRef.current?.click()}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm text-zinc-500 border border-dashed border-zinc-300 rounded-md hover:border-zinc-400 hover:text-zinc-700 transition-colors disabled:opacity-50"
+                  >
+                    <CameraIcon size={15} />
+                    Camera
+                  </button>
+                </div>
               )}
             </div>
 

@@ -78,7 +78,7 @@ export const createPromoColumns = ({
     cell: ({ row }) => {
       const p = row.original;
       if (p.maxUses == null) {
-        return <span className="text-xs text-zinc-400">{p.usageCount ?? 0} / ∞</span>;
+        return null;
       }
       const used = p.usageCount ?? 0;
       const exhausted = used >= p.maxUses;

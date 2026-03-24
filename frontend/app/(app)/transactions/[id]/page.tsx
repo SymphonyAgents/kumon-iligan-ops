@@ -32,6 +32,7 @@ import {
   useTransactionDetailQuery,
   useUpdateTransactionMutation,
   useUpdateItemStatusMutation,
+  useUpdateItemMutation,
   useAddPaymentMutation,
   useUpdatePaymentMethodMutation,
   useDeleteTransactionMutation,
@@ -41,6 +42,7 @@ import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 import { useUploadPhotoMutation, useUploadTxnPhotoMutation } from '@/hooks/useUploadPhoto';
 import { useAssignableUsersQuery } from '@/hooks/useUsersQuery';
 import { usePromosQuery } from '@/hooks/usePromosQuery';
+import { useServicesQuery } from '@/hooks/useServicesQuery';
 import { PAYMENT_METHOD_VALUES, TRANSACTION_STATUS, CARD_BANK_OPTIONS, getCardFeeRatePreview } from '@/lib/constants';
 import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
@@ -98,11 +100,20 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   const [pendingStaffId, setPendingStaffId] = useState<string | null>(null);
   const initializedRef = useRef<string | null>(null);
 
+  // Superadmin: edit item (shoe description + service)
+  const [editItemDialog, setEditItemDialog] = useState<{
+    open: boolean;
+    itemId: number | null;
+    shoeDescription: string;
+    serviceId: string;
+  }>({ open: false, itemId: null, shoeDescription: '', serviceId: '' });
+
   const { data: currentUser } = useCurrentUserQuery();
   const isAdmin = currentUser?.userType === 'admin' || currentUser?.userType === 'superadmin';
   const isSuperadmin = currentUser?.userType === 'superadmin';
   const { data: assignableUsers = [] } = useAssignableUsersQuery();
   const { data: activePromos = [] } = usePromosQuery();
+  const { data: services = [] } = useServicesQuery();
   const [promoEditing, setPromoEditing] = useState(false);
   const [promoSelected, setPromoSelected] = useState('none');
 
@@ -111,6 +122,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   const deleteTxnMut = useDeleteTransactionMutation(() => router.replace('/transactions'));
   const restoreTxnMut = useRestoreTransactionMutation(() => router.replace('/transactions'));
   const updateItemStatusMut = useUpdateItemStatusMutation(id);
+  const updateItemMut = useUpdateItemMutation(id, () => setEditItemDialog({ open: false, itemId: null, shoeDescription: '', serviceId: '' }));
   const uploadPhotoMut = useUploadPhotoMutation(id);
   const uploadTxnPhotoMut = useUploadTxnPhotoMutation(id);
 
@@ -241,11 +253,17 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
       onImageClick: (src, label) => setLightbox({ src, label }),
       onUploadClick: handleUploadClick,
       onCameraClick: handleCameraClick,
+      onEditItem: isSuperadmin ? (item) => setEditItemDialog({
+        open: true,
+        itemId: item.id,
+        shoeDescription: item.shoeDescription ?? '',
+        serviceId: item.service ? String(item.service.id) : '',
+      }) : undefined,
       loadingItemIds,
       uploadingItemIds,
       disableUploadBefore: true,
     }),
-    [loadingItemIds, uploadingItemIds, handleUploadClick, handleCameraClick],
+    [loadingItemIds, uploadingItemIds, handleUploadClick, handleCameraClick, isSuperadmin],
   );
   const addPaymentMut = useAddPaymentMutation(id, () => {
     setPaymentDialogOpen(false);
@@ -572,7 +590,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                 </div>
               )}
               {/* Superadmin: apply / change / remove promo inline */}
-              {isSuperadmin && txn.status !== 'cancelled' && txn.status !== 'claimed' && (
+              {isSuperadmin && txn.status !== 'cancelled' && txn.status !== 'claimed' && parseFloat(txn.paid) < parseFloat(txn.total) && (
                 promoEditing ? (
                   <div className="flex flex-col gap-2 pt-1">
                     <label className="text-xs font-medium text-zinc-700">Change Promo</label>
@@ -1309,6 +1327,70 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
         onCancel={() => { if (!updateTxnMut.isPending) setPendingStaffId(null); }}
         loading={updateTxnMut.isPending}
       />
+
+      {/* Superadmin: edit item shoe description + service */}
+      {isSuperadmin && (
+        <Dialog
+          open={editItemDialog.open}
+          onOpenChange={(open) => {
+            if (!open && !updateItemMut.isPending) {
+              setEditItemDialog({ open: false, itemId: null, shoeDescription: '', serviceId: '' });
+            }
+          }}
+        >
+          <DialogContent className="bg-white sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="text-base">Edit Item</DialogTitle>
+              <DialogDescription className="text-xs text-zinc-400">Superadmin only</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 pt-1">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-zinc-700">Shoe Description</label>
+                <input
+                  type="text"
+                  value={editItemDialog.shoeDescription}
+                  onChange={(e) => setEditItemDialog((prev) => ({ ...prev, shoeDescription: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm bg-white border border-zinc-200 rounded-md text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  placeholder="e.g. Nike Air Max 1"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-zinc-700">Service</label>
+                <Select
+                  value={editItemDialog.serviceId}
+                  onValueChange={(v) => setEditItemDialog((prev) => ({ ...prev, serviceId: v }))}
+                >
+                  <SelectTrigger className="h-9 text-sm border-zinc-200">
+                    <SelectValue placeholder="Select service…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">— No service —</SelectItem>
+                    {services.map((s) => (
+                      <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                variant="dark"
+                size="sm"
+                className="w-full"
+                disabled={updateItemMut.isPending || (!editItemDialog.shoeDescription.trim() && !editItemDialog.serviceId)}
+                onClick={() => {
+                  if (!editItemDialog.itemId) return;
+                  updateItemMut.mutate({
+                    itemId: editItemDialog.itemId,
+                    ...(editItemDialog.shoeDescription.trim() && { shoeDescription: editItemDialog.shoeDescription.trim() }),
+                    ...(editItemDialog.serviceId && { serviceId: parseInt(editItemDialog.serviceId, 10) }),
+                  });
+                }}
+              >
+                {updateItemMut.isPending ? <Spinner /> : 'Save Changes'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

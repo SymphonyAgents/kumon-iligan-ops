@@ -131,9 +131,13 @@ export default function DashboardPage() {
   const [depositError, setDepositError] = useState('');
   const [depositSource, setDepositSource] = useState<'gcash' | 'cash' | 'card'>('gcash');
 
+  const [lifetimeMode, setLifetimeMode] = useState(false);
+
   const { data: currentUser } = useCurrentUserQuery();
   const isAdmin = currentUser?.userType === 'admin' || currentUser?.userType === 'superadmin';
   const isSuperadmin = currentUser?.userType === 'superadmin';
+
+  const effectiveYear = lifetimeMode ? 0 : year;
 
   // activeOnly=true — exclude soft-deleted (isActive=false) branches from the filter dropdown
   const { data: branches = [] } = useBranchesQuery(true);
@@ -141,12 +145,12 @@ export default function DashboardPage() {
   const branchId = branchFilter !== 'all' ? parseInt(branchFilter, 10) : undefined;
 
   // Single backend call — ALL financial calculations happen server-side
-  const { data: dashboard, isLoading: dashboardLoading } = useDashboardSummaryQuery(year, month, {
+  const { data: dashboard, isLoading: dashboardLoading } = useDashboardSummaryQuery(effectiveYear, lifetimeMode ? 0 : month, {
     branchId,
     enabled: !!currentUser,
   });
 
-  const upsertDepositMut = useUpsertDepositMutation(year, month, branchId);
+  const upsertDepositMut = useUpsertDepositMutation(effectiveYear, lifetimeMode ? 0 : month, branchId);
 
   // Display-only lists (no calculations)
   const { data: recentTxns = [] } = useRecentTransactionsQuery(20);
@@ -169,10 +173,25 @@ export default function DashboardPage() {
     <div>
       <PageHeader
         title="Dashboard"
-        subtitle={isAdmin ? (year === 0 ? 'All-time financial summary' : 'Monthly financial summary') : "Today's overview"}
+        subtitle={isAdmin ? (lifetimeMode ? 'All-time financial summary' : 'Monthly financial summary') : "Today's overview"}
         action={
           isAdmin ? (
-            <div className={`grid gap-2 ${isSuperadmin && branches.length > 0 ? 'grid-cols-3' : 'grid-cols-2'} sm:flex sm:items-center sm:flex-wrap sm:justify-end`}>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {/* Lifetime toggle */}
+              <button
+                onClick={() => {
+                  const next = !lifetimeMode;
+                  setLifetimeMode(next);
+                  if (next) setBranchFilter('all');
+                }}
+                className={`h-9 px-3 text-sm font-medium rounded-md border transition-colors duration-150 ${
+                  lifetimeMode
+                    ? 'bg-zinc-950 text-white border-zinc-950'
+                    : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400 hover:text-zinc-900'
+                }`}
+              >
+                Lifetime
+              </button>
               {isSuperadmin && branches.length > 0 && (
                 <Select value={branchFilter} onValueChange={setBranchFilter}>
                   <SelectTrigger className="h-9 text-sm w-full sm:w-36 border-zinc-200">
@@ -186,7 +205,7 @@ export default function DashboardPage() {
                   </SelectContent>
                 </Select>
               )}
-              {year !== 0 && (
+              {!lifetimeMode && (
                 <Select value={String(month)} onValueChange={(v) => setMonth(parseInt(v, 10))}>
                   <SelectTrigger className="h-9 text-sm w-full sm:w-32 border-zinc-200">
                     <SelectValue />
@@ -199,24 +218,21 @@ export default function DashboardPage() {
                   </SelectContent>
                 </Select>
               )}
-              <Select
-                value={String(year)}
-                onValueChange={(v) => {
-                  const y = parseInt(v, 10);
-                  setYear(y);
-                  if (y === 0) setMonth(0); // all-time always has month=0
-                }}
-              >
-                <SelectTrigger className="h-9 text-sm w-full sm:w-28 border-zinc-200">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">All Time</SelectItem>
-                  {[2024, 2025, 2026].map((y) => (
-                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {!lifetimeMode && (
+                <Select
+                  value={String(year)}
+                  onValueChange={(v) => setYear(parseInt(v, 10))}
+                >
+                  <SelectTrigger className="h-9 text-sm w-full sm:w-28 border-zinc-200">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[2024, 2025, 2026].map((y) => (
+                      <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           ) : null
         }
@@ -525,7 +541,7 @@ export default function DashboardPage() {
         onClose={() => setHistoryDialog({ open: false })}
         year={year}
         month={month}
-        monthLabel={year === 0 ? 'All Time' : month === 0 ? `${year} Overall` : `${MONTHS[(month || 1) - 1]} ${year}`}
+        monthLabel={lifetimeMode ? 'All Time' : month === 0 ? `${year} Overall` : `${MONTHS[(month || 1) - 1]} ${year}`}
         branchId={branchId}
       />
 
@@ -536,7 +552,7 @@ export default function DashboardPage() {
           onClose={() => setCollectionHistoryDialog(null)}
           year={year}
           month={month}
-          monthLabel={year === 0 ? 'All Time' : month === 0 ? `${year} Overall` : `${MONTHS[(month || 1) - 1]} ${year}`}
+          monthLabel={lifetimeMode ? 'All Time' : month === 0 ? `${year} Overall` : `${MONTHS[(month || 1) - 1]} ${year}`}
           method={collectionHistoryDialog.method}
           methodLabel={collectionHistoryDialog.methodLabel}
           branchId={branchId}
@@ -552,7 +568,7 @@ export default function DashboardPage() {
           <DialogHeader>
             <DialogTitle className="text-base">Record Bank Deposit</DialogTitle>
             <DialogDescription className="text-xs text-zinc-400">
-              {year === 0 ? 'All Time' : month === 0 ? `${year} Overall` : `${MONTHS[(month || 1) - 1]} ${year}`}
+              {lifetimeMode ? 'All Time' : month === 0 ? `${year} Overall` : `${MONTHS[(month || 1) - 1]} ${year}`}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 pt-1">

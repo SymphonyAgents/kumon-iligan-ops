@@ -142,6 +142,10 @@ export default function UpcomingPickupsPage() {
   const { data: monthData = [], isLoading: calLoading } = useUpcomingByMonthQuery(viewYear, viewMonth);
 
   const transactions = tableData as Transaction[];
+  const totalPairs = useMemo(
+    () => transactions.reduce((sum, t) => sum + (t.itemCount ?? 0), 0),
+    [transactions],
+  );
 
   const byDate = useMemo(() => {
     const map = new Map<string, Transaction[]>();
@@ -187,7 +191,11 @@ export default function UpcomingPickupsPage() {
     <div>
       <PageHeader
         title="Upcoming Pickups"
-        subtitle="Transactions with upcoming pickup dates"
+        subtitle={
+          transactions.length > 0
+            ? `${transactions.length} transaction${transactions.length !== 1 ? 's' : ''} · ${totalPairs} pair${totalPairs !== 1 ? 's' : ''} total`
+            : 'Transactions with upcoming pickup dates'
+        }
         action={(
           <div className="flex items-center gap-1 p-1 bg-zinc-100 rounded-lg">
             {toggleBtn('calendar', <CalendarBlankIcon size={14} weight={view === 'calendar' ? 'fill' : 'regular'} />, 'Calendar')}
@@ -295,6 +303,11 @@ export default function UpcomingPickupsPage() {
           <DialogHeader>
             <DialogTitle className="text-base">
               {selectedDate ? formatDate(selectedDate) : ''}
+              {dialogTxns.length > 0 && (
+                <span className="ml-2 text-xs font-normal text-zinc-400">
+                  {dialogTxns.reduce((sum, t) => sum + (t.itemCount ?? 0), 0)} pairs
+                </span>
+              )}
             </DialogTitle>
           </DialogHeader>
           <div className="divide-y divide-zinc-100 -mx-1">

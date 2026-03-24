@@ -498,6 +498,7 @@ export class TransactionsService {
       auditType = AUDIT_TYPE.TRANSACTION_UPDATED;
       action = 'promo_change';
       auditDetails = {
+        txnNumber: updated.number,
         promoFrom: existing.promoId ?? null,
         promoTo: dto.promoId ?? null,
         totalAfter: fromScaled(updated.total),
