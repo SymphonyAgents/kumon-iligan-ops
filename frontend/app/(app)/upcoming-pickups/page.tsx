@@ -275,11 +275,14 @@ export default function UpcomingPickupsPage() {
                   )}>
                     {day}
                   </span>
-                  {hasPicks && (
-                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[10px] font-semibold leading-none w-fit">
-                      {txns.length} {txns.length === 1 ? 'pickup' : 'pickups'}
-                    </span>
-                  )}
+                  {hasPicks && (() => {
+                    const pairs = txns.reduce((s, t) => s + (t.itemCount ?? 0), 0);
+                    return (
+                      <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[10px] font-semibold leading-none w-fit">
+                        {pairs} {pairs === 1 ? 'pair' : 'pairs'}
+                      </span>
+                    );
+                  })()}
                 </div>
               );
             })}

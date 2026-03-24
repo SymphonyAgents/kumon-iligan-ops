@@ -52,6 +52,7 @@ const INPUT_CLS = 'w-full px-3 py-2 text-sm border border-zinc-200 rounded-md fo
 export default function ExpensesPage() {
   const searchParams = useSearchParams();
   const [selectedDate, setSelectedDate] = useState(today());
+  const [activeTab, setActiveTab] = useState<'main' | 'fees'>('main');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Expense | null>(null);
   const [form, setForm] = useState<ExpenseForm>(EMPTY_FORM);
@@ -142,14 +143,21 @@ export default function ExpensesPage() {
     }
   };
 
+  const FEE_CATEGORY = 'Card Processing Fee';
+  const mainExpenses = useMemo(() => (expenses as Expense[]).filter((e) => e.category !== FEE_CATEGORY), [expenses]);
+  const feeExpenses = useMemo(() => (expenses as Expense[]).filter((e) => e.category === FEE_CATEGORY), [expenses]);
+  const activeExpenses = activeTab === 'fees' ? feeExpenses : mainExpenses;
+  const feeTotal = useMemo(() => feeExpenses.reduce((s, e) => s + parseFloat(e.amount ?? '0'), 0), [feeExpenses]);
+  const mainTotal = useMemo(() => mainExpenses.reduce((s, e) => s + parseFloat(e.amount ?? '0'), 0), [mainExpenses]);
+
   const columns = useMemo(
     () => createExpenseColumns({
       onDelete: setDeleteTarget,
-      onStartEdit: isAdmin ? openEdit : undefined,
+      onStartEdit: isAdmin && activeTab === 'main' ? openEdit : undefined,
       isAdmin,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isAdmin],
+    [isAdmin, activeTab],
   );
 
   return (
@@ -157,15 +165,15 @@ export default function ExpensesPage() {
       <PageHeader
         title="Expenses"
         subtitle="Daily operational expenses"
-        action={(
+        action={activeTab === 'main' ? (
           <Button onClick={openCreate}>
             <ReceiptIcon size={14} weight="bold" />
             Add Expense
           </Button>
-        )}
+        ) : undefined}
       />
 
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-4">
         <input
           type="date"
           value={selectedDate}
@@ -180,13 +188,42 @@ export default function ExpensesPage() {
         )}
       </div>
 
+      {/* Tabs */}
+      <div className="flex items-center gap-1 mb-4 border-b border-zinc-100">
+        {([
+          { key: 'main', label: 'Main', count: mainExpenses.length, total: mainTotal },
+          { key: 'fees', label: 'Fees', count: feeExpenses.length, total: feeTotal },
+        ] as const).map(({ key, label, count, total }) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key)}
+            className={cn(
+              'flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors duration-150',
+              activeTab === key
+                ? 'border-zinc-900 text-zinc-900'
+                : 'border-transparent text-zinc-400 hover:text-zinc-600',
+            )}
+          >
+            {label}
+            {count > 0 && (
+              <span className={cn(
+                'text-[11px] font-mono px-1.5 py-0.5 rounded-full',
+                activeTab === key ? 'bg-zinc-100 text-zinc-700' : 'bg-zinc-50 text-zinc-400',
+              )}>
+                {formatPeso(String(total))}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
       <DataTable
         columns={columns}
-        data={expenses as Expense[]}
+        data={activeExpenses}
         isLoading={isLoading}
         loadingRows={3}
-        emptyTitle="No expenses"
-        emptyDescription="No expenses recorded for this date."
+        emptyTitle={activeTab === 'fees' ? 'No card fee expenses' : 'No expenses'}
+        emptyDescription={activeTab === 'fees' ? 'Card processing fee expenses will appear here.' : 'No expenses recorded for this date.'}
       />
 
       <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open && !isBusy) closeDialog(); }}>
