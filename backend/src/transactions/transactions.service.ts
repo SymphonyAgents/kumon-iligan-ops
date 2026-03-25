@@ -589,7 +589,7 @@ export class TransactionsService {
     const itemCountsSubq = this.drizzle.db
       .select({
         txnId: transactionItems.transactionId,
-        count: sql<number>`CAST(COUNT(*) AS INT)`,
+        count: sql<number>`CAST(COUNT(*) AS INT)`.as('cnt'),
       })
       .from(transactionItems)
       .where(ne(transactionItems.status, 'cancelled'))
@@ -637,7 +637,7 @@ export class TransactionsService {
     const itemCountsSubq = this.drizzle.db
       .select({
         txnId: transactionItems.transactionId,
-        count: sql<number>`CAST(COUNT(*) AS INT)`,
+        count: sql<number>`CAST(COUNT(*) AS INT)`.as('cnt'),
       })
       .from(transactionItems)
       .where(ne(transactionItems.status, 'cancelled'))
