@@ -75,6 +75,8 @@ export function useUpcomingByMonthQuery(year: number, month: number) {
   return useQuery({
     queryKey: ['transactions-upcoming-month', year, month],
     queryFn: () => api.transactions.upcomingByMonth(year, month),
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 }
 
