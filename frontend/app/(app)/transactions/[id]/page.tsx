@@ -55,6 +55,7 @@ import type { EmailTemplateKey } from '@/utils/email';
 import type { PaymentMethod } from '@/lib/types';
 import { ItemStatusConfirmDialog, type PendingItemChange } from '@/components/transactions/ItemStatusConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function TransactionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -1253,6 +1254,29 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
             </DialogHeader>
 
             <div className="space-y-5 pt-1">
+              {/* Loading skeleton while detail data is fetching */}
+              {!txn?.items && (
+                <div className="space-y-3">
+                  {[0, 1].map((i) => (
+                    <div key={i} className="rounded-lg border border-zinc-200 p-3 space-y-2">
+                      <Skeleton className="h-3 w-32" />
+                      <div className="grid grid-cols-2 gap-2">
+                        <Skeleton className="h-9 w-full rounded-md" />
+                        <Skeleton className="h-9 w-full rounded-md" />
+                      </div>
+                    </div>
+                  ))}
+                  {[0, 1].map((i) => (
+                    <div key={i} className="rounded-lg border border-zinc-200 p-3 space-y-2">
+                      <Skeleton className="h-3 w-24" />
+                      <div className="grid grid-cols-2 gap-2">
+                        <Skeleton className="h-9 w-full rounded-md" />
+                        <Skeleton className="h-9 w-full rounded-md" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
               {/* Payments — shown first */}
               {editDraftPayments.length > 0 && (
                 <div>

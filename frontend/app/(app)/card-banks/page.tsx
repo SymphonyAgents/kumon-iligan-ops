@@ -5,6 +5,7 @@ import { PlusIcon, PencilSimpleIcon, TrashIcon } from '@phosphor-icons/react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Dialog,
@@ -100,8 +101,19 @@ export default function CardBanksPage() {
         />
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Spinner size={24} className="text-zinc-400" />
+          <div className="space-y-2 max-w-lg">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center justify-between px-4 py-3 bg-white border border-zinc-200 rounded-lg">
+                <div className="space-y-1.5">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-3 w-40" />
+                </div>
+                <div className="flex gap-1">
+                  <Skeleton className="h-7 w-7 rounded" />
+                  <Skeleton className="h-7 w-7 rounded" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <div className="space-y-2 max-w-lg">
