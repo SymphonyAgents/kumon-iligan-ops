@@ -101,55 +101,73 @@ export class PromosService {
   }
 
   async create(dto: CreatePromoDto, performedBy?: string) {
-    const [created] = await this.drizzle.db
-      .insert(promos)
-      .values({
-        name: dto.name,
-        code: dto.code.toUpperCase(),
-        percent: dto.percent,
-        dateFrom: dto.dateFrom ?? null,
-        dateTo: dto.dateTo ?? null,
-        isActive: dto.isActive ?? true,
-        maxUses: dto.maxUses ?? null,
-        createdById: performedBy ?? null,
-      })
-      .returning();
+    try {
+      const [created] = await this.drizzle.db
+        .insert(promos)
+        .values({
+          name: dto.name,
+          code: dto.code.toUpperCase(),
+          percent: dto.percent,
+          dateFrom: dto.dateFrom ?? null,
+          dateTo: dto.dateTo ?? null,
+          isActive: dto.isActive ?? true,
+          maxUses: dto.maxUses ?? null,
+          createdById: performedBy ?? null,
+        })
+        .returning();
 
-    await this.audit.log({
-      action: 'create',
-      entityType: 'promo',
-      entityId: String(created.id),
-      source: 'admin',
-      performedBy,
-      details: { code: created.code },
-    });
+      await this.audit.log({
+        action: 'create',
+        entityType: 'promo',
+        entityId: String(created.id),
+        source: 'admin',
+        performedBy,
+        details: { code: created.code },
+      });
 
-    return created;
+      return created;
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === '23505') {
+        throw new BadRequestException(
+          `Promo code "${dto.code.toUpperCase()}" is already in use. Choose a different code.`,
+        );
+      }
+      throw err;
+    }
   }
 
   async update(id: number, dto: UpdatePromoDto, performedBy?: string) {
     const existing = await this.findOne(id);
 
-    const [updated] = await this.drizzle.db
-      .update(promos)
-      .set({
-        ...dto,
-        code: dto.code ? dto.code.toUpperCase() : undefined,
-        updatedAt: new Date(),
-      })
-      .where(eq(promos.id, id))
-      .returning();
+    try {
+      const [updated] = await this.drizzle.db
+        .update(promos)
+        .set({
+          ...dto,
+          code: dto.code ? dto.code.toUpperCase() : undefined,
+          updatedAt: new Date(),
+        })
+        .where(eq(promos.id, id))
+        .returning();
 
-    await this.audit.log({
-      action: 'update',
-      entityType: 'promo',
-      entityId: String(id),
-      source: 'admin',
-      performedBy,
-      details: { before: existing, after: updated },
-    });
+      await this.audit.log({
+        action: 'update',
+        entityType: 'promo',
+        entityId: String(id),
+        source: 'admin',
+        performedBy,
+        details: { before: existing, after: updated },
+      });
 
-    return updated;
+      return updated;
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === '23505') {
+        throw new BadRequestException(
+          `Promo code "${(dto.code ?? '').toUpperCase()}" is already in use. Choose a different code.`,
+        );
+      }
+      throw err;
+    }
   }
 
   // Soft-delete — set isActive = false
