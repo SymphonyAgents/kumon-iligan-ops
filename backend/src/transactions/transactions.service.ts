@@ -202,7 +202,11 @@ export class TransactionsService {
       ...mapTxn(row.txn),
       promo: row.promo ?? null,
       items,
-      payments: payments.map((p) => ({ ...p, amount: fromScaled(p.amount) })),
+      payments: payments.map((p) => ({
+        ...p,
+        amount: fromScaled(p.amount),
+        fee: p.fee != null ? fromScaled(p.fee) : null,
+      })),
       customerStreetName: customerAddress?.streetName ?? null,
       customerCity: customerAddress?.city ?? null,
       staffNickname: row.staff?.nickname ?? null,
@@ -1274,7 +1278,7 @@ export class TransactionsService {
         .set({ referenceNumber: dto.referenceNumber !== undefined ? dto.referenceNumber : existing.referenceNumber })
         .where(eq(claimPayments.id, paymentId))
         .returning();
-      return { ...updated, amount: fromScaled(updated.amount) };
+      return { ...updated, amount: fromScaled(updated.amount), fee: updated.fee != null ? fromScaled(updated.fee) : null };
     }
 
     // Recompute fee when changing to/from card — clear fee for non-card methods
