@@ -240,6 +240,7 @@ export interface DashboardSummary {
     gcash: string;
     card: string;
     bank_deposit: string;
+    cardFee?: string;
   };
   todayCollections: TodayCollection[];
   todayCollectionTotal: string;
