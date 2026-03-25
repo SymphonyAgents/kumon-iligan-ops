@@ -15,7 +15,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-[100dvh] flex-col items-center justify-center bg-zinc-50">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-zinc-50">
       <div className="flex flex-col items-center gap-8">
         <Image
           src="/sneaker-doc-logo.png"

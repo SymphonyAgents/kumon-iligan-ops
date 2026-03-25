@@ -263,6 +263,9 @@ export default function UpcomingPickupsPage() {
                 <div
                   key={day}
                   onClick={() => hasPicks && setSelectedDate(dateStr)}
+                  role={hasPicks ? 'button' : undefined}
+                  tabIndex={hasPicks ? 0 : undefined}
+                  style={hasPicks ? { touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' } : undefined}
                   className={cn(
                     'min-h-[72px] p-2 border-b border-zinc-100 flex flex-col',
                     colIndex < 6 && 'border-r',
