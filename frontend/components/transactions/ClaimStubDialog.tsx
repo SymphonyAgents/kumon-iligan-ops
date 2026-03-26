@@ -143,7 +143,7 @@ export function ClaimStubDialog({ open, txn, onViewTransaction }: ClaimStubDialo
               <PrinterIcon size={13} />
               Print
             </Button>
-            {gmailLink && (
+            {emailLink && (
               <button
                 type="button"
                 onClick={handleEmail}
