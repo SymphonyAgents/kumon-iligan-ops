@@ -41,7 +41,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      {/* Catch JS errors before React hydrates — helps debug old device failures */}
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.onerror=function(m,u,l,c,e){var d=document.getElementById('js-error-banner');if(d){d.textContent='JS Error: '+m+' ('+u+':'+l+')';d.style.display='block';}};`,
+          }}
+        />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <div id="js-error-banner" style={{display:'none',position:'fixed',top:0,left:0,right:0,background:'#ef4444',color:'#fff',padding:'12px',fontSize:'13px',zIndex:99999,wordBreak:'break-all'}} />
         <NavigationProgress />
         <QueryProvider>{children}</QueryProvider>
         <Toaster position="bottom-right" richColors />
