@@ -49,7 +49,7 @@ import { useCardBanksQuery } from '@/hooks/useCardBanksQuery';
 import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { generateGmailLink, generateGmailLinkNoBody, openLinkReliably, EMAIL_TEMPLATES, EMAIL_TEMPLATE_LABELS } from '@/utils/email';
+import { generateEmailLink, generateClaimStubEmailLink, openLinkReliably, EMAIL_TEMPLATES, EMAIL_TEMPLATE_LABELS } from '@/utils/email';
 import { ClaimStubPreview } from '@/components/transactions/ClaimStubPreview';
 import type { EmailTemplateKey } from '@/utils/email';
 import type { PaymentMethod } from '@/lib/types';
@@ -1026,33 +1026,33 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                   type="button"
                   className="flex items-center justify-center gap-2 w-full px-3 py-2 text-sm font-medium bg-zinc-200 text-zinc-800 rounded-md hover:bg-zinc-300 transition-colors duration-150"
                   onClick={() => {
+                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
                     if (emailTemplate === EMAIL_TEMPLATES.claim_stub) {
-                      const link = generateGmailLinkNoBody(txn, EMAIL_TEMPLATES.claim_stub);
-                      // Use openLinkReliably (anchor element) instead of window.open —
-                      // works in PWA standalone mode and avoids mobile popup blockers.
-                      // Open synchronously first, then attempt clipboard copy in background.
+                      const link = generateClaimStubEmailLink(txn);
                       openLinkReliably(link);
-                      (async () => {
-                        try {
-                          if (!stubRef.current) return;
-                          const dataUrl = await toPng(stubRef.current, { pixelRatio: 2 });
-                          const res = await fetch(dataUrl);
-                          const blob = await res.blob();
-                          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-                          toast.success('Stub image copied', { description: 'Paste into the Gmail compose body' });
-                        } catch {
-                          // clipboard image copy not supported on this device
-                        }
-                      })();
+                      // Desktop only: copy stub image to clipboard for paste into Gmail compose
+                      if (!isMobile) {
+                        (async () => {
+                          try {
+                            if (!stubRef.current) return;
+                            const dataUrl = await toPng(stubRef.current, { pixelRatio: 2 });
+                            const res = await fetch(dataUrl);
+                            const blob = await res.blob();
+                            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                            toast.success('Stub image copied', { description: 'Paste into the Gmail compose body' });
+                          } catch {
+                            // clipboard image copy not supported on this browser
+                          }
+                        })();
+                      }
                     } else {
-                      // Use openLinkReliably — window.open with long body-encoded URLs
-                      // is blocked or silently fails on mobile browsers and PWA standalone mode.
-                      openLinkReliably(generateGmailLink(txn, emailTemplate));
+                      // generateEmailLink returns mailto: on mobile, Gmail compose URL on desktop
+                      openLinkReliably(generateEmailLink(txn, emailTemplate));
                     }
                   }}
                 >
                   <EnvelopeIcon size={13} />
-                  Open in Gmail
+                  Send Email
                 </button>
               </div>
             </div>

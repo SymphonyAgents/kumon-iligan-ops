@@ -133,6 +133,46 @@ function buildTemplate(key: EmailTemplateKey, ctx: TransactionEmailContext): Ema
 
 const SENDER_EMAIL = 'info.sneakerdoctorph@gmail.com';
 
+function isMobileDevice(): boolean {
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+}
+
+/**
+ * Returns a compose URL for a given template.
+ * - Desktop: Gmail compose URL (opens in new tab, authuser pre-filled)
+ * - Mobile: mailto: URL — iOS/Android honor to/subject/body and open the
+ *   user's default mail app (Gmail app, Apple Mail, etc.) correctly.
+ *   Gmail compose URLs don't work on mobile because the Gmail app ignores
+ *   the view=cm compose intent and opens the inbox instead.
+ */
+export function generateEmailLink(ctx: TransactionEmailContext, templateKey: EmailTemplateKey): string {
+  if (!ctx.customerEmail) return '';
+  const { subject, body } = buildTemplate(templateKey, ctx);
+  if (isMobileDevice()) {
+    return `mailto:${encodeURIComponent(ctx.customerEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+  const params = new URLSearchParams({ view: 'cm', to: ctx.customerEmail, su: subject, body });
+  return `https://mail.google.com/mail/u/?authuser=${SENDER_EMAIL}&${params.toString()}`;
+}
+
+/**
+ * Claim stub variant: desktop opens Gmail compose with no body (user pastes image).
+ * Mobile uses mailto: with the text claim stub in the body — image paste isn't
+ * possible on iOS (navigator.clipboard.write with images is unsupported).
+ */
+export function generateClaimStubEmailLink(ctx: TransactionEmailContext): string {
+  if (!ctx.customerEmail) return '';
+  const { subject, body } = buildTemplate(EMAIL_TEMPLATES.claim_stub, ctx);
+  if (isMobileDevice()) {
+    // Use text body on mobile — clipboard image paste doesn't work on iOS
+    return `mailto:${encodeURIComponent(ctx.customerEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+  // Desktop: no body — user pastes the claim stub image from clipboard
+  const params = new URLSearchParams({ view: 'cm', to: ctx.customerEmail, su: subject });
+  return `https://mail.google.com/mail/u/?authuser=${SENDER_EMAIL}&${params.toString()}`;
+}
+
+// Keep for backwards compat — prefer generateEmailLink / generateClaimStubEmailLink
 export function generateGmailLink(ctx: TransactionEmailContext, templateKey: EmailTemplateKey): string {
   if (!ctx.customerEmail) return '';
   const { subject, body } = buildTemplate(templateKey, ctx);
@@ -140,7 +180,6 @@ export function generateGmailLink(ctx: TransactionEmailContext, templateKey: Ema
   return `https://mail.google.com/mail/u/?authuser=${SENDER_EMAIL}&${params.toString()}`;
 }
 
-// Opens Gmail compose with only to + subject pre-filled (no body) — used when body is pasted manually
 export function generateGmailLinkNoBody(ctx: TransactionEmailContext, templateKey: EmailTemplateKey): string {
   if (!ctx.customerEmail) return '';
   const { subject } = buildTemplate(templateKey, ctx);

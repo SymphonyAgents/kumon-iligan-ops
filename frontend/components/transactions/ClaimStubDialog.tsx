@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { formatDate, formatPeso } from '@/lib/utils';
 import { toTitleCase } from '@/utils/text';
-import { generateGmailLinkNoBody, EMAIL_TEMPLATES } from '@/utils/email';
+import { generateClaimStubEmailLink, openLinkReliably } from '@/utils/email';
 import { ClaimStubPreview } from '@/components/transactions/ClaimStubPreview';
 import type { Transaction } from '@/lib/types';
 
@@ -88,16 +88,24 @@ export function ClaimStubDialog({ open, txn, onViewTransaction }: ClaimStubDialo
     win.document.close();
   }
 
-  const gmailLink = txn.customerEmail
-    ? generateGmailLinkNoBody(txn, EMAIL_TEMPLATES.claim_stub)
-    : null;
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(
+    typeof navigator !== 'undefined' ? navigator.userAgent : '',
+  );
+  const emailLink = txn.customerEmail ? generateClaimStubEmailLink(txn) : null;
 
   function handleEmail() {
-    if (!gmailLink) return;
+    if (!emailLink) return;
 
-    // Open Gmail synchronously to avoid mobile popup blocker,
-    // then attempt clipboard copy in the background
-    window.open(gmailLink, '_blank');
+    if (isMobile) {
+      // On mobile: mailto: opens the default mail app with text body pre-filled.
+      // navigator.clipboard.write() with images is unsupported on iOS, so we skip
+      // the image-paste flow and use the text claim stub body instead.
+      openLinkReliably(emailLink);
+      return;
+    }
+
+    // Desktop: open Gmail compose (no body), then copy stub image to clipboard for paste
+    openLinkReliably(emailLink);
     (async () => {
       try {
         if (!stubRef.current) return;
@@ -107,7 +115,7 @@ export function ClaimStubDialog({ open, txn, onViewTransaction }: ClaimStubDialo
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
         toast.success('Stub image copied', { description: 'Paste into the Gmail compose body' });
       } catch {
-        // clipboard image copy not supported on this device
+        // clipboard image copy not supported on this browser
       }
     })();
   }
