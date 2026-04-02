@@ -213,9 +213,13 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   // Compute which items should have claiming disabled.
   //
   // Rules:
-  //   Single item         — needs (dump photo OR item photo) AND full payment
+  //   Single item txn     — needs (dump photo OR item photo) AND full payment
   //   Multi-item, non-last — needs (dump photo OR item photo) only, no payment check
   //   Multi-item, last    — needs item-level photo (dump NOT sufficient) AND full payment
+  //
+  // "Multi-item" is based on the TRANSACTION having multiple non-cancelled items,
+  // NOT on how many items are currently 'done'. This ensures that if item2 is still
+  // pending/in-progress, item1 (done) is still treated as a non-last item.
   const { disableClaimItemIds, claimDisableReasons } = useMemo(() => {
     const disabled = new Set<number>();
     const reasons = new Map<number, string>();
@@ -225,24 +229,28 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
     const bal = parseFloat(txn.total) - parseFloat(txn.paid);
     const hasDumpPhoto = hasTransactionAfterPhoto;
 
-    // Items currently in 'done' status (eligible to transition to 'claimed')
-    const claimableItems = (txn.items ?? []).filter((i) => i.status === 'done');
-    const isMultiItem = claimableItems.length > 1;
-    const lastItem = isMultiItem ? claimableItems[claimableItems.length - 1] : null;
+    // All non-cancelled items determine whether this is a multi-item transaction
+    // and which item is the "last" one to be claimed.
+    const allActiveItems = (txn.items ?? []).filter((i) => i.status !== 'cancelled');
+    const isMultiItem = allActiveItems.length > 1;
+    const lastActiveItem = allActiveItems[allActiveItems.length - 1];
 
-    claimableItems.forEach((item) => {
+    // Only iterate over items currently 'done' (eligible to transition to 'claimed')
+    const doneItems = allActiveItems.filter((i) => i.status === 'done');
+
+    doneItems.forEach((item) => {
       const hasItemPhoto = !!item.afterImageUrl;
-      const isLastItem = isMultiItem && item.id === lastItem?.id;
+      const isLastItem = isMultiItem && item.id === lastActiveItem?.id;
 
       if (isMultiItem && !isLastItem) {
-        // Non-last in multi-item: photo only, NO payment check
+        // Non-last in multi-item txn: only needs a photo (dump or item-level). No payment check.
         const hasAnyPhoto = hasDumpPhoto || hasItemPhoto;
         if (!hasAnyPhoto) {
           disabled.add(item.id);
           reasons.set(item.id, 'After photo required before claiming');
         }
       } else if (isLastItem) {
-        // Last item in multi-item: item-level photo required + full payment
+        // Last item in multi-item txn: needs item-level photo + full payment
         if (!hasItemPhoto && bal > 0) {
           disabled.add(item.id);
           reasons.set(item.id, 'Item photo + full payment required (last item)');
@@ -254,7 +262,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
           reasons.set(item.id, `Full payment required — Balance: ₱${bal.toFixed(2)}`);
         }
       } else {
-        // Single item: photo (dump or item-level) + full payment
+        // Single item txn: needs photo (dump or item-level) + full payment
         const hasAnyPhoto = hasDumpPhoto || hasItemPhoto;
         if (!hasAnyPhoto && bal > 0) {
           disabled.add(item.id);
