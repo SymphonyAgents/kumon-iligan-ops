@@ -213,9 +213,11 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   // Compute which items should have claiming disabled.
   //
   // Rules:
-  //   Non-last items  — can claim if (txn-level dump photo OR item-level photo) AND full payment
-  //   Last unclaimed  — MUST have item-level after photo AND full payment
-  //     Reason: dump photo may not include the last shoe; need individual proof it was done.
+  //   Single item          — can claim if (dump photo OR item photo) AND full payment
+  //   Multiple items:
+  //     Non-last items    — can claim if (dump photo OR item photo) AND full payment
+  //     Last unclaimed    — MUST have item-level photo AND full payment (dump not enough)
+  //       Reason: dump photo may not include the last shoe; need individual proof.
   const { disableClaimItemIds, claimDisableReasons } = useMemo(() => {
     const disabled = new Set<number>();
     const reasons = new Map<number, string>();
@@ -225,28 +227,29 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
     const bal = parseFloat(txn.total) - parseFloat(txn.paid);
     const hasDumpPhoto = hasTransactionAfterPhoto;
 
-    // Items eligible for status → claimed (currently in 'done')
+    // Items currently in 'done' status (eligible to transition to 'claimed')
     const claimableItems = (txn.items ?? []).filter((i) => i.status === 'done');
-    const lastItem = claimableItems.length === 1 ? claimableItems[0] : null;
+    const isMultiItem = claimableItems.length > 1;
+    const lastItem = isMultiItem ? claimableItems[claimableItems.length - 1] : null;
 
     claimableItems.forEach((item) => {
       const hasItemPhoto = !!item.afterImageUrl;
-      const isLast = item.id === lastItem?.id;
+      const isLastItem = isMultiItem && item.id === lastItem?.id;
 
-      if (isLast) {
-        // Last item: dump photo is NOT sufficient — needs its own item-level photo
+      if (isLastItem) {
+        // Multi-item txn, last item: dump photo NOT sufficient — must have item-level photo
         if (!hasItemPhoto && bal > 0) {
           disabled.add(item.id);
-          reasons.set(item.id, 'Item photo + full payment required for last item');
+          reasons.set(item.id, 'Item photo + full payment required (last item)');
         } else if (!hasItemPhoto) {
           disabled.add(item.id);
-          reasons.set(item.id, 'Item-level after photo required for last item');
+          reasons.set(item.id, 'Item-level after photo required (last item)');
         } else if (bal > 0) {
           disabled.add(item.id);
           reasons.set(item.id, `Full payment required — Balance: ₱${bal.toFixed(2)}`);
         }
       } else {
-        // Non-last items: dump photo OR item photo is fine
+        // Single item OR non-last in multi-item: dump photo OR item photo both work
         const hasAnyPhoto = hasDumpPhoto || hasItemPhoto;
         if (!hasAnyPhoto && bal > 0) {
           disabled.add(item.id);
