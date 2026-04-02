@@ -213,11 +213,9 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   // Compute which items should have claiming disabled.
   //
   // Rules:
-  //   Single item          — can claim if (dump photo OR item photo) AND full payment
-  //   Multiple items:
-  //     Non-last items    — can claim if (dump photo OR item photo) AND full payment
-  //     Last unclaimed    — MUST have item-level photo AND full payment (dump not enough)
-  //       Reason: dump photo may not include the last shoe; need individual proof.
+  //   Single item         — needs (dump photo OR item photo) AND full payment
+  //   Multi-item, non-last — needs (dump photo OR item photo) only, no payment check
+  //   Multi-item, last    — needs item-level photo (dump NOT sufficient) AND full payment
   const { disableClaimItemIds, claimDisableReasons } = useMemo(() => {
     const disabled = new Set<number>();
     const reasons = new Map<number, string>();
@@ -236,8 +234,15 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
       const hasItemPhoto = !!item.afterImageUrl;
       const isLastItem = isMultiItem && item.id === lastItem?.id;
 
-      if (isLastItem) {
-        // Multi-item txn, last item: dump photo NOT sufficient — must have item-level photo
+      if (isMultiItem && !isLastItem) {
+        // Non-last in multi-item: photo only, NO payment check
+        const hasAnyPhoto = hasDumpPhoto || hasItemPhoto;
+        if (!hasAnyPhoto) {
+          disabled.add(item.id);
+          reasons.set(item.id, 'After photo required before claiming');
+        }
+      } else if (isLastItem) {
+        // Last item in multi-item: item-level photo required + full payment
         if (!hasItemPhoto && bal > 0) {
           disabled.add(item.id);
           reasons.set(item.id, 'Item photo + full payment required (last item)');
@@ -249,7 +254,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
           reasons.set(item.id, `Full payment required — Balance: ₱${bal.toFixed(2)}`);
         }
       } else {
-        // Single item OR non-last in multi-item: dump photo OR item photo both work
+        // Single item: photo (dump or item-level) + full payment
         const hasAnyPhoto = hasDumpPhoto || hasItemPhoto;
         if (!hasAnyPhoto && bal > 0) {
           disabled.add(item.id);
