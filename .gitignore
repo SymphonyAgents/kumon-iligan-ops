@@ -16,5 +16,9 @@ node_modules/
 .DS_Store
 
 # local docs — not for commits
-*.md
+
 !AGENTS.md
+
+# Allow docs and project markdown
+!*.md
+!docs/

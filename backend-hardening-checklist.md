@@ -1,6 +1,6 @@
 # Backend Hardening Checklist
 
-Reusable audit checklist derived from the SneakerDoc POS backend audit (2026-03-13).
+Reusable audit checklist derived from a prior backend audit (2026-03-13).
 Use this when building or reviewing any NestJS + Drizzle + Supabase backend.
 
 ---
