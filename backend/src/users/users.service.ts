@@ -47,6 +47,15 @@ export class UsersService {
     return user ?? null;
   }
 
+  /** Full user record including branchId and userType -- used by service-layer RBAC. */
+  async findByIdFull(id: string) {
+    const [user] = await this.drizzle.db
+      .select()
+      .from(users)
+      .where(eq(users.id, id));
+    return user ?? null;
+  }
+
   async onboard(id: string, branchId: string) {
     const user = await this.findById(id);
     if (!user) throw new NotFoundException('User not found');
