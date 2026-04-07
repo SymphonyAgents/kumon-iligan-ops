@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { asc, eq, and, sql, ne } from 'drizzle-orm';
 import { DrizzleService } from '../db/drizzle.service';
 import { AuditService } from '../audit/audit.service';
-import { users, staffDocuments, branches } from '../db/schema';
+import { users, branches } from '../db/schema';
 import { AUDIT_TYPE } from '../db/constants';
 import type { UserType } from '../db/constants';
 import type { UpdateUserProfileDto } from './dto/update-user-profile.dto';
@@ -32,7 +32,7 @@ export class UsersService {
       .values({
         id,
         email,
-        userType: isFirstUser ? 'superadmin' : 'staff',
+        userType: isFirstUser ? 'superadmin' : 'teacher',
         status: isFirstUser ? 'active' : 'pending',
       })
       .returning();
@@ -47,7 +47,7 @@ export class UsersService {
     return user ?? null;
   }
 
-  async onboard(id: string, branchId: number) {
+  async onboard(id: string, branchId: string) {
     const user = await this.findById(id);
     if (!user) throw new NotFoundException('User not found');
 
@@ -66,12 +66,12 @@ export class UsersService {
     return updated;
   }
 
-  async getBranchId(userId: string): Promise<number | null> {
+  async getBranchId(userId: string): Promise<string | null> {
     const user = await this.findById(userId);
     return user?.branchId ?? null;
   }
 
-  async findAll(branchId?: number) {
+  async findAll(branchId?: string) {
     // Show active + pending users (not rejected or deactivated)
     const activeOrPending = and(
       eq(users.isActive, true),
@@ -100,7 +100,7 @@ export class UsersService {
 
     await this.audit.log({
       action: `Approved user: ${user.email}`,
-      auditType: AUDIT_TYPE.USER_APPROVED,
+      auditType: AUDIT_TYPE.USER_STATUS_CHANGED,
       entityType: 'user',
       entityId: id,
       source: 'admin',
@@ -123,7 +123,7 @@ export class UsersService {
 
     await this.audit.log({
       action: `Rejected and deleted user: ${user.email}`,
-      auditType: AUDIT_TYPE.USER_REJECTED,
+      auditType: AUDIT_TYPE.USER_STATUS_CHANGED,
       entityType: 'user',
       entityId: id,
       source: 'admin',
@@ -135,9 +135,9 @@ export class UsersService {
     return { deleted: true };
   }
 
-  // Returns active users for transaction assignment dropdowns
+  // Returns active users for assignment dropdowns
   // Filtered to the same branch if branchId is provided
-  async findAssignable(branchId?: number | null) {
+  async findAssignable(branchId?: string | null) {
     const baseCondition = eq(users.isActive, true);
     const whereClause = branchId
       ? and(baseCondition, eq(users.branchId, branchId))
@@ -221,29 +221,7 @@ export class UsersService {
     return updated;
   }
 
-  async getDocuments(staffId: string) {
-    return this.drizzle.db
-      .select()
-      .from(staffDocuments)
-      .where(eq(staffDocuments.staffId, staffId))
-      .orderBy(asc(staffDocuments.uploadedAt));
-  }
-
-  async addDocument(staffId: string, url: string, label?: string) {
-    const [doc] = await this.drizzle.db
-      .insert(staffDocuments)
-      .values({ staffId, url, label: label ?? null })
-      .returning();
-    return doc;
-  }
-
-  async removeDocument(staffId: string, docId: number) {
-    await this.drizzle.db
-      .delete(staffDocuments)
-      .where(and(eq(staffDocuments.id, docId), eq(staffDocuments.staffId, staffId)));
-  }
-
-  async updateBranch(id: string, branchId: number, performedBy?: string) {
+  async updateBranch(id: string, branchId: string, performedBy?: string) {
     const user = await this.findById(id);
     if (!user) throw new NotFoundException('User not found');
 
@@ -266,7 +244,6 @@ export class UsersService {
     return updated;
   }
 
-
   async syncUser(data: {
     id: string;
     email: string;
@@ -276,7 +253,7 @@ export class UsersService {
     id: string;
     userType: string;
     status: string;
-    branchId: number | null;
+    branchId: string | null;
     fullName: string | null;
     nickname: string | null;
   }> {

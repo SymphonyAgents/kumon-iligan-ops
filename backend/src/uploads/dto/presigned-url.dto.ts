@@ -1,12 +1,12 @@
-import { IsNumber, IsOptional, IsString, IsIn, Matches } from 'class-validator';
+import { IsOptional, IsString, IsIn, Matches } from 'class-validator';
 
 export class PresignedUrlDto {
-  @IsNumber()
-  txnId: number;
+  @IsString()
+  txnId: string;
 
   @IsOptional()
-  @IsNumber()
-  itemId?: number;
+  @IsString()
+  itemId?: string;
 
   @IsString()
   @IsIn(['before', 'after'])

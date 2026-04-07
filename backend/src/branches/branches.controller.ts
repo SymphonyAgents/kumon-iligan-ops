@@ -5,7 +5,6 @@ import {
   Patch,
   Body,
   Param,
-  ParseIntPipe,
   Query,
   Req,
   UseGuards,
@@ -30,7 +29,7 @@ export class BranchesController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id') id: string) {
     return this.branchesService.findOne(id);
   }
 
@@ -45,7 +44,7 @@ export class BranchesController {
   @UseGuards(RolesGuard)
   @Roles('superadmin')
   update(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() dto: Partial<CreateBranchDto> & { isActive?: boolean },
     @Req() req: AuthedRequest,
   ) {

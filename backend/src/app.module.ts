@@ -6,16 +6,12 @@ import { AuditModule } from './audit/audit.module';
 import { EmailModule } from './email/email.module';
 import { SmsModule } from './sms/sms.module';
 import { UsersModule } from './users/users.module';
-import { ServicesModule } from './services/services.module';
-import { PromosModule } from './promos/promos.module';
-import { ExpensesModule } from './expenses/expenses.module';
-import { TransactionsModule } from './transactions/transactions.module';
-import { CustomersModule } from './customers/customers.module';
 import { BranchesModule } from './branches/branches.module';
 import { UploadsModule } from './uploads/uploads.module';
-import { DepositsModule } from './deposits/deposits.module';
-import { ReportsModule } from './reports/reports.module';
-import { CardBanksModule } from './card-banks/card-banks.module';
+import { FamiliesModule } from './families/families.module';
+import { StudentsModule } from './students/students.module';
+import { PaymentPeriodsModule } from './payment-periods/payment-periods.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -26,16 +22,12 @@ import { CardBanksModule } from './card-banks/card-banks.module';
     EmailModule,
     SmsModule,
     UsersModule,
-    ServicesModule,
-    PromosModule,
-    ExpensesModule,
-    TransactionsModule,
-    CustomersModule,
     BranchesModule,
     UploadsModule,
-    DepositsModule,
-    ReportsModule,
-    CardBanksModule,
+    FamiliesModule,
+    StudentsModule,
+    PaymentPeriodsModule,
+    PaymentsModule,
   ],
 })
 export class AppModule {}

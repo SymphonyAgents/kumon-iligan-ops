@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { and, desc, eq, gte, getTableColumns, lte } from 'drizzle-orm';
 import { DrizzleService } from '../db/drizzle.service';
 import { auditLog, users } from '../db/schema';
+import { AUDIT_TYPE } from '../db/constants';
 import type { AuditType } from '../db/constants';
 
 interface LogActionParams {
@@ -11,7 +12,7 @@ interface LogActionParams {
   entityId?: string;
   source?: string;
   performedBy?: string;
-  branchId?: number;
+  branchId?: string;
   details?: Record<string, unknown>;
 }
 
@@ -21,7 +22,7 @@ export class AuditService {
 
   constructor(private readonly drizzle: DrizzleService) {}
 
-  async findAll(params: { limit?: number; month?: number; year?: number; performedBy?: string; branchId?: number } = {}) {
+  async findAll(params: { limit?: number; month?: number; year?: number; performedBy?: string; branchId?: string } = {}) {
     const { limit = 200, month, year, performedBy, branchId } = params;
     const conditions: ReturnType<typeof eq>[] = [];
 
@@ -80,11 +81,14 @@ export class AuditService {
 
   async log(params: LogActionParams): Promise<void> {
     try {
+      // Skip if entityId is missing — schema requires a non-null uuid
+      if (!params.entityId) return;
+
       await this.drizzle.db.insert(auditLog).values({
         action: params.action,
-        auditType: params.auditType ?? null,
+        auditType: params.auditType ?? AUDIT_TYPE.DATA_EXPORTED,
         entityType: params.entityType,
-        entityId: params.entityId ?? null,
+        entityId: params.entityId,
         source: params.source ?? null,
         performedBy: params.performedBy ?? null,
         branchId: params.branchId ?? null,

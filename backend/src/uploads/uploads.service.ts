@@ -1,9 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { eq } from 'drizzle-orm';
 import { SupabaseService } from '../supabase/supabase.service';
 import { DrizzleService } from '../db/drizzle.service';
-import { transactionItems, transactions } from '../db/schema';
 import { PresignedUrlDto } from './dto/presigned-url.dto';
 
 @Injectable()
@@ -14,35 +12,16 @@ export class UploadsService {
     private readonly config: ConfigService,
   ) {}
 
-  async getTransactionBranchId(txnId: number): Promise<number | null> {
-    const [txn] = await this.db.db
-      .select({ branchId: transactions.branchId })
-      .from(transactions)
-      .where(eq(transactions.id, txnId))
-      .limit(1);
-    return txn?.branchId ?? null;
+  async getReceiptBranchId(_paymentId: string): Promise<string | null> {
+    // TODO: implement when payments module is ready
+    return null;
   }
 
   async createPresignedUrl(dto: PresignedUrlDto) {
     const bucket = this.config.getOrThrow<string>('SUPABASE_STORAGE_BUCKET');
     const ext = dto.extension.toLowerCase().replace(/^\./, '');
 
-    let path: string;
-
-    if (dto.itemId != null) {
-      // Legacy: per-item photo
-      const [item] = await this.db.db
-        .select({ id: transactionItems.id })
-        .from(transactionItems)
-        .where(eq(transactionItems.id, dto.itemId))
-        .limit(1);
-
-      if (!item) throw new NotFoundException('Item not found');
-      path = `sneakers/${dto.txnId}/${dto.itemId}/${dto.type}/${Date.now()}.${ext}`;
-    } else {
-      // Transaction-level photo dump
-      path = `txn-photos/${dto.txnId}/${dto.type}/${Date.now()}.${ext}`;
-    }
+    const path = `receipts/${dto.txnId}/${dto.type}/${Date.now()}.${ext}`;
 
     const { data, error } = await this.supabase.db.storage
       .from(bucket)

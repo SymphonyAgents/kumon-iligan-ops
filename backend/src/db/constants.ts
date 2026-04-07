@@ -1,100 +1,120 @@
-export const TRANSACTION_STATUS = {
-  PENDING: 'pending',
-  IN_PROGRESS: 'in_progress',
-  DONE: 'done',
-  CLAIMED: 'claimed',
-  CANCELLED: 'cancelled',
-} as const;
-
-export type TransactionStatus =
-  (typeof TRANSACTION_STATUS)[keyof typeof TRANSACTION_STATUS];
-
-export const ITEM_STATUS = {
-  PENDING: 'pending',
-  IN_PROGRESS: 'in_progress',
-  DONE: 'done',
-  CLAIMED: 'claimed',
-  CANCELLED: 'cancelled',
-} as const;
-
-export type ItemStatus = (typeof ITEM_STATUS)[keyof typeof ITEM_STATUS];
-
-export const PAYMENT_METHOD = {
-  CASH: 'cash',
-  GCASH: 'gcash',
-  CARD: 'card',
-  BANK_DEPOSIT: 'bank_deposit',
-} as const;
-
-export type PaymentMethod =
-  (typeof PAYMENT_METHOD)[keyof typeof PAYMENT_METHOD];
-
-export const SERVICE_TYPE = {
-  PRIMARY: 'primary',
-  ADD_ON: 'add_on',
-} as const;
-
-export type ServiceType = (typeof SERVICE_TYPE)[keyof typeof SERVICE_TYPE];
-
+// ---------------------------------------------------------------------------
+// USER_TYPE
+// ---------------------------------------------------------------------------
 export const USER_TYPE = {
-  ADMIN: 'admin',
-  STAFF: 'staff',
   SUPERADMIN: 'superadmin',
+  ADMIN: 'admin',
+  TEACHER: 'teacher',
 } as const;
 
 export type UserType = (typeof USER_TYPE)[keyof typeof USER_TYPE];
 
+// ---------------------------------------------------------------------------
+// USER_STATUS
+// ---------------------------------------------------------------------------
+export const USER_STATUS = {
+  ACTIVE: 'active',
+  PENDING: 'pending',
+  REJECTED: 'rejected',
+} as const;
+
+export type UserStatus = (typeof USER_STATUS)[keyof typeof USER_STATUS];
+
+// ---------------------------------------------------------------------------
+// STUDENT_STATUS
+// ---------------------------------------------------------------------------
+export const STUDENT_STATUS = {
+  ACTIVE: 'active',
+  INACTIVE: 'inactive',
+  WITHDRAWN: 'withdrawn',
+} as const;
+
+export type StudentStatus = (typeof STUDENT_STATUS)[keyof typeof STUDENT_STATUS];
+
+// ---------------------------------------------------------------------------
+// PERIOD_STATUS
+// ---------------------------------------------------------------------------
+export const PERIOD_STATUS = {
+  PENDING: 'pending',
+  PARTIAL: 'partial',
+  PAID: 'paid',
+  OVERDUE: 'overdue',
+} as const;
+
+export type PeriodStatus = (typeof PERIOD_STATUS)[keyof typeof PERIOD_STATUS];
+
+// ---------------------------------------------------------------------------
+// PAYMENT_METHOD
+// ---------------------------------------------------------------------------
+export const PAYMENT_METHOD = {
+  BANK_TRANSFER: 'bank_transfer',
+  GCASH: 'gcash',
+  CASH: 'cash',
+  OTHER: 'other',
+} as const;
+
+export type PaymentMethod = (typeof PAYMENT_METHOD)[keyof typeof PAYMENT_METHOD];
+
+// ---------------------------------------------------------------------------
+// PAYMENT_STATUS
+// ---------------------------------------------------------------------------
+export const PAYMENT_STATUS = {
+  PENDING_REVIEW: 'pending_review',
+  VERIFIED: 'verified',
+  FLAGGED: 'flagged',
+  REJECTED: 'rejected',
+} as const;
+
+export type PaymentStatus = (typeof PAYMENT_STATUS)[keyof typeof PAYMENT_STATUS];
+
+// ---------------------------------------------------------------------------
+// AUDIT_TYPE
+// ---------------------------------------------------------------------------
 export const AUDIT_TYPE = {
-  TRANSACTION_CREATED: 'TRANSACTION_CREATED',
-  TRANSACTION_UPDATED: 'TRANSACTION_UPDATED',
-  PICKUP_RESCHEDULED: 'PICKUP_RESCHEDULED',
-  TRANSACTION_STATUS_CHANGED: 'TRANSACTION_STATUS_CHANGED',
-  TRANSACTION_CLAIMED: 'TRANSACTION_CLAIMED',
-  TRANSACTION_CANCELLED: 'TRANSACTION_CANCELLED',
-  ITEM_STATUS_CHANGED: 'ITEM_STATUS_CHANGED',
-  PAYMENT_ADDED: 'PAYMENT_ADDED',
-  EXPENSE_CREATED: 'EXPENSE_CREATED',
-  SERVICE_UPDATED: 'SERVICE_UPDATED',
-  TRANSACTION_ASSIGNED: 'TRANSACTION_ASSIGNED',
-  TRANSACTION_DELETED: 'TRANSACTION_DELETED',
-  TRANSACTION_RESTORED: 'TRANSACTION_RESTORED',
-  TRANSACTION_EDITED: 'TRANSACTION_EDITED',
-  SMS_SENT: 'SMS_SENT',
-  CUSTOMER_UPSERTED: 'CUSTOMER_UPSERTED',
-  USER_APPROVED: 'USER_APPROVED',
-  USER_REJECTED: 'USER_REJECTED',
+  // Payment lifecycle
+  PAYMENT_RECORDED: 'payment_recorded',
+  PAYMENT_VERIFIED: 'payment_verified',
+  PAYMENT_FLAGGED: 'payment_flagged',
+  PAYMENT_REJECTED: 'payment_rejected',
+  // Student lifecycle
+  STUDENT_ENROLLED: 'student_enrolled',
+  STUDENT_STATUS_CHANGED: 'student_status_changed',
+  STUDENT_REASSIGNED: 'student_reassigned',
+  // Family
+  FAMILY_CREATED: 'family_created',
+  FAMILY_UPDATED: 'family_updated',
+  // Payment periods
+  PERIOD_CREATED: 'period_created',
+  PERIOD_ADJUSTED: 'period_adjusted',
+  // User management
+  USER_CREATED: 'user_created',
+  USER_STATUS_CHANGED: 'user_status_changed',
+  // Branch
+  BRANCH_CREATED: 'branch_created',
+  // Data ops
+  DATA_IMPORTED: 'data_imported',
+  DATA_EXPORTED: 'data_exported',
 } as const;
 
 export type AuditType = (typeof AUDIT_TYPE)[keyof typeof AUDIT_TYPE];
 
-// Monetary audit types — used for revenue/collection deduplication in reports
-export const MONETARY_AUDIT_TYPES: AuditType[] = [
-  AUDIT_TYPE.TRANSACTION_CREATED,
-  AUDIT_TYPE.PAYMENT_ADDED,
-];
-
 // ---------------------------------------------------------------------------
-// Card payment fee rates (server-side only — never computed on frontend)
-// Key = cardBank value stored in claim_payments.card_bank
-// null/undefined key = default rate (generic card)
-// To add a new bank: add an entry here, no schema change needed
+// Money helpers — scaled integer (same pattern as sneaker-doc-pos)
+// All monetary values stored as bigint × 100 (e.g. ₱1,234.56 → 123456)
 // ---------------------------------------------------------------------------
-export const CARD_BANK_FEES: Record<string, number> = {
-  bpi: 0.035,  // BPI: 3.5%
-};
-export const CARD_DEFAULT_FEE_RATE = 0.03; // 3% for all other banks / no bank specified
+export const SCALE_FACTOR = 100;
 
-export function getCardFeeRate(cardBank: string | null | undefined): number {
-  if (!cardBank) return CARD_DEFAULT_FEE_RATE;
-  return CARD_BANK_FEES[cardBank.toLowerCase()] ?? CARD_DEFAULT_FEE_RATE;
+export function toScaled(amount: number): number {
+  return Math.round(amount * SCALE_FACTOR);
 }
 
-export function computeCardFee(scaledAmount: number, cardBank: string | null | undefined): {
-  fee: number;
-  feePercent: string;
-} {
-  const rate = getCardFeeRate(cardBank);
-  const fee = Math.round(scaledAmount * rate);
-  const feePercent = (rate * 100).toFixed(2); // e.g. '3.00' or '3.50'
-  return { fee, feePercent };
+export function fromScaled(scaled: number): number {
+  return scaled / SCALE_FACTOR;
+}
+
+// ---------------------------------------------------------------------------
+// Payment number generator — "PAY-0001", "PAY-0002", ...
+// ---------------------------------------------------------------------------
+export function formatPaymentNumber(seq: number): string {
+  return `PAY-${String(seq).padStart(4, '0')}`;
 }
