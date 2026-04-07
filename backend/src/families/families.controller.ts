@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Delete,
   Body,
   Param,
   Query,
@@ -43,5 +44,10 @@ export class FamiliesController {
     @Req() req: AuthedRequest,
   ) {
     return this.families.update(id, dto, req.user.id);
+  }
+
+  @Delete(':id')
+  softDelete(@Param('id') id: string, @Req() req: AuthedRequest) {
+    return this.families.softDelete(id, req.user.id);
   }
 }

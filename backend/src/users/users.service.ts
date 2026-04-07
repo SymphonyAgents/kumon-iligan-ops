@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { asc, eq, and, sql, ne } from 'drizzle-orm';
+import { asc, eq, and, sql, ne, isNull } from 'drizzle-orm';
 import { DrizzleService } from '../db/drizzle.service';
 import { AuditService } from '../audit/audit.service';
 import { users, branches } from '../db/schema';
@@ -36,6 +36,17 @@ export class UsersService {
         status: isFirstUser ? 'active' : 'pending',
       })
       .returning();
+
+    await this.audit.log({
+      action: `New user provisioned: ${email}`,
+      auditType: AUDIT_TYPE.USER_CREATED,
+      entityType: 'user',
+      entityId: created.id,
+      source: 'web',
+      performedBy: created.id,
+      details: { email, userType: created.userType, status: created.status },
+    });
+
     return created;
   }
 
@@ -43,7 +54,7 @@ export class UsersService {
     const [user] = await this.drizzle.db
       .select()
       .from(users)
-      .where(eq(users.id, id));
+      .where(and(eq(users.id, id), isNull(users.deletedAt)));
     return user ?? null;
   }
 
@@ -52,7 +63,7 @@ export class UsersService {
     const [user] = await this.drizzle.db
       .select()
       .from(users)
-      .where(eq(users.id, id));
+      .where(and(eq(users.id, id), isNull(users.deletedAt)));
     return user ?? null;
   }
 
@@ -81,10 +92,11 @@ export class UsersService {
   }
 
   async findAll(branchId?: string) {
-    // Show active + pending users (not rejected or deactivated)
+    // Show active + pending users (not rejected, deactivated, or deleted)
     const activeOrPending = and(
       eq(users.isActive, true),
       ne(users.status, 'rejected'),
+      isNull(users.deletedAt),
     );
     const whereClause = branchId
       ? and(activeOrPending, eq(users.branchId, branchId))
@@ -125,13 +137,15 @@ export class UsersService {
     const user = await this.findById(id);
     if (!user) throw new NotFoundException('User not found');
 
-    // Hard-delete the user row
-    await this.drizzle.db
-      .delete(users)
-      .where(eq(users.id, id));
+    // Soft-delete instead of hard-delete
+    const [updated] = await this.drizzle.db
+      .update(users)
+      .set({ status: 'rejected', isActive: false, deletedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
 
     await this.audit.log({
-      action: `Rejected and deleted user: ${user.email}`,
+      action: `Rejected user: ${user.email}`,
       auditType: AUDIT_TYPE.USER_STATUS_CHANGED,
       entityType: 'user',
       entityId: id,
@@ -147,7 +161,7 @@ export class UsersService {
   // Returns active users for assignment dropdowns
   // Filtered to the same branch if branchId is provided
   async findAssignable(branchId?: string | null) {
-    const baseCondition = eq(users.isActive, true);
+    const baseCondition = and(eq(users.isActive, true), isNull(users.deletedAt));
     const whereClause = branchId
       ? and(baseCondition, eq(users.branchId, branchId))
       : baseCondition;
@@ -176,6 +190,7 @@ export class UsersService {
 
     await this.audit.log({
       action: `Deactivated user: ${user.email}`,
+      auditType: AUDIT_TYPE.USER_STATUS_CHANGED,
       entityType: 'user',
       entityId: id,
       source: 'admin',
@@ -183,6 +198,30 @@ export class UsersService {
       branchId: user.branchId ?? undefined,
       details: { email: user.email },
     });
+  }
+
+  async softDelete(id: string, performedBy?: string) {
+    const user = await this.findById(id);
+    if (!user) throw new NotFoundException('User not found');
+
+    const [deleted] = await this.drizzle.db
+      .update(users)
+      .set({ isActive: false, deletedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+
+    await this.audit.log({
+      action: `Deleted user: ${user.email}`,
+      auditType: AUDIT_TYPE.USER_DELETED,
+      entityType: 'user',
+      entityId: id,
+      source: 'admin',
+      performedBy,
+      branchId: user.branchId ?? undefined,
+      details: { email: user.email },
+    });
+
+    return deleted;
   }
 
   async updateUserType(id: string, userType: UserType, performedBy?: string) {
@@ -197,6 +236,7 @@ export class UsersService {
 
     await this.audit.log({
       action: `Updated user role: ${user.email} → ${userType}`,
+      auditType: AUDIT_TYPE.USER_STATUS_CHANGED,
       entityType: 'user',
       entityId: id,
       source: 'admin',
@@ -220,6 +260,7 @@ export class UsersService {
 
     await this.audit.log({
       action: `Updated profile: ${user.email}`,
+      auditType: AUDIT_TYPE.USER_STATUS_CHANGED,
       entityType: 'user',
       entityId: id,
       source: 'admin',
@@ -242,6 +283,7 @@ export class UsersService {
 
     await this.audit.log({
       action: `Updated user branch: ${user.email} → branch ${branchId}`,
+      auditType: AUDIT_TYPE.USER_STATUS_CHANGED,
       entityType: 'user',
       entityId: id,
       source: 'admin',
@@ -300,6 +342,16 @@ export class UsersService {
         status: isFirstUser ? 'active' : 'pending',
       })
       .returning();
+
+    await this.audit.log({
+      action: `New user synced: ${data.email}`,
+      auditType: AUDIT_TYPE.USER_CREATED,
+      entityType: 'user',
+      entityId: created.id,
+      source: 'web',
+      performedBy: created.id,
+      details: { email: data.email, userType: created.userType, status: created.status },
+    });
 
     return {
       id: created.id,

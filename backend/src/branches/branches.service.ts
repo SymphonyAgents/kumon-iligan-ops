@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import { DrizzleService } from '../db/drizzle.service';
 import { AuditService } from '../audit/audit.service';
 import { branches } from '../db/schema';
+import { AUDIT_TYPE } from '../db/constants';
 import { CreateBranchDto } from './dto/create-branch.dto';
 
 @Injectable()
@@ -13,14 +14,18 @@ export class BranchesService {
   ) {}
 
   async findAll() {
-    return this.drizzle.db.select().from(branches).orderBy(branches.name);
+    return this.drizzle.db
+      .select()
+      .from(branches)
+      .where(isNull(branches.deletedAt))
+      .orderBy(branches.name);
   }
 
   async findActive() {
     return this.drizzle.db
       .select()
       .from(branches)
-      .where(eq(branches.isActive, true))
+      .where(and(eq(branches.isActive, true), isNull(branches.deletedAt)))
       .orderBy(branches.name);
   }
 
@@ -28,7 +33,7 @@ export class BranchesService {
     const [branch] = await this.drizzle.db
       .select()
       .from(branches)
-      .where(eq(branches.id, id));
+      .where(and(eq(branches.id, id), isNull(branches.deletedAt)));
     if (!branch) throw new NotFoundException(`Branch ${id} not found`);
     return branch;
   }
@@ -50,6 +55,7 @@ export class BranchesService {
 
     await this.audit.log({
       action: `Created branch: ${created.name}`,
+      auditType: AUDIT_TYPE.BRANCH_CREATED,
       entityType: 'branch',
       entityId: String(created.id),
       source: 'admin',
@@ -73,11 +79,12 @@ export class BranchesService {
       .where(eq(branches.id, id))
       .returning();
 
-    const isSoftDelete = dto.isActive === false && Object.keys(dto).length === 1;
+    const isDeactivation = dto.isActive === false && Object.keys(dto).length === 1;
     await this.audit.log({
-      action: isSoftDelete
+      action: isDeactivation
         ? `Deactivated branch: ${existing.name}`
         : `Updated branch: ${existing.name}`,
+      auditType: isDeactivation ? AUDIT_TYPE.BRANCH_DELETED : AUDIT_TYPE.BRANCH_UPDATED,
       entityType: 'branch',
       entityId: String(id),
       source: 'admin',
@@ -86,5 +93,27 @@ export class BranchesService {
     });
 
     return updated;
+  }
+
+  async softDelete(id: string, performedBy?: string) {
+    const existing = await this.findOne(id);
+
+    const [deleted] = await this.drizzle.db
+      .update(branches)
+      .set({ isActive: false, deletedAt: new Date() })
+      .where(eq(branches.id, id))
+      .returning();
+
+    await this.audit.log({
+      action: `Deleted branch: ${existing.name}`,
+      auditType: AUDIT_TYPE.BRANCH_DELETED,
+      entityType: 'branch',
+      entityId: String(id),
+      source: 'admin',
+      performedBy,
+      details: { name: existing.name },
+    });
+
+    return deleted;
   }
 }

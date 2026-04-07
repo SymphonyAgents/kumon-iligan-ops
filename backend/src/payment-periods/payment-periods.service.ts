@@ -12,6 +12,7 @@ import {
   getTableColumns,
   asc,
   desc,
+  isNull,
 } from 'drizzle-orm';
 import { DrizzleService } from '../db/drizzle.service.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -50,6 +51,10 @@ export class PaymentPeriodsService {
     if (!user) throw new UnauthorizedException();
 
     const conditions: ReturnType<typeof eq>[] = [];
+
+    // Soft-delete filters
+    conditions.push(isNull(paymentPeriods.deletedAt));
+    conditions.push(isNull(students.deletedAt));
 
     // Branch scoping
     if (user.userType === USER_TYPE.SUPERADMIN) {
@@ -108,7 +113,7 @@ export class PaymentPeriodsService {
       })
       .from(paymentPeriods)
       .innerJoin(students, eq(paymentPeriods.studentId, students.id))
-      .where(eq(paymentPeriods.id, id));
+      .where(and(eq(paymentPeriods.id, id), isNull(paymentPeriods.deletedAt)));
 
     if (!period) throw new NotFoundException('Payment period not found');
 
@@ -119,11 +124,11 @@ export class PaymentPeriodsService {
       }
     }
 
-    // Fetch payments for this period
+    // Fetch payments for this period (exclude soft-deleted)
     const periodPayments = await this.drizzle.db
       .select()
       .from(payments)
-      .where(eq(payments.periodId, id))
+      .where(and(eq(payments.periodId, id), isNull(payments.deletedAt)))
       .orderBy(desc(payments.createdAt));
 
     return {
@@ -153,7 +158,7 @@ export class PaymentPeriodsService {
     const [student] = await this.drizzle.db
       .select()
       .from(students)
-      .where(eq(students.id, dto.studentId));
+      .where(and(eq(students.id, dto.studentId), isNull(students.deletedAt)));
 
     if (!student) throw new NotFoundException('Student not found');
     if (student.status !== 'active') {
@@ -233,7 +238,7 @@ export class PaymentPeriodsService {
       })
       .from(paymentPeriods)
       .innerJoin(students, eq(paymentPeriods.studentId, students.id))
-      .where(eq(paymentPeriods.id, id));
+      .where(and(eq(paymentPeriods.id, id), isNull(paymentPeriods.deletedAt)));
 
     if (!existing) throw new NotFoundException('Payment period not found');
 
@@ -303,11 +308,11 @@ export class PaymentPeriodsService {
       throw new ForbiddenException('No branch assigned — cannot generate periods');
     }
 
-    // Find all active students in the branch
+    // Find all active, non-deleted students in the branch
     const activeStudents = await this.drizzle.db
       .select({ id: students.id })
       .from(students)
-      .where(and(eq(students.branchId, branchId), eq(students.status, 'active')));
+      .where(and(eq(students.branchId, branchId), eq(students.status, 'active'), isNull(students.deletedAt)));
 
     if (activeStudents.length === 0) {
       return { created: 0, skipped: 0 };
@@ -344,6 +349,17 @@ export class PaymentPeriodsService {
       })),
     );
 
+    await this.audit.log({
+      action: `Bulk-generated ${toCreate.length} periods for ${dto.periodMonth}/${dto.periodYear}`,
+      auditType: AUDIT_TYPE.PERIOD_BULK_GENERATED,
+      entityType: 'payment_period',
+      entityId: branchId,
+      source: 'web',
+      performedBy: requestingUserId,
+      branchId,
+      details: { created: toCreate.length, skipped: activeStudents.length - toCreate.length, periodMonth: dto.periodMonth, periodYear: dto.periodYear },
+    });
+
     return {
       created: toCreate.length,
       skipped: activeStudents.length - toCreate.length,
@@ -351,10 +367,58 @@ export class PaymentPeriodsService {
   }
 
   // -----------------------------------------------------------------------
+  // softDelete
+  // -----------------------------------------------------------------------
+  async softDelete(id: string, requestingUserId: string) {
+    const user = await this.usersService.findByIdFull(requestingUserId);
+    if (!user) throw new UnauthorizedException();
+
+    if (user.userType === USER_TYPE.TEACHER) {
+      throw new ForbiddenException('Only admin/superadmin can delete payment periods');
+    }
+
+    const [existing] = await this.drizzle.db
+      .select({
+        ...getTableColumns(paymentPeriods),
+        studentBranchId: students.branchId,
+      })
+      .from(paymentPeriods)
+      .innerJoin(students, eq(paymentPeriods.studentId, students.id))
+      .where(and(eq(paymentPeriods.id, id), isNull(paymentPeriods.deletedAt)));
+
+    if (!existing) throw new NotFoundException('Payment period not found');
+
+    if (user.userType !== USER_TYPE.SUPERADMIN) {
+      if (existing.studentBranchId !== user.branchId) {
+        throw new ForbiddenException('Access denied to this payment period');
+      }
+    }
+
+    const [deleted] = await this.drizzle.db
+      .update(paymentPeriods)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(paymentPeriods.id, id))
+      .returning();
+
+    await this.audit.log({
+      action: `Deleted payment period ${id}`,
+      auditType: AUDIT_TYPE.PERIOD_DELETED,
+      entityType: 'payment_period',
+      entityId: id,
+      source: 'web',
+      performedBy: requestingUserId,
+      branchId: existing.studentBranchId,
+      details: { periodMonth: existing.periodMonth, periodYear: existing.periodYear, studentId: existing.studentId },
+    });
+
+    return deleted;
+  }
+
+  // -----------------------------------------------------------------------
   // computeAndUpdatePeriodStatus — called by PaymentsService after verify/reject
   // -----------------------------------------------------------------------
   async computeAndUpdatePeriodStatus(periodId: string): Promise<void> {
-    // Sum all verified payments for this period
+    // Sum all verified, non-deleted payments for this period
     const [{ total }] = await this.drizzle.db
       .select({ total: sql<number>`COALESCE(SUM(${payments.amount}), 0)` })
       .from(payments)
@@ -362,6 +426,7 @@ export class PaymentPeriodsService {
         and(
           eq(payments.periodId, periodId),
           eq(payments.status, PAYMENT_STATUS.VERIFIED),
+          isNull(payments.deletedAt),
         ),
       );
 

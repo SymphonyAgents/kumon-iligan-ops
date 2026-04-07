@@ -14,6 +14,7 @@ import {
   lte,
   getTableColumns,
   sql,
+  isNull,
 } from 'drizzle-orm';
 import { DrizzleService } from '../db/drizzle.service.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -82,6 +83,9 @@ export class PaymentsService {
     if (!user) throw new UnauthorizedException();
 
     const conditions: ReturnType<typeof eq>[] = [];
+
+    // Soft-delete filter
+    conditions.push(isNull(payments.deletedAt));
 
     // Role-based scoping
     if (user.userType === USER_TYPE.TEACHER) {
@@ -156,7 +160,7 @@ export class PaymentsService {
     const [payment] = await this.drizzle.db
       .select()
       .from(payments)
-      .where(eq(payments.id, id));
+      .where(and(eq(payments.id, id), isNull(payments.deletedAt)));
 
     if (!payment) throw new NotFoundException('Payment not found');
 
@@ -224,11 +228,11 @@ export class PaymentsService {
     const user = await this.usersService.findByIdFull(requestingUserId);
     if (!user) throw new UnauthorizedException();
 
-    // Validate student exists
+    // Validate student exists and is not deleted
     const [student] = await this.drizzle.db
       .select()
       .from(students)
-      .where(eq(students.id, dto.studentId));
+      .where(and(eq(students.id, dto.studentId), isNull(students.deletedAt)));
 
     if (!student) throw new NotFoundException('Student not found');
 
@@ -326,7 +330,7 @@ export class PaymentsService {
     const [payment] = await this.drizzle.db
       .select()
       .from(payments)
-      .where(eq(payments.id, id));
+      .where(and(eq(payments.id, id), isNull(payments.deletedAt)));
 
     if (!payment) throw new NotFoundException('Payment not found');
 
@@ -379,7 +383,7 @@ export class PaymentsService {
     const [payment] = await this.drizzle.db
       .select()
       .from(payments)
-      .where(eq(payments.id, id));
+      .where(and(eq(payments.id, id), isNull(payments.deletedAt)));
 
     if (!payment) throw new NotFoundException('Payment not found');
 
@@ -429,7 +433,7 @@ export class PaymentsService {
     const [payment] = await this.drizzle.db
       .select()
       .from(payments)
-      .where(eq(payments.id, id));
+      .where(and(eq(payments.id, id), isNull(payments.deletedAt)));
 
     if (!payment) throw new NotFoundException('Payment not found');
 
@@ -470,5 +474,54 @@ export class PaymentsService {
     });
 
     return this.formatPayment(updated);
+  }
+
+  // -----------------------------------------------------------------------
+  // softDelete
+  // -----------------------------------------------------------------------
+  async softDelete(id: string, requestingUserId: string) {
+    const user = await this.usersService.findByIdFull(requestingUserId);
+    if (!user) throw new UnauthorizedException();
+
+    if (user.userType === USER_TYPE.TEACHER) {
+      throw new ForbiddenException('Only admin/superadmin can delete payments');
+    }
+
+    const [payment] = await this.drizzle.db
+      .select()
+      .from(payments)
+      .where(and(eq(payments.id, id), isNull(payments.deletedAt)));
+
+    if (!payment) throw new NotFoundException('Payment not found');
+
+    if (user.userType !== USER_TYPE.SUPERADMIN) {
+      if (payment.branchId !== user.branchId) {
+        throw new ForbiddenException('Access denied to this payment');
+      }
+    }
+
+    const [deleted] = await this.drizzle.db
+      .update(payments)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(payments.id, id))
+      .returning();
+
+    // Recompute period status if this payment was verified
+    if (payment.status === PAYMENT_STATUS.VERIFIED) {
+      await this.paymentPeriodsService.computeAndUpdatePeriodStatus(payment.periodId);
+    }
+
+    await this.audit.log({
+      action: `Deleted payment ${payment.number}`,
+      auditType: AUDIT_TYPE.PAYMENT_DELETED,
+      entityType: 'payment',
+      entityId: id,
+      source: 'web',
+      performedBy: requestingUserId,
+      branchId: payment.branchId,
+      details: { paymentNumber: payment.number, amount: fromScaled(Number(payment.amount)) },
+    });
+
+    return deleted;
   }
 }

@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Delete,
   Body,
   Param,
   Query,
@@ -49,5 +50,10 @@ export class PaymentPeriodsController {
   @Post('bulk-generate')
   bulkGenerate(@Body() dto: BulkGeneratePeriodsDto, @Req() req: AuthedRequest) {
     return this.paymentPeriods.bulkGenerate(dto, req.user.id);
+  }
+
+  @Delete(':id')
+  softDelete(@Param('id') id: string, @Req() req: AuthedRequest) {
+    return this.paymentPeriods.softDelete(id, req.user.id);
   }
 }

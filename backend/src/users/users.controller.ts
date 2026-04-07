@@ -132,7 +132,7 @@ export class UsersController {
   @HttpCode(204)
   @UseGuards(RolesGuard)
   @Roles('superadmin')
-  remove(@Param('id') id: string, @Req() req: AuthedRequest) {
-    return this.usersService.remove(id, req.user?.id);
+  softDelete(@Param('id') id: string, @Req() req: AuthedRequest) {
+    return this.usersService.softDelete(id, req.user?.id);
   }
 }

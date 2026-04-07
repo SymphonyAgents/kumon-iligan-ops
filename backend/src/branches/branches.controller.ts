@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -49,5 +50,12 @@ export class BranchesController {
     @Req() req: AuthedRequest,
   ) {
     return this.branchesService.update(id, dto, req.user?.id);
+  }
+
+  @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles('superadmin')
+  softDelete(@Param('id') id: string, @Req() req: AuthedRequest) {
+    return this.branchesService.softDelete(id, req.user?.id);
   }
 }

@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -63,5 +64,10 @@ export class PaymentsController {
     @Req() req: AuthedRequest,
   ) {
     return this.payments.reject(id, dto, req.user.id);
+  }
+
+  @Delete(':id')
+  softDelete(@Param('id') id: string, @Req() req: AuthedRequest) {
+    return this.payments.softDelete(id, req.user.id);
   }
 }

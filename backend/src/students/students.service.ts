@@ -14,6 +14,7 @@ import {
   asc,
   desc,
   inArray,
+  isNull,
 } from 'drizzle-orm';
 import { DrizzleService } from '../db/drizzle.service.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -62,6 +63,7 @@ export class StudentsService {
 
       const conditions: ReturnType<typeof eq>[] = [
         inArray(students.id, studentIds),
+        isNull(students.deletedAt),
       ];
 
       if (query.status) {
@@ -100,6 +102,9 @@ export class StudentsService {
 
     // Admin / Superadmin
     const conditions: ReturnType<typeof eq>[] = [];
+
+    // Soft-delete filter
+    conditions.push(isNull(students.deletedAt));
 
     if (user.userType === USER_TYPE.SUPERADMIN) {
       if (query.branchId) {
@@ -168,7 +173,7 @@ export class StudentsService {
     const [student] = await this.drizzle.db
       .select()
       .from(students)
-      .where(eq(students.id, id));
+      .where(and(eq(students.id, id), isNull(students.deletedAt)));
 
     if (!student) throw new NotFoundException('Student not found');
 
@@ -296,7 +301,7 @@ export class StudentsService {
     const [existing] = await this.drizzle.db
       .select()
       .from(students)
-      .where(eq(students.id, id));
+      .where(and(eq(students.id, id), isNull(students.deletedAt)));
 
     if (!existing) throw new NotFoundException('Student not found');
 
@@ -311,6 +316,17 @@ export class StudentsService {
       .set({ ...dto, updatedAt: new Date() })
       .where(eq(students.id, id))
       .returning();
+
+    await this.audit.log({
+      action: `Updated student: ${existing.firstName} ${existing.lastName}`,
+      auditType: AUDIT_TYPE.STUDENT_UPDATED,
+      entityType: 'student',
+      entityId: id,
+      source: 'web',
+      performedBy: requestingUserId,
+      branchId: existing.branchId,
+      details: { changes: dto },
+    });
 
     return updated;
   }
@@ -330,7 +346,7 @@ export class StudentsService {
     const [existing] = await this.drizzle.db
       .select()
       .from(students)
-      .where(eq(students.id, id));
+      .where(and(eq(students.id, id), isNull(students.deletedAt)));
 
     if (!existing) throw new NotFoundException('Student not found');
 
@@ -379,7 +395,7 @@ export class StudentsService {
     const [student] = await this.drizzle.db
       .select()
       .from(students)
-      .where(eq(students.id, studentId));
+      .where(and(eq(students.id, studentId), isNull(students.deletedAt)));
 
     if (!student) throw new NotFoundException('Student not found');
 
@@ -440,5 +456,46 @@ export class StudentsService {
     });
 
     return newAssignment;
+  }
+
+  async softDelete(id: string, requestingUserId: string) {
+    const user = await this.usersService.findByIdFull(requestingUserId);
+    if (!user) throw new UnauthorizedException();
+
+    if (user.userType === USER_TYPE.TEACHER) {
+      throw new ForbiddenException('Teachers cannot delete students');
+    }
+
+    const [existing] = await this.drizzle.db
+      .select()
+      .from(students)
+      .where(and(eq(students.id, id), isNull(students.deletedAt)));
+
+    if (!existing) throw new NotFoundException('Student not found');
+
+    if (user.userType !== USER_TYPE.SUPERADMIN) {
+      if (existing.branchId !== user.branchId) {
+        throw new ForbiddenException('Access denied to this student');
+      }
+    }
+
+    const [deleted] = await this.drizzle.db
+      .update(students)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(students.id, id))
+      .returning();
+
+    await this.audit.log({
+      action: `Deleted student: ${existing.firstName} ${existing.lastName}`,
+      auditType: AUDIT_TYPE.STUDENT_DELETED,
+      entityType: 'student',
+      entityId: id,
+      source: 'web',
+      performedBy: requestingUserId,
+      branchId: existing.branchId,
+      details: { firstName: existing.firstName, lastName: existing.lastName },
+    });
+
+    return deleted;
   }
 }

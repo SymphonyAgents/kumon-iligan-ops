@@ -89,8 +89,22 @@ export const AUDIT_TYPE = {
   // User management
   USER_CREATED: 'user_created',
   USER_STATUS_CHANGED: 'user_status_changed',
+  // Family
+  FAMILY_DELETED: 'family_deleted',
+  // Student lifecycle (continued)
+  STUDENT_UPDATED: 'student_updated',
+  STUDENT_DELETED: 'student_deleted',
+  // Payment periods (continued)
+  PERIOD_DELETED: 'period_deleted',
+  PERIOD_BULK_GENERATED: 'period_bulk_generated',
+  // Payment lifecycle (continued)
+  PAYMENT_DELETED: 'payment_deleted',
   // Branch
   BRANCH_CREATED: 'branch_created',
+  BRANCH_UPDATED: 'branch_updated',
+  BRANCH_DELETED: 'branch_deleted',
+  // User management (continued)
+  USER_DELETED: 'user_deleted',
   // Data ops
   DATA_IMPORTED: 'data_imported',
   DATA_EXPORTED: 'data_exported',

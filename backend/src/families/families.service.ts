@@ -4,7 +4,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { eq, and, or, ilike, getTableColumns, asc } from 'drizzle-orm';
+import { eq, and, or, ilike, getTableColumns, asc, isNull } from 'drizzle-orm';
 import { DrizzleService } from '../db/drizzle.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { UsersService } from '../users/users.service.js';
@@ -27,6 +27,9 @@ export class FamiliesService {
     if (!user) throw new UnauthorizedException();
 
     const conditions: ReturnType<typeof eq>[] = [];
+
+    // Soft-delete filter
+    conditions.push(isNull(families.deletedAt));
 
     // Branch scoping
     if (user.userType === USER_TYPE.SUPERADMIN) {
@@ -64,7 +67,7 @@ export class FamiliesService {
     const [family] = await this.drizzle.db
       .select()
       .from(families)
-      .where(eq(families.id, id));
+      .where(and(eq(families.id, id), isNull(families.deletedAt)));
 
     if (!family) throw new NotFoundException('Family not found');
 
@@ -75,11 +78,11 @@ export class FamiliesService {
       }
     }
 
-    // Include students
+    // Include students (filter out soft-deleted)
     const familyStudents = await this.drizzle.db
       .select()
       .from(students)
-      .where(eq(students.familyId, id))
+      .where(and(eq(students.familyId, id), isNull(students.deletedAt)))
       .orderBy(asc(students.firstName));
 
     return { ...family, students: familyStudents };
@@ -146,7 +149,7 @@ export class FamiliesService {
     const [existing] = await this.drizzle.db
       .select()
       .from(families)
-      .where(eq(families.id, id));
+      .where(and(eq(families.id, id), isNull(families.deletedAt)));
 
     if (!existing) throw new NotFoundException('Family not found');
 
@@ -175,5 +178,46 @@ export class FamiliesService {
     });
 
     return updated;
+  }
+
+  async softDelete(id: string, requestingUserId: string) {
+    const user = await this.usersService.findByIdFull(requestingUserId);
+    if (!user) throw new UnauthorizedException();
+
+    if (user.userType === USER_TYPE.TEACHER) {
+      throw new ForbiddenException('Teachers cannot delete families');
+    }
+
+    const [existing] = await this.drizzle.db
+      .select()
+      .from(families)
+      .where(and(eq(families.id, id), isNull(families.deletedAt)));
+
+    if (!existing) throw new NotFoundException('Family not found');
+
+    if (user.userType !== USER_TYPE.SUPERADMIN) {
+      if (existing.branchId !== user.branchId) {
+        throw new ForbiddenException('Access denied to this family');
+      }
+    }
+
+    const [deleted] = await this.drizzle.db
+      .update(families)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(families.id, id))
+      .returning();
+
+    await this.audit.log({
+      action: `Deleted family: ${existing.guardianName}`,
+      auditType: AUDIT_TYPE.FAMILY_DELETED,
+      entityType: 'family',
+      entityId: id,
+      source: 'web',
+      performedBy: requestingUserId,
+      branchId: existing.branchId,
+      details: { guardianName: existing.guardianName },
+    });
+
+    return deleted;
   }
 }

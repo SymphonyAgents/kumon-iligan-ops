@@ -26,6 +26,7 @@ export const branches = pgTable('branches', {
   country: varchar('country', { length: 255 }).default('PH'),
   phone: varchar('phone', { length: 20 }),
   isActive: boolean('is_active').default(true).notNull(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdById: uuid('created_by_id').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
@@ -47,6 +48,7 @@ export const users = pgTable('users', {
   status: varchar('status', { length: 20 }).default('pending').notNull(), // active | pending | rejected
   branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'set null' }),
   isActive: boolean('is_active').default(true).notNull(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -65,6 +67,7 @@ export const families = pgTable('families', {
   country: varchar('country', { length: 255 }).default('PH'),
   notes: text('notes'), // irregular cases: "pays two kids together", "usually late"
   branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'restrict' }).notNull(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
@@ -81,6 +84,7 @@ export const students = pgTable('students', {
   level: varchar('level', { length: 50 }), // "Pre-school", "Level 1", "Level 2A", etc.
   enrollmentDate: date('enrollment_date').notNull(),
   status: varchar('status', { length: 20 }).default('active').notNull(), // active | inactive | withdrawn
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
@@ -121,6 +125,7 @@ export const paymentPeriods = pgTable(
     paidAmount: bigint('paid_amount', { mode: 'number' }).default(0).notNull(), // running total of verified payments
     dueDate: date('due_date').notNull(),
     status: varchar('status', { length: 20 }).default('pending').notNull(), // pending | partial | paid | overdue
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
@@ -151,6 +156,7 @@ export const payments = pgTable('payments', {
   verifiedBy: uuid('verified_by').references(() => users.id, { onDelete: 'set null' }), // admin
   verifiedAt: timestamp('verified_at', { withTimezone: true }),
   branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'restrict' }).notNull(), // denormalized
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
