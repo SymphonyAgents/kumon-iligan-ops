@@ -1,11 +1,8 @@
 'use client';
 
 import { type ColumnDef } from '@tanstack/react-table';
-import { formatDatetime, formatPeso } from '@/lib/utils';
+import { formatDatetime } from '@/lib/utils';
 import {
-  ITEM_STATUS,
-  PAYMENT_METHOD_LABELS,
-  STATUS_LABELS,
   AUDIT_TYPE_LABELS,
   AUDIT_TYPE_STYLES,
   ENTITY_LABELS,
@@ -24,7 +21,7 @@ function getEventStyle(entry: AuditEntry): string {
   if (entry.auditType && AUDIT_TYPE_STYLES[entry.auditType]) {
     return AUDIT_TYPE_STYLES[entry.auditType];
   }
-  return 'bg-zinc-100 text-zinc-600';
+  return 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300';
 }
 
 export const auditColumns: ColumnDef<AuditEntry>[] = [
@@ -42,33 +39,12 @@ export const auditColumns: ColumnDef<AuditEntry>[] = [
     header: 'Event',
     cell: ({ row }) => {
       const entry = row.original;
-      const isDeposit = entry.entityType === 'deposit';
-      const details = entry.details as { method?: string; added?: string; to?: string; refundedAmount?: string } | null;
-      const depositMethod = isDeposit && details?.method ? (PAYMENT_METHOD_LABELS[details.method] ?? details.method) : null;
-      const depositAdded = isDeposit && details?.added ? formatPeso(details.added) : null;
-      const isItemStatusChanged = entry.auditType === 'ITEM_STATUS_CHANGED' && details?.to;
-      const toStatusLabel = isItemStatusChanged ? (STATUS_LABELS[details!.to!] ?? details!.to) : null;
-      const isCancelledWithRefund = isItemStatusChanged && details?.to === ITEM_STATUS.CANCELLED && details?.refundedAmount;
-      const isTxnCancelledWithRefund = entry.auditType === 'TRANSACTION_CANCELLED' && details?.refundedAmount;
       return (
-        <div className="flex flex-col items-start gap-0.5">
-          <span
-            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${getEventStyle(entry)}`}
-          >
-            {isDeposit ? 'Recorded deposit' : getEventLabel(entry)}
-          </span>
-          {isDeposit && depositMethod && depositAdded && (
-            <span className="text-[10px] text-zinc-400 pl-0.5">{depositMethod} +{depositAdded}</span>
-          )}
-          {isItemStatusChanged && toStatusLabel && (
-            <span className={`text-[10px] pl-0.5 ${details?.to === ITEM_STATUS.CANCELLED ? 'text-red-400' : 'text-zinc-400'}`}>
-              {toStatusLabel}{isCancelledWithRefund ? ` · Refunded ${formatPeso(details!.refundedAmount!)}` : ''}
-            </span>
-          )}
-          {isTxnCancelledWithRefund && (
-            <span className="text-[10px] text-red-400 pl-0.5">Refunded {formatPeso(details!.refundedAmount!)}</span>
-          )}
-        </div>
+        <span
+          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${getEventStyle(entry)}`}
+        >
+          {getEventLabel(entry)}
+        </span>
       );
     },
   },
@@ -80,7 +56,7 @@ export const auditColumns: ColumnDef<AuditEntry>[] = [
       const label = ENTITY_LABELS[entityType] ?? entityType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
       return (
         <div>
-          <span className="text-sm text-zinc-700">{label}</span>
+          <span className="text-sm text-zinc-700 dark:text-zinc-300">{label}</span>
           {entityId && (
             <span className="block font-mono text-xs text-zinc-400">#{entityId}</span>
           )}
@@ -100,8 +76,8 @@ export const auditColumns: ColumnDef<AuditEntry>[] = [
       const [user, domain] = email.split('@');
       return (
         <div>
-          <span className="text-sm text-zinc-700">{fullName ? fullName : user}</span>
-          <span className="block text-xs text-zinc-400">@{domain ?? '—'}</span>
+          <span className="text-sm text-zinc-700 dark:text-zinc-300">{fullName ? fullName : user}</span>
+          <span className="block text-xs text-zinc-400">@{domain ?? '\u2014'}</span>
         </div>
       );
     },
@@ -111,9 +87,9 @@ export const auditColumns: ColumnDef<AuditEntry>[] = [
     header: 'Via',
     cell: ({ row }) => {
       const raw = row.original.source?.toLowerCase() ?? '';
-      const label = SOURCE_LABELS[raw] ?? (raw || '—');
+      const label = SOURCE_LABELS[raw] ?? (raw || '\u2014');
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-zinc-100 text-zinc-500">
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
           {label}
         </span>
       );

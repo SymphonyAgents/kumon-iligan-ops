@@ -1,34 +1,30 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
-  ReceiptIcon,
-  WrenchIcon,
-  TagIcon,
   CurrencyDollarIcon,
   ChartBarIcon,
   ClockIcon,
-  CalendarIcon,
-  SignOutIcon,
   ListIcon,
   XIcon,
   UserIcon,
   GitBranchIcon,
   UsersIcon,
-  AddressBookIcon,
-  QrCodeIcon,
+  SignOutIcon,
+  CalendarCheckIcon,
+  UsersThreeIcon,
+  GraduationCapIcon,
   FileTextIcon,
-  CreditCardIcon,
 } from '@phosphor-icons/react';
 import { signOut as nextAuthSignOut } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
-import { useUpcomingPickupsQuery } from '@/hooks/useTransactionsQuery';
 import { ROUTES } from '@/lib/routes';
+import { USER_TYPE, USER_TYPE_LABELS, USER_TYPE_STYLES } from '@/lib/constants';
 import { Spinner } from '@/components/ui/spinner';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import {
   Dialog,
   DialogContent,
@@ -38,7 +34,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { QrScanDialog } from '@/components/ui/qr-scan-dialog';
 
 interface NavItem {
   href: string;
@@ -62,20 +57,18 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: 'Operations',
+    label: 'Tuition',
     items: [
-      { href: ROUTES.TRANSACTIONS, label: 'Transactions', icon: ReceiptIcon, adminOnly: false, superadminOnly: false },
-      { href: ROUTES.UPCOMING_PICKUPS, label: 'Upcoming Pickups', icon: CalendarIcon, adminOnly: false, superadminOnly: false },
-      { href: ROUTES.EXPENSES, label: 'Expenses', icon: CurrencyDollarIcon, adminOnly: false, superadminOnly: false },
-      { href: ROUTES.CUSTOMERS, label: 'Customers', icon: AddressBookIcon, adminOnly: true, superadminOnly: false },
+      { href: ROUTES.PAYMENTS, label: 'Payments', icon: CurrencyDollarIcon, adminOnly: false, superadminOnly: false },
+      { href: ROUTES.PAYMENT_PERIODS, label: 'Periods', icon: CalendarCheckIcon, adminOnly: true, superadminOnly: false },
     ],
   },
   {
-    label: 'Catalog',
+    label: 'Students',
     adminOnly: true,
     items: [
-      { href: ROUTES.SERVICES, label: 'Services', icon: WrenchIcon, adminOnly: true, superadminOnly: false },
-      { href: ROUTES.PROMOS, label: 'Promos', icon: TagIcon, adminOnly: true, superadminOnly: false },
+      { href: ROUTES.FAMILIES, label: 'Families', icon: UsersThreeIcon, adminOnly: true, superadminOnly: false },
+      { href: ROUTES.STUDENTS, label: 'Students', icon: GraduationCapIcon, adminOnly: true, superadminOnly: false },
     ],
   },
   {
@@ -84,25 +77,21 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: ROUTES.REPORTS, label: 'Reports', icon: FileTextIcon, adminOnly: true, superadminOnly: false },
       { href: ROUTES.AUDIT, label: 'Audit Log', icon: ClockIcon, adminOnly: true, superadminOnly: false },
-      { href: ROUTES.STAFF, label: 'Staff', icon: UsersIcon, adminOnly: true, superadminOnly: false },
+      { href: ROUTES.USERS, label: 'Users', icon: UsersIcon, adminOnly: true, superadminOnly: false },
       { href: ROUTES.BRANCHES, label: 'Branches', icon: GitBranchIcon, adminOnly: false, superadminOnly: true },
-      { href: ROUTES.CARD_BANKS, label: 'Card Banks', icon: CreditCardIcon, adminOnly: false, superadminOnly: true },
     ],
   },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const [showQrScanner, setShowQrScanner] = useState(false);
   const { data: currentUser } = useCurrentUserQuery();
-  const { data: upcomingPickups = [] } = useUpcomingPickupsQuery();
-  const hasUpcoming = upcomingPickups.length > 0;
-  const isAdmin = currentUser?.userType === 'admin' || currentUser?.userType === 'superadmin';
-  const isSuperadmin = currentUser?.userType === 'superadmin';
+
+  const isAdmin = currentUser?.userType === USER_TYPE.ADMIN || currentUser?.userType === USER_TYPE.SUPERADMIN;
+  const isSuperadmin = currentUser?.userType === USER_TYPE.SUPERADMIN;
 
   function filterItem(item: NavItem) {
     if (item.superadminOnly) return isSuperadmin;
@@ -130,29 +119,24 @@ export function Sidebar() {
         return (
           <div key={gi}>
             {group.label && (
-              <p className="px-2.5 mb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
+              <p className="px-2.5 mb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
                 {group.label}
               </p>
             )}
             <div className="space-y-0.5">
               {visibleItems.map(({ href, label, icon: Icon }) => {
                 const active = href === '/' ? pathname === '/' : pathname.startsWith(href);
-                const showDot = href === ROUTES.UPCOMING_PICKUPS && hasUpcoming;
                 const itemClass = cn(
                   'flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm transition-colors duration-150',
-                  active ? 'bg-zinc-950 text-white' : 'text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100',
-                );
-                const labelNode = (
-                  <span className="flex items-center gap-1.5">
-                    {label}
-                    {showDot && <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />}
-                  </span>
+                  active
+                    ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950'
+                    : 'text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-50 dark:hover:bg-zinc-800',
                 );
                 if (active) {
                   return (
                     <span key={href} className={itemClass}>
                       <Icon size={16} weight="fill" />
-                      {labelNode}
+                      {label}
                     </span>
                   );
                 }
@@ -164,19 +148,10 @@ export function Sidebar() {
                     className={itemClass}
                   >
                     <Icon size={16} weight="regular" />
-                    {labelNode}
+                    {label}
                   </Link>
                 );
               })}
-              {gi === 0 && (
-                <button
-                  onClick={() => { setMobileOpen(false); setShowQrScanner(true); }}
-                  className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-md text-sm text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 transition-colors duration-150"
-                >
-                  <QrCodeIcon size={16} />
-                  Scan QR
-                </button>
-              )}
             </div>
           </div>
         );
@@ -185,27 +160,25 @@ export function Sidebar() {
   );
 
   const footer = (
-    <div className="px-3 py-4 border-t border-zinc-200 space-y-1">
+    <div className="px-3 py-4 border-t border-zinc-200 dark:border-zinc-800 space-y-1">
       {currentUser && (
-        <div className="flex items-center gap-2 px-2.5 mb-3">
-          <UserIcon size={12} className="text-zinc-400 shrink-0" />
-          <span className="text-xs text-zinc-500 truncate flex-1">{currentUser.email}</span>
-          <span
-            className={cn(
-              'shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide',
-              currentUser.userType === 'staff'
-                ? 'bg-zinc-100 text-zinc-600'
-                : 'bg-blue-50 text-blue-600',
-            )}
-          >
-            {currentUser.userType}
+        <div className="flex items-center gap-2 px-2.5 mb-2">
+          <UserIcon size={12} className="text-zinc-400 dark:text-zinc-500 shrink-0" />
+          <span className="text-xs text-zinc-500 dark:text-zinc-400 truncate flex-1">
+            {currentUser.nickname ?? currentUser.email}
+          </span>
+          <span className={cn(
+            'shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide',
+            USER_TYPE_STYLES[currentUser.userType] ?? USER_TYPE_STYLES.teacher,
+          )}>
+            {USER_TYPE_LABELS[currentUser.userType] ?? currentUser.userType}
           </span>
         </div>
       )}
-      <p className="px-2.5 text-xs text-zinc-400 mb-2">Philippine Peso (₱)</p>
+      <ThemeToggle />
       <button
         onClick={() => setShowSignOutDialog(true)}
-        className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-md text-sm text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 transition-colors duration-150"
+        className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-md text-sm text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-50 dark:hover:bg-zinc-800 transition-colors duration-150"
       >
         <SignOutIcon size={16} />
         Sign out
@@ -213,11 +186,25 @@ export function Sidebar() {
     </div>
   );
 
+  const sidebarContent = (
+    <>
+      <div className="px-5 py-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-3">
+        <div className="w-8 h-8 bg-zinc-950 dark:bg-white rounded-lg flex items-center justify-center">
+          <GraduationCapIcon size={18} weight="fill" className="text-white dark:text-zinc-950" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 leading-none">Kumon Iligan</p>
+          <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-0.5">Ops Platform</p>
+        </div>
+      </div>
+      {navLinks}
+      {footer}
+    </>
+  );
+
   return (
     <>
-      <QrScanDialog open={showQrScanner} onClose={() => setShowQrScanner(false)} />
-
-      {/* Sign-out confirmation dialog */}
+      {/* Sign-out confirmation */}
       <Dialog open={showSignOutDialog} onOpenChange={setShowSignOutDialog}>
         <DialogContent showCloseButton={false} className="max-w-sm">
           <DialogHeader>
@@ -225,19 +212,14 @@ export function Sidebar() {
             <DialogDescription>You will be returned to the login screen.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowSignOutDialog(false)}>
-              Cancel
-            </Button>
-            <Button variant="danger" onClick={handleSignOut}>
-              Sign out
-            </Button>
+            <Button variant="ghost" onClick={() => setShowSignOutDialog(false)}>Cancel</Button>
+            <Button variant="danger" onClick={handleSignOut}>Sign out</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Signing-out overlay */}
       {signingOut && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-sm bg-white/60">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-sm bg-white/60 dark:bg-black/60">
           <div className="flex flex-col items-center gap-3">
             <Spinner size={24} className="text-zinc-500" />
             <span className="text-sm text-zinc-500 font-medium">Signing out...</span>
@@ -246,49 +228,32 @@ export function Sidebar() {
       )}
 
       {/* Mobile top bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-20 h-14 bg-white border-b border-zinc-200 flex items-center px-4 gap-3">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-20 h-14 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 flex items-center px-4 gap-3">
         <button
           onClick={() => setMobileOpen(true)}
-          className="p-1.5 text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 rounded-md transition-colors"
+          className="p-1.5 text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-50 dark:hover:bg-zinc-800 rounded-md transition-colors"
         >
           <ListIcon size={20} />
         </button>
-        <Image
-          src="/sneaker-doc-logo.png"
-          alt="SneakerDoc"
-          width={32}
-          height={32}
-          className="object-contain"
-        />
+        <div className="w-7 h-7 bg-zinc-950 dark:bg-white rounded-md flex items-center justify-center">
+          <GraduationCapIcon size={14} weight="fill" className="text-white dark:text-zinc-950" />
+        </div>
+        <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Kumon Iligan</span>
       </div>
 
       {/* Mobile overlay */}
       {mobileOpen && (
-        <div
-          className="lg:hidden fixed inset-0 z-30 bg-black/40"
-          onClick={() => setMobileOpen(false)}
-        />
+        <div className="lg:hidden fixed inset-0 z-30 bg-black/40" onClick={() => setMobileOpen(false)} />
       )}
 
       {/* Mobile drawer */}
-      <aside
-        className={cn(
-          'lg:hidden fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-zinc-200 flex flex-col transition-transform duration-200',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full',
-        )}
-      >
-        <div className="px-5 py-4 border-b border-zinc-200 flex items-center justify-between">
-          <Image
-            src="/sneaker-doc-logo.png"
-            alt="SneakerDoc"
-            width={48}
-            height={48}
-            className="object-contain"
-          />
-          <button
-            onClick={() => setMobileOpen(false)}
-            className="p-1.5 text-zinc-400 hover:text-zinc-950 hover:bg-zinc-100 rounded-md transition-colors"
-          >
+      <aside className={cn(
+        'lg:hidden fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 flex flex-col transition-transform duration-200',
+        mobileOpen ? 'translate-x-0' : '-translate-x-full',
+      )}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200 dark:border-zinc-800">
+          <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Menu</span>
+          <button onClick={() => setMobileOpen(false)} className="p-1.5 text-zinc-400 hover:text-zinc-950 hover:bg-zinc-100 dark:text-zinc-500 dark:hover:text-zinc-50 dark:hover:bg-zinc-800 rounded-md transition-colors">
             <XIcon size={16} />
           </button>
         </div>
@@ -297,18 +262,8 @@ export function Sidebar() {
       </aside>
 
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-56 bg-white border-r border-zinc-200 flex-col z-10">
-        <div className="px-5 py-5 border-b border-zinc-200 flex justify-center">
-          <Image
-            src="/sneaker-doc-logo.png"
-            alt="SneakerDoc"
-            width={96}
-            height={96}
-            className="object-contain"
-          />
-        </div>
-        {navLinks}
-        {footer}
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-56 bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 flex-col z-10">
+        {sidebarContent}
       </aside>
     </>
   );

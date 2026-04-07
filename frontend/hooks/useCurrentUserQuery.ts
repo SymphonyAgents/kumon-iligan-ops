@@ -10,7 +10,7 @@ export function useCurrentUserQuery() {
     queryKey: ['current-user'],
     queryFn: async () => {
       try {
-        return await api.users.me();
+        return await api.users.getCurrent();
       } catch (err) {
         if (err instanceof ApiError && (err.status === 401 || err.status === 404)) {
           signOut({ callbackUrl: '/login' });

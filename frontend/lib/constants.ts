@@ -1,220 +1,211 @@
 // ---------------------------------------------------------------------------
-// Enums & Enum Types
+// User roles
 // ---------------------------------------------------------------------------
-
-export const TRANSACTION_STATUS = {
-  PENDING: 'pending',
-  IN_PROGRESS: 'in_progress',
-  DONE: 'done',
-  CLAIMED: 'claimed',
-  CANCELLED: 'cancelled',
+export const USER_TYPE = {
+  TEACHER: 'teacher',
+  ADMIN: 'admin',
+  SUPERADMIN: 'superadmin',
 } as const;
+export type UserType = (typeof USER_TYPE)[keyof typeof USER_TYPE];
 
-export type TransactionStatus = typeof TRANSACTION_STATUS[keyof typeof TRANSACTION_STATUS];
+export const USER_TYPE_LABELS: Record<string, string> = {
+  teacher: 'Teacher',
+  admin: 'Admin',
+  superadmin: 'Superadmin',
+};
 
-export const ITEM_STATUS = {
+export const USER_TYPE_STYLES: Record<string, string> = {
+  teacher: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300',
+  admin: 'bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300',
+  superadmin: 'bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300',
+};
+
+export const USER_STATUS = {
+  ACTIVE: 'active',
   PENDING: 'pending',
-  IN_PROGRESS: 'in_progress',
-  DONE: 'done',
-  CLAIMED: 'claimed',
-  CANCELLED: 'cancelled',
+  REJECTED: 'rejected',
 } as const;
+export type UserStatus = (typeof USER_STATUS)[keyof typeof USER_STATUS];
 
-export type ItemStatus = typeof ITEM_STATUS[keyof typeof ITEM_STATUS];
+// ---------------------------------------------------------------------------
+// Student
+// ---------------------------------------------------------------------------
+export const STUDENT_STATUS = {
+  ACTIVE: 'active',
+  INACTIVE: 'inactive',
+  WITHDRAWN: 'withdrawn',
+} as const;
+export type StudentStatus = (typeof STUDENT_STATUS)[keyof typeof STUDENT_STATUS];
+
+export const STUDENT_STATUS_LABELS: Record<string, string> = {
+  active: 'Active',
+  inactive: 'Inactive',
+  withdrawn: 'Withdrawn',
+};
+
+export const STUDENT_STATUS_STYLES: Record<string, string> = {
+  active: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+  inactive: 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
+  withdrawn: 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400',
+};
+
+// ---------------------------------------------------------------------------
+// Payment
+// ---------------------------------------------------------------------------
+export const PAYMENT_STATUS = {
+  PENDING_REVIEW: 'pending_review',
+  VERIFIED: 'verified',
+  FLAGGED: 'flagged',
+  REJECTED: 'rejected',
+} as const;
+export type PaymentStatus = (typeof PAYMENT_STATUS)[keyof typeof PAYMENT_STATUS];
+
+export const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  pending_review: 'Pending Review',
+  verified: 'Verified',
+  flagged: 'Flagged',
+  rejected: 'Rejected',
+};
+
+export const PAYMENT_STATUS_STYLES: Record<string, string> = {
+  pending_review: 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
+  verified: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+  flagged: 'bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300',
+  rejected: 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300',
+};
 
 export const PAYMENT_METHOD = {
-  CASH: 'cash',
+  BANK_TRANSFER: 'bank_transfer',
   GCASH: 'gcash',
-  CARD: 'card',
-  BANK_DEPOSIT: 'bank_deposit',
+  CASH: 'cash',
+  OTHER: 'other',
 } as const;
-
-export type PaymentMethod = typeof PAYMENT_METHOD[keyof typeof PAYMENT_METHOD];
-
-export const SERVICE_TYPE = {
-  PRIMARY: 'primary',
-  ADD_ON: 'add_on',
-} as const;
-
-export type ServiceType = typeof SERVICE_TYPE[keyof typeof SERVICE_TYPE];
-
-export const TRANSACTION_STATUS_VALUES = Object.values(TRANSACTION_STATUS);
-export const ITEM_STATUS_VALUES = Object.values(ITEM_STATUS);
-export const PAYMENT_METHOD_VALUES = Object.values(PAYMENT_METHOD);
-
-// ---------------------------------------------------------------------------
-// Shared Label / Display Maps
-// ---------------------------------------------------------------------------
-
-export const STATUS_LABELS: Record<string, string> = {
-  pending: 'Pending',
-  in_progress: 'In Progress',
-  done: 'Done',
-  claimed: 'Claimed',
-  cancelled: 'Cancelled',
-};
-
-export const STATUS_COLORS: Record<string, string> = {
-  pending: 'text-zinc-600 bg-zinc-100',
-  in_progress: 'text-blue-600 bg-blue-100',
-  done: 'text-emerald-700 bg-emerald-100',
-  claimed: 'text-violet-700 bg-violet-100',
-  cancelled: 'text-red-500 bg-red-100',
-};
+export type PaymentMethod = (typeof PAYMENT_METHOD)[keyof typeof PAYMENT_METHOD];
 
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  cash: 'Cash',
+  bank_transfer: 'Bank Transfer',
   gcash: 'GCash',
-  card: 'Card',
-  bank_deposit: 'Bank Deposit',
+  cash: 'Cash',
+  other: 'Other',
 };
 
-export const PAYMENT_METHODS_OPTIONS = [
-  { value: 'cash', label: 'Cash' },
+export const PAYMENT_METHOD_STYLES: Record<string, string> = {
+  bank_transfer: 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
+  gcash: 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+  cash: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+  other: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300',
+};
+
+export const PAYMENT_METHOD_OPTIONS = [
+  { value: 'bank_transfer', label: 'Bank Transfer' },
   { value: 'gcash', label: 'GCash' },
-  { value: 'card', label: 'Card' },
-  { value: 'bank_deposit', label: 'Bank Deposit' },
+  { value: 'cash', label: 'Cash' },
+  { value: 'other', label: 'Other' },
 ] as const;
 
-export const METHOD_ORDER = ['gcash', 'bank_deposit', 'cash', 'card'] as const;
+// ---------------------------------------------------------------------------
+// Payment period
+// ---------------------------------------------------------------------------
+export const PERIOD_STATUS = {
+  PENDING: 'pending',
+  PARTIAL: 'partial',
+  PAID: 'paid',
+  OVERDUE: 'overdue',
+} as const;
+export type PeriodStatus = (typeof PERIOD_STATUS)[keyof typeof PERIOD_STATUS];
 
-export const METHOD_STYLES: Record<string, string> = {
-  cash: 'bg-emerald-50 text-emerald-700',
-  gcash: 'bg-blue-50 text-blue-700',
-  card: 'bg-violet-50 text-violet-700',
-  bank_deposit: 'bg-amber-50 text-amber-700',
+export const PERIOD_STATUS_LABELS: Record<string, string> = {
+  pending: 'Pending',
+  partial: 'Partial',
+  paid: 'Paid',
+  overdue: 'Overdue',
+};
+
+export const PERIOD_STATUS_STYLES: Record<string, string> = {
+  pending: 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400',
+  partial: 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
+  paid: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+  overdue: 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300',
 };
 
 // ---------------------------------------------------------------------------
-// Role UI
+// Audit types
 // ---------------------------------------------------------------------------
-
-export const ROLES = ['staff', 'admin', 'superadmin'] as const;
-
-export const ROLE_STYLES: Record<string, string> = {
-  staff: 'bg-zinc-100 text-zinc-600',
-  admin: 'bg-blue-50 text-blue-600',
-  superadmin: 'bg-violet-50 text-violet-700',
-};
-
-// ---------------------------------------------------------------------------
-// Audit
-// ---------------------------------------------------------------------------
-
 export const AUDIT_TYPE_LABELS: Record<string, string> = {
-  TRANSACTION_CREATED: 'Transaction Created',
-  TRANSACTION_UPDATED: 'Transaction Updated',
-  TRANSACTION_RESTORED: 'Transaction Restored',
-  PICKUP_RESCHEDULED: 'Pickup Rescheduled',
-  TRANSACTION_STATUS_CHANGED: 'Status Changed',
-  TRANSACTION_CLAIMED: 'Transaction Claimed',
-  TRANSACTION_CANCELLED: 'Transaction Cancelled',
-  ITEM_STATUS_CHANGED: 'Item Status Changed',
-  PAYMENT_ADDED: 'Payment Added',
-  EXPENSE_CREATED: 'Expense Logged',
-  SERVICE_UPDATED: 'Service Updated',
-  SMS_SENT: 'SMS Sent',
+  payment_recorded: 'Payment Recorded',
+  payment_verified: 'Payment Verified',
+  payment_flagged: 'Payment Flagged',
+  payment_rejected: 'Payment Rejected',
+  payment_deleted: 'Payment Deleted',
+  student_enrolled: 'Student Enrolled',
+  student_updated: 'Student Updated',
+  student_status_changed: 'Student Status Changed',
+  student_reassigned: 'Student Reassigned',
+  student_deleted: 'Student Deleted',
+  family_created: 'Family Created',
+  family_updated: 'Family Updated',
+  family_deleted: 'Family Deleted',
+  period_created: 'Period Created',
+  period_adjusted: 'Period Adjusted',
+  period_deleted: 'Period Deleted',
+  period_bulk_generated: 'Periods Bulk Generated',
+  user_created: 'User Created',
+  user_status_changed: 'User Status Changed',
+  user_deleted: 'User Deleted',
+  branch_created: 'Branch Created',
+  branch_updated: 'Branch Updated',
+  branch_deleted: 'Branch Deleted',
+  data_imported: 'Data Imported',
+  data_exported: 'Data Exported',
 };
 
 export const AUDIT_TYPE_STYLES: Record<string, string> = {
-  TRANSACTION_CREATED: 'bg-emerald-50 text-emerald-700',
-  EXPENSE_CREATED: 'bg-emerald-50 text-emerald-700',
-  PAYMENT_ADDED: 'bg-violet-50 text-violet-700',
-  PICKUP_RESCHEDULED: 'bg-amber-50 text-amber-700',
-  TRANSACTION_CANCELLED: 'bg-red-50 text-red-700',
-  TRANSACTION_CLAIMED: 'bg-blue-50 text-blue-700',
-  TRANSACTION_STATUS_CHANGED: 'bg-blue-50 text-blue-700',
-  ITEM_STATUS_CHANGED: 'bg-blue-50 text-blue-700',
-  TRANSACTION_UPDATED: 'bg-zinc-100 text-zinc-600',
-  TRANSACTION_RESTORED: 'bg-emerald-50 text-emerald-700',
-  SERVICE_UPDATED: 'bg-zinc-100 text-zinc-600',
-  SMS_SENT: 'bg-sky-50 text-sky-700',
+  payment_recorded: 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+  payment_verified: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+  payment_flagged: 'bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300',
+  payment_rejected: 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300',
+  payment_deleted: 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300',
+  student_enrolled: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+  student_updated: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300',
+  student_status_changed: 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
+  student_reassigned: 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+  student_deleted: 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300',
+  family_created: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+  family_updated: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300',
+  family_deleted: 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300',
+  period_created: 'bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300',
+  period_adjusted: 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
+  period_bulk_generated: 'bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300',
+  period_deleted: 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300',
+  user_created: 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+  user_status_changed: 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
+  user_deleted: 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300',
+  branch_created: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+  branch_updated: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300',
+  branch_deleted: 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300',
+  data_imported: 'bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300',
+  data_exported: 'bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300',
 };
 
 export const ENTITY_LABELS: Record<string, string> = {
-  transaction: 'Transaction',
-  transaction_item: 'Item',
-  service: 'Service',
-  promo: 'Promo',
-  expense: 'Expense',
+  payment: 'Payment',
+  student: 'Student',
+  family: 'Family',
+  payment_period: 'Payment Period',
+  user: 'User',
+  branch: 'Branch',
 };
 
 export const SOURCE_LABELS: Record<string, string> = {
-  pos: 'POS',
-  admin: 'Admin',
+  web: 'Web',
+  import: 'Import',
+  system: 'System',
 };
 
 // ---------------------------------------------------------------------------
-// Calendar / Date
+// Calendar
 // ---------------------------------------------------------------------------
-
 export const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
-
-export const DAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-// ---------------------------------------------------------------------------
-// Deposit Filters
-// ---------------------------------------------------------------------------
-
-export type PaymentFilter = 'all' | 'cash' | 'gcash' | 'card';
-
-export const DEPOSIT_FILTERS: { label: string; value: PaymentFilter }[] = [
-  { label: 'All', value: 'all' },
-  { label: 'Cash', value: 'cash' },
-  { label: 'GCash', value: 'gcash' },
-  { label: 'Card', value: 'card' },
-];
-
-// ---------------------------------------------------------------------------
-// Staff Detail Page
-// ---------------------------------------------------------------------------
-
-export type StaffSection = 'profile' | 'documents';
-
-export const STAFF_SECTIONS: { id: StaffSection; label: string }[] = [
-  { id: 'profile', label: 'Profile' },
-  { id: 'documents', label: 'Documents' },
-];
-
-// ---------------------------------------------------------------------------
-// Auth / Navigation
-// ---------------------------------------------------------------------------
-
-export const STAFF_ALLOWED_PATHS = ['/expenses'];
-
-// ---------------------------------------------------------------------------
-// Card bank options — loaded from DB via /card-banks; these are static fallbacks
-// only used when the DB data hasn't loaded yet.
-// ---------------------------------------------------------------------------
-
-export const CARD_BANK_OPTIONS = [
-  { value: '', label: 'Default (3%)' },
-  { value: 'bpi', label: 'BPI (3.5%)' },
-] as const;
-
-type CardBankRow = { name: string; feePercent: string; isDefault: boolean };
-
-/** Build Select options from live DB data. Falls back to static CARD_BANK_OPTIONS. */
-export function buildCardBankOptions(banks: CardBankRow[]): { value: string; label: string }[] {
-  if (!banks.length) return [...CARD_BANK_OPTIONS];
-  const sorted = [...banks].sort((a) => (a.isDefault ? -1 : 1));
-  return sorted.map((b) => ({
-    value: b.isDefault ? '' : b.name.toLowerCase(),
-    label: `${b.name} (${parseFloat(b.feePercent).toFixed(1)}%)`,
-  }));
-}
-
-/** Display-only fee rate for preview. Uses DB data when available. */
-export function getCardFeeRatePreview(cardBank: string, banks?: CardBankRow[]): number {
-  if (banks?.length) {
-    const match = cardBank
-      ? banks.find((b) => !b.isDefault && b.name.toLowerCase() === cardBank.toLowerCase())
-      : banks.find((b) => b.isDefault);
-    if (match) return parseFloat(match.feePercent) / 100;
-  }
-  if (cardBank === 'bpi') return 0.035;
-  return 0.03;
-}

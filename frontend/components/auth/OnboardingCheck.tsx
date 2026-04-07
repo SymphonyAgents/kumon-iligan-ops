@@ -32,7 +32,7 @@ export function OnboardingCheck() {
 
   if (isLoading || needsOnboarding || isPending || isRejected) {
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white dark:bg-zinc-950">
         <Spinner size={24} className="text-zinc-400" />
       </div>
     );

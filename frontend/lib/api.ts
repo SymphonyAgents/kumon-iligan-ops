@@ -1,23 +1,13 @@
 import type {
-  Transaction,
-  TransactionPhoto,
-  AssignableUser,
-  Customer,
-  Service,
-  Promo,
-  Expense,
-  ExpenseSummary,
-  AuditEntry,
-  ClaimPayment,
-  TransactionItem,
-  AppUser,
-  StaffDocument,
   Branch,
-  TodayCollection,
-  DashboardSummary,
-  DepositAuditEntry,
-  ReportSummary,
-  CardBank,
+  AppUser,
+  Family,
+  Student,
+  PaymentPeriod,
+  Payment,
+  AuditEntry,
+  AssignableUser,
+  BulkGenerateResult,
 } from './types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
@@ -30,7 +20,6 @@ export class ApiError extends Error {
 }
 
 async function getAuthHeaders(): Promise<HeadersInit> {
-  // Fetch NextAuth session from the client-side session endpoint
   const res = await fetch('/api/auth/session');
   const session = res.ok ? await res.json() : null;
   const userId = session?.user?.id;
@@ -56,219 +45,126 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+// ---------------------------------------------------------------------------
+// API
+// ---------------------------------------------------------------------------
 export const api = {
-  transactions: {
-    list: (params?: Record<string, string>) => {
-      const qs = new URLSearchParams(params);
-      return apiFetch<Transaction[]>(`/transactions?${qs}`);
+  // ----- Branches -----
+  branches: {
+    list: () => apiFetch<Branch[]>('/branches'),
+    listActive: () => apiFetch<Branch[]>('/branches/active'),
+    get: (id: string) => apiFetch<Branch>(`/branches/${id}`),
+    create: (data: { name: string; streetName?: string; barangay?: string; city?: string; province?: string; country?: string; phone?: string }) =>
+      apiFetch<Branch>('/branches', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<{ name: string; streetName: string; barangay: string; city: string; province: string; country: string; phone: string; isActive: boolean }>) =>
+      apiFetch<Branch>(`/branches/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => apiFetch<void>(`/branches/${id}`, { method: 'DELETE' }),
+  },
+
+  // ----- Users -----
+  users: {
+    list: (branchId?: string) => {
+      const qs = branchId ? `?branchId=${branchId}` : '';
+      return apiFetch<AppUser[]>(`/users${qs}`);
     },
-    recent: (limit = 10) => apiFetch<Transaction[]>(`/transactions/recent?limit=${limit}`),
-    upcoming: () => apiFetch<Transaction[]>('/transactions/upcoming'),
-    upcomingByMonth: (year: number, month: number) =>
-      apiFetch<Transaction[]>(`/transactions/upcoming/monthly?year=${year}&month=${month}`),
-    todayCollections: () => apiFetch<TodayCollection[]>('/transactions/today-collections'),
-    dashboardSummary: (year: number, month: number, branchId?: number) => {
-      const qs = new URLSearchParams({ year: String(year), month: String(month) });
-      if (branchId) qs.set('branchId', String(branchId));
-      return apiFetch<DashboardSummary>(`/transactions/dashboard?${qs}`);
+    get: (id: string) => apiFetch<AppUser>(`/users/${id}`),
+    getCurrent: () => apiFetch<AppUser>('/users/me'),
+    assignable: (branchId?: string | null) => {
+      const qs = branchId ? `?branchId=${branchId}` : '';
+      return apiFetch<AssignableUser[]>(`/users/assignable${qs}`);
     },
-    collectionsSummary: (year: number, month: number, branchId?: number) => {
-      const qs = new URLSearchParams({ year: String(year), month: String(month) });
-      if (branchId) qs.set('branchId', String(branchId));
-      return apiFetch<Record<string, string>>(`/transactions/collections/summary?${qs}`);
-    },
-    collectionsHistory: (year: number, month: number, method: string, branchId?: number) => {
-      const qs = new URLSearchParams({ year: String(year), month: String(month), method });
-      if (branchId) qs.set('branchId', String(branchId));
-      return apiFetch<{ id: number; transactionId: number; method: string; amount: string; fee: string; net: string; feePercent: string; paidAt: string; txnNumber: string; customerName: string | null }[]>(`/transactions/collections/history?${qs}`);
-    },
-    get: (id: number) => apiFetch<Transaction>(`/transactions/${id}`),
-    getByNumber: (number: string) => apiFetch<Transaction>(`/transactions/number/${number}`),
-    create: (body: Partial<Omit<Transaction, 'items'>> & { items?: Record<string, unknown>[]; isExistingCustomer?: boolean; customerStreetName?: string; customerCity?: string; customerCountry?: string }) =>
-      apiFetch<Transaction>('/transactions', { method: 'POST', body: JSON.stringify(body) }),
-    update: (id: number, body: Partial<Transaction> & { promoId?: number | null }) =>
-      apiFetch<Transaction>(`/transactions/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
-    updateItem: (txnId: number, itemId: number, body: Partial<TransactionItem>) =>
-      apiFetch<TransactionItem>(`/transactions/${txnId}/items/${itemId}`, {
-        method: 'PATCH',
-        body: JSON.stringify(body),
-      }),
-    edit: (id: number, body: {
-      items?: Array<{ id: number; shoeDescription?: string; serviceId?: number }>;
-      payments?: Array<{ id: number; method: string; referenceNumber?: string; cardBank?: string }>;
-    }) =>
-      apiFetch<Transaction>(`/transactions/${id}/edit`, { method: 'PATCH', body: JSON.stringify(body) }),
-    addPayment: (id: number, body: { method: string; amount: string; referenceNumber?: string; cardBank?: string }) =>
-      apiFetch<ClaimPayment>(`/transactions/${id}/payments`, {
+    approve: (id: string) => apiFetch<AppUser>(`/users/${id}/approve`, { method: 'PATCH' }),
+    reject: (id: string) => apiFetch<{ deleted: boolean }>(`/users/${id}/reject`, { method: 'PATCH' }),
+    updateRole: (id: string, userType: string) =>
+      apiFetch<AppUser>(`/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ userType }) }),
+    updateBranch: (id: string, branchId: string) =>
+      apiFetch<AppUser>(`/users/${id}/branch`, { method: 'PATCH', body: JSON.stringify({ branchId }) }),
+    updateProfile: (id: string, data: Partial<AppUser>) =>
+      apiFetch<AppUser>(`/users/${id}/profile`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => apiFetch<void>(`/users/${id}`, { method: 'DELETE' }),
+    syncUser: (data: { id: string; email: string; name: string | null; image: string | null }) =>
+      apiFetch<Pick<AppUser, 'id' | 'userType' | 'status' | 'branchId' | 'fullName' | 'nickname'>>('/users/sync', {
         method: 'POST',
-        body: JSON.stringify(body),
+        body: JSON.stringify(data),
       }),
-    sendPickupReadySms: (id: number) =>
-      apiFetch<{ phone: string }>(`/transactions/${id}/sms/pickup-ready`, { method: 'POST' }),
-    savePhoto: (id: number, body: { type: 'before' | 'after'; url: string }) =>
-      apiFetch<TransactionPhoto>(`/transactions/${id}/photos`, {
-        method: 'POST',
-        body: JSON.stringify(body),
-      }),
-    updatePaymentMethod: (txnId: number, paymentId: number, body: { method: string; referenceNumber?: string; cardBank?: string }) =>
-      apiFetch<ClaimPayment & { bankDepositWarning: boolean }>(`/transactions/${txnId}/payments/${paymentId}/method`, {
-        method: 'PATCH',
-        body: JSON.stringify(body),
-      }),
-    deletePhoto: (txnId: number, photoId: number) =>
-      apiFetch<void>(`/transactions/${txnId}/photos/${photoId}`, { method: 'DELETE' }),
-    deleted: () => apiFetch<Transaction[]>('/transactions/deleted'),
-    restore: (id: number) => apiFetch<Transaction>(`/transactions/${id}/restore`, { method: 'PATCH' }),
-    delete: (id: number) => apiFetch<void>(`/transactions/${id}`, { method: 'DELETE' }),
   },
 
-  services: {
-    list: (activeOnly?: boolean) =>
-      apiFetch<Service[]>(`/services${activeOnly ? '?active=1' : ''}`),
-    get: (id: number) => apiFetch<Service>(`/services/${id}`),
-    create: (body: Partial<Service>) =>
-      apiFetch<Service>('/services', { method: 'POST', body: JSON.stringify(body) }),
-    update: (id: number, body: Partial<Service>) =>
-      apiFetch<Service>(`/services/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
-    delete: (id: number) => apiFetch<void>(`/services/${id}`, { method: 'DELETE' }),
+  // ----- Families -----
+  families: {
+    list: (params?: { branchId?: string; search?: string }) => {
+      const qs = new URLSearchParams(params as Record<string, string>);
+      return apiFetch<Family[]>(`/families?${qs}`);
+    },
+    get: (id: string) => apiFetch<Family>(`/families/${id}`),
+    create: (data: { guardianName: string; guardianPhone: string; guardianEmail?: string; streetName?: string; barangay?: string; city?: string; province?: string; country?: string; notes?: string; branchId?: string }) =>
+      apiFetch<Family>('/families', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<{ guardianName: string; guardianPhone: string; guardianEmail: string; streetName: string; barangay: string; city: string; province: string; country: string; notes: string }>) =>
+      apiFetch<Family>(`/families/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => apiFetch<void>(`/families/${id}`, { method: 'DELETE' }),
   },
 
-  promos: {
-    list: (activeOnly?: boolean) => apiFetch<Promo[]>(`/promos${activeOnly ? '?active=1' : ''}`),
-    get: (id: number) => apiFetch<Promo>(`/promos/${id}`),
-    findByCode: (code: string) => apiFetch<Promo | null>(`/promos/code/${code}`),
-    create: (body: Partial<Promo>) =>
-      apiFetch<Promo>('/promos', { method: 'POST', body: JSON.stringify(body) }),
-    update: (id: number, body: Partial<Promo>) =>
-      apiFetch<Promo>(`/promos/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
-    delete: (id: number) => apiFetch<void>(`/promos/${id}`, { method: 'DELETE' }),
+  // ----- Students -----
+  students: {
+    list: (params?: { branchId?: string; teacherId?: string; status?: string; search?: string }) => {
+      const qs = new URLSearchParams(params as Record<string, string>);
+      return apiFetch<Student[]>(`/students?${qs}`);
+    },
+    get: (id: string) => apiFetch<Student>(`/students/${id}`),
+    enroll: (data: { familyId: string; firstName: string; lastName: string; enrollmentDate: string; level?: string; branchId?: string }) =>
+      apiFetch<Student>('/students', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<{ firstName: string; lastName: string; level: string; enrollmentDate: string }>) =>
+      apiFetch<Student>(`/students/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    changeStatus: (id: string, data: { status: string; reason?: string }) =>
+      apiFetch<Student>(`/students/${id}/status`, { method: 'PATCH', body: JSON.stringify(data) }),
+    assignTeacher: (id: string, data: { teacherId: string }) =>
+      apiFetch<{ id: string; teacherId: string }>(`/students/${id}/assign-teacher`, { method: 'POST', body: JSON.stringify(data) }),
+    delete: (id: string) => apiFetch<void>(`/students/${id}`, { method: 'DELETE' }),
   },
 
-  expenses: {
-    listByDate: (date: string) => apiFetch<Expense[]>(`/expenses?date=${date}`),
-    listByMonth: (year: number, month: number) =>
-      apiFetch<Expense[]>(`/expenses/monthly?year=${year}&month=${month}`),
-    summary: (date: string) => apiFetch<ExpenseSummary>(`/expenses/summary?date=${date}`),
-    create: (body: Partial<Expense>) =>
-      apiFetch<Expense>('/expenses', { method: 'POST', body: JSON.stringify(body) }),
-    update: (id: number, body: Partial<Expense>) =>
-      apiFetch<Expense>(`/expenses/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
-    delete: (id: number) => apiFetch<void>(`/expenses/${id}`, { method: 'DELETE' }),
-    uploadUrl: (extension: string) =>
-      apiFetch<{ signedUrl: string; token: string; path: string; publicUrl: string }>(
-        '/expenses/upload-url',
-        { method: 'POST', body: JSON.stringify({ extension }) },
-      ),
+  // ----- Payment Periods -----
+  paymentPeriods: {
+    list: (params?: { studentId?: string; periodMonth?: number; periodYear?: number; status?: string; branchId?: string }) => {
+      const qs = new URLSearchParams(Object.fromEntries(Object.entries(params ?? {}).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])));
+      return apiFetch<PaymentPeriod[]>(`/payment-periods?${qs}`);
+    },
+    get: (id: string) => apiFetch<PaymentPeriod>(`/payment-periods/${id}`),
+    create: (data: { studentId: string; periodMonth: number; periodYear: number; expectedAmount: number; dueDate: string }) =>
+      apiFetch<PaymentPeriod>('/payment-periods', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: { expectedAmount?: number; dueDate?: string }) =>
+      apiFetch<PaymentPeriod>(`/payment-periods/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    bulkGenerate: (data: { periodMonth: number; periodYear: number; expectedAmount: number; dueDate: string; branchId?: string }) =>
+      apiFetch<BulkGenerateResult>('/payment-periods/bulk-generate', { method: 'POST', body: JSON.stringify(data) }),
+    delete: (id: string) => apiFetch<void>(`/payment-periods/${id}`, { method: 'DELETE' }),
   },
 
+  // ----- Payments -----
+  payments: {
+    list: (params?: { branchId?: string; teacherId?: string; status?: string; periodId?: string; studentId?: string; familyId?: string; dateFrom?: string; dateTo?: string }) => {
+      const qs = new URLSearchParams(params as Record<string, string>);
+      return apiFetch<Payment[]>(`/payments?${qs}`);
+    },
+    get: (id: string) => apiFetch<Payment>(`/payments/${id}`),
+    record: (data: { studentId: string; periodId: string; amount: number; paymentMethod: string; referenceNumber: string; receiptImageUrl: string; paymentDate: string; note?: string }) =>
+      apiFetch<Payment>('/payments', { method: 'POST', body: JSON.stringify(data) }),
+    verify: (id: string, data?: { note?: string }) =>
+      apiFetch<Payment>(`/payments/${id}/verify`, { method: 'PATCH', body: JSON.stringify(data ?? {}) }),
+    flag: (id: string, data: { note: string }) =>
+      apiFetch<Payment>(`/payments/${id}/flag`, { method: 'PATCH', body: JSON.stringify(data) }),
+    reject: (id: string, data: { note: string }) =>
+      apiFetch<Payment>(`/payments/${id}/reject`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) => apiFetch<void>(`/payments/${id}`, { method: 'DELETE' }),
+    // Receipt upload — get presigned URL then PUT the file
+    getUploadUrl: (params: { fileName: string; fileType: string }) =>
+      apiFetch<{ uploadUrl: string; fileUrl: string }>(`/uploads/receipt?fileName=${params.fileName}&fileType=${params.fileType}`),
+  },
+
+  // ----- Audit -----
   audit: {
-    list: (params?: { month?: number; year?: number; performedBy?: string }) => {
-      const qs = new URLSearchParams();
-      if (params?.month) qs.set('month', String(params.month));
-      if (params?.year) qs.set('year', String(params.year));
-      if (params?.performedBy) qs.set('performedBy', params.performedBy);
+    list: (params?: { limit?: number; month?: number; year?: number; performedBy?: string; branchId?: string }) => {
+      const qs = new URLSearchParams(Object.fromEntries(Object.entries(params ?? {}).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])));
       return apiFetch<AuditEntry[]>(`/audit?${qs}`);
     },
-    findByTransaction: (txnNumber: string, auditType?: string) => {
-      const qs = new URLSearchParams();
-      if (auditType) qs.set('auditType', auditType);
-      return apiFetch<AuditEntry[]>(`/audit/transaction/${encodeURIComponent(txnNumber)}?${qs}`);
-    },
-  },
-
-  customers: {
-    list: () => apiFetch<Customer[]>('/customers'),
-    findByPhone: (phone: string) => apiFetch<Customer | null>(`/customers/by-phone/${encodeURIComponent(phone)}`),
-  },
-
-  users: {
-    me: () => apiFetch<AppUser>('/users/me'),
-    onboard: (branchId: number) =>
-      apiFetch<AppUser>('/users/me/onboard', {
-        method: 'PATCH',
-        body: JSON.stringify({ branchId }),
-      }),
-    list: () => apiFetch<AppUser[]>('/users'),
-    listAssignable: () => apiFetch<AssignableUser[]>('/users/assignable'),
-    updateRole: (id: string, userType: string) =>
-      apiFetch<AppUser>(`/users/${id}/role`, {
-        method: 'PATCH',
-        body: JSON.stringify({ userType }),
-      }),
-    updateBranch: (id: string, branchId: number) =>
-      apiFetch<AppUser>(`/users/${id}/branch`, {
-        method: 'PATCH',
-        body: JSON.stringify({ branchId }),
-      }),
-    get: (id: string) => apiFetch<AppUser>(`/users/${id}`),
-    updateProfile: (id: string, body: Partial<AppUser>) =>
-      apiFetch<AppUser>(`/users/${id}/profile`, {
-        method: 'PATCH',
-        body: JSON.stringify(body),
-      }),
-    approve: (id: string) =>
-      apiFetch<AppUser>(`/users/${id}/approve`, { method: 'PATCH' }),
-    reject: (id: string) =>
-      apiFetch<AppUser>(`/users/${id}/reject`, { method: 'PATCH' }),
-    delete: (id: string) => apiFetch<void>(`/users/${id}`, { method: 'DELETE' }),
-    getDocuments: (id: string) => apiFetch<StaffDocument[]>(`/users/${id}/documents`),
-    addDocument: (id: string, body: { url: string; label?: string }) =>
-      apiFetch<StaffDocument>(`/users/${id}/documents`, {
-        method: 'POST',
-        body: JSON.stringify(body),
-      }),
-    deleteDocument: (userId: string, docId: number) =>
-      apiFetch<void>(`/users/${userId}/documents/${docId}`, { method: 'DELETE' }),
-  },
-
-  deposits: {
-    get: (year: number, month: number, branchId?: number) => {
-      const qs = new URLSearchParams({ year: String(year), month: String(month) });
-      if (branchId) qs.set('branchId', String(branchId));
-      return apiFetch<Record<string, string>>(`/deposits?${qs}`);
-    },
-    upsert: (body: { year: number; month: number; method: string; amount: string; branchId?: number; origin?: string }) =>
-      apiFetch<{ id: number; amount: string }>('/deposits', { method: 'PATCH', body: JSON.stringify(body) }),
-    getAudit: (year: number, month: number, branchId?: number, method?: string) => {
-      const qs = new URLSearchParams({ year: String(year), month: String(month) });
-      if (branchId) qs.set('branchId', String(branchId));
-      if (method) qs.set('method', method);
-      return apiFetch<DepositAuditEntry[]>(`/deposits/audit?${qs}`);
-    },
-  },
-
-  branches: {
-    list: (activeOnly?: boolean) =>
-      apiFetch<Branch[]>(`/branches${activeOnly ? '?active=1' : ''}`),
-    create: (body: { name: string; streetName?: string; barangay?: string; city?: string; province?: string; country?: string; phone?: string }) =>
-      apiFetch<Branch>('/branches', { method: 'POST', body: JSON.stringify(body) }),
-    update: (id: number, body: Partial<{ name: string; streetName: string | null; barangay: string | null; city: string | null; province: string | null; country: string | null; phone: string | null; isActive: boolean }>) =>
-      apiFetch<Branch>(`/branches/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
-  },
-
-  uploads: {
-    presignedUrl: (body: { txnId: number; itemId?: number; type: 'before' | 'after'; extension: string }) =>
-      apiFetch<{ signedUrl: string; token: string; path: string; publicUrl: string }>('/uploads/presigned-url', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      }),
-  },
-
-  reports: {
-    summary: (year: number, month: number, branchId?: number) => {
-      const qs = new URLSearchParams({ year: String(year), month: String(month) });
-      if (branchId) qs.set('branchId', String(branchId));
-      return apiFetch<ReportSummary>(`/reports/summary?${qs}`);
-    },
-  },
-
-  cardBanks: {
-    list: () => apiFetch<CardBank[]>('/card-banks'),
-    create: (body: { name: string; feePercent: number }) =>
-      apiFetch<CardBank>('/card-banks', { method: 'POST', body: JSON.stringify(body) }),
-    update: (id: number, body: { name?: string; feePercent?: number }) =>
-      apiFetch<CardBank>(`/card-banks/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
-    remove: (id: number) =>
-      apiFetch<{ deleted: boolean }>(`/card-banks/${id}`, { method: 'DELETE' }),
+    byEntity: (entityType: string, entityId: string) =>
+      apiFetch<AuditEntry[]>(`/audit/entity/${entityType}/${entityId}`),
   },
 };

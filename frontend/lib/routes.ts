@@ -1,34 +1,33 @@
 export const ROUTES = {
   ROOT: '/',
   LOGIN: '/login',
-  DASHBOARD: '/',
-  TRANSACTIONS: '/transactions',
-  UPCOMING_PICKUPS: '/upcoming-pickups',
-  SERVICES: '/services',
-  PROMOS: '/promos',
-  EXPENSES: '/expenses',
-  AUDIT: '/audit',
-  BRANCHES: '/branches',
-  STAFF: '/staff',
-  CUSTOMERS: '/customers',
-  REPORTS: '/reports',
-  CARD_BANKS: '/card-banks',
+  PENDING: '/pending',
   ONBOARDING: '/onboarding',
+  // Core — Tuition Ops
+  DASHBOARD: '/',
+  PAYMENTS: '/payments',
+  PAYMENT_NEW: '/payments/new',
+  PAYMENT_PERIODS: '/payment-periods',
+  FAMILIES: '/families',
+  STUDENTS: '/students',
+  // Admin
+  REPORTS: '/reports',
+  AUDIT: '/audit',
+  USERS: '/users',
+  BRANCHES: '/branches',
 } as const;
 
-// '/' (dashboard) is protected by NextAuth middleware — not here, since startsWith('/') matches everything
+export type Route = (typeof ROUTES)[keyof typeof ROUTES];
+
 export const PROTECTED_ROUTES: string[] = [
-  ROUTES.TRANSACTIONS,
-  ROUTES.UPCOMING_PICKUPS,
-  ROUTES.SERVICES,
-  ROUTES.PROMOS,
-  ROUTES.EXPENSES,
-  ROUTES.AUDIT,
-  ROUTES.BRANCHES,
-  ROUTES.STAFF,
-  ROUTES.CUSTOMERS,
+  ROUTES.PAYMENTS,
+  ROUTES.PAYMENT_PERIODS,
+  ROUTES.FAMILIES,
+  ROUTES.STUDENTS,
   ROUTES.REPORTS,
-  ROUTES.CARD_BANKS,
+  ROUTES.AUDIT,
+  ROUTES.USERS,
+  ROUTES.BRANCHES,
   ROUTES.ONBOARDING,
 ];
 

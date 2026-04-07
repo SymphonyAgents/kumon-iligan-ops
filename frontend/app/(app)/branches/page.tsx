@@ -41,7 +41,7 @@ export default function BranchesPage() {
   const [form, setForm] = useState<NewForm>(EMPTY_FORM);
   const [deleteTarget, setDeleteTarget] = useState<Branch | null>(null);
 
-  const { data: branches = [], isLoading } = useBranchesQuery(true);
+  const { data: branches = [], isLoading } = useBranchesQuery();
 
   const closeDialog = () => setDialogOpen(false);
   const createMut = useCreateBranchMutation(() => {

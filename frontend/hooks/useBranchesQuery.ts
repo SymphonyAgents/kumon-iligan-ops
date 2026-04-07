@@ -6,10 +6,10 @@ import { api } from '@/lib/api';
 
 export const BRANCHES_KEY = ['branches'] as const;
 
-export function useBranchesQuery(activeOnly = false) {
+export function useBranchesQuery() {
   return useQuery({
-    queryKey: [...BRANCHES_KEY, activeOnly],
-    queryFn: () => api.branches.list(activeOnly),
+    queryKey: BRANCHES_KEY,
+    queryFn: () => api.branches.list(),
   });
 }
 
@@ -29,8 +29,8 @@ export function useCreateBranchMutation(onSuccess?: () => void) {
 export function useUpdateBranchMutation(onSuccess?: () => void) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...body }: { id: number; name?: string; streetName?: string | null; barangay?: string | null; city?: string | null; province?: string | null; country?: string | null; phone?: string | null; isActive?: boolean }) =>
-      api.branches.update(id, body),
+    mutationFn: ({ id, ...body }: { id: string } & Record<string, unknown>) =>
+      api.branches.update(id, body as Partial<{ name: string; streetName: string; barangay: string; city: string; province: string; country: string; phone: string; isActive: boolean }>),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: BRANCHES_KEY });
       toast.success('Branch updated');
@@ -43,7 +43,7 @@ export function useUpdateBranchMutation(onSuccess?: () => void) {
 export function useDeleteBranchMutation(onSuccess?: () => void) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => api.branches.update(id, { isActive: false }),
+    mutationFn: (id: string) => api.branches.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: BRANCHES_KEY });
       toast.success('Branch deleted');

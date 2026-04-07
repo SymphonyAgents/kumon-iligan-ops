@@ -1,7 +1,7 @@
 'use client';
 
 import { type ColumnDef } from '@tanstack/react-table';
-import { TrashIcon, PencilSimpleIcon, FolderOpenIcon, CheckCircleIcon, XCircleIcon } from '@phosphor-icons/react';
+import { TrashIcon, PencilSimpleIcon, CheckCircleIcon, XCircleIcon } from '@phosphor-icons/react';
 import { formatDatetime, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,26 +11,27 @@ import {
   SelectTrigger,
 } from '@/components/ui/select';
 import { toTitleCase } from '@/utils/text';
-import { ROLES, ROLE_STYLES } from '@/lib/constants';
+import { USER_TYPE, USER_TYPE_LABELS, USER_TYPE_STYLES } from '@/lib/constants';
 import type { AppUser, Branch } from '@/lib/types';
+
+const ROLES = [USER_TYPE.TEACHER, USER_TYPE.ADMIN, USER_TYPE.SUPERADMIN] as const;
 
 function RoleBadge({ role }: { role: string }) {
   return (
     <span className={cn(
       'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium uppercase tracking-wide',
-      ROLE_STYLES[role] ?? 'bg-zinc-100 text-zinc-600',
+      USER_TYPE_STYLES[role] ?? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300',
     )}>
-      {role}
+      {USER_TYPE_LABELS[role] ?? role}
     </span>
   );
 }
 
 interface UserColumnsOptions {
   onRoleChange: (id: string, newUserType: string, currentUserType: string, email: string) => void;
-  onBranchChange?: (id: string, newBranchId: number, currentBranchId: number | null, email: string, newBranchName: string, currentBranchName: string | null) => void;
+  onBranchChange?: (id: string, newBranchId: string, currentBranchId: string | null, email: string, newBranchName: string, currentBranchName: string | null) => void;
   onDelete?: (user: AppUser) => void;
   onEdit?: (user: AppUser) => void;
-  onDocuments?: (user: AppUser) => void;
   onApprove?: (user: AppUser) => void;
   onReject?: (user: AppUser) => void;
   currentUserId?: string;
@@ -43,7 +44,6 @@ export const createUserColumns = ({
   onBranchChange,
   onDelete,
   onEdit,
-  onDocuments,
   onApprove,
   onReject,
   currentUserId,
@@ -52,12 +52,12 @@ export const createUserColumns = ({
 }: UserColumnsOptions): ColumnDef<AppUser>[] => [
   {
     accessorKey: 'email',
-    header: 'Staff',
+    header: 'User',
     cell: ({ row }) => {
       const u = row.original;
       const name = u.fullName ?? u.nickname ?? null;
       const primary = name ? toTitleCase(name) : u.email;
-      return <span className="text-sm text-zinc-950">{primary}</span>;
+      return <span className="text-sm text-zinc-950 dark:text-zinc-50">{primary}</span>;
     },
   },
   {
@@ -101,7 +101,7 @@ export const createUserColumns = ({
 
       if (isSelf || !isSuperadmin || !onBranchChange || user.status === 'pending') {
         return (
-          <span className={cn('text-sm', currentBranch ? 'text-zinc-700' : 'text-zinc-400')}>
+          <span className={cn('text-sm', currentBranch ? 'text-zinc-700 dark:text-zinc-300' : 'text-zinc-400 dark:text-zinc-500')}>
             {toTitleCase(currentBranch?.name) || 'No branch'}
           </span>
         );
@@ -111,14 +111,13 @@ export const createUserColumns = ({
         <Select
           value={user.branchId !== null ? String(user.branchId) : ''}
           onValueChange={(v) => {
-            const newBranchId = parseInt(v, 10);
-            const newBranch = branches.find((b) => b.id === newBranchId);
+            const newBranch = branches.find((b) => b.id === v);
             if (!newBranch) return;
-            onBranchChange(user.id, newBranchId, user.branchId, user.email, newBranch.name, currentBranch?.name ?? null);
+            onBranchChange(user.id, v, user.branchId, user.email, newBranch.name, currentBranch?.name ?? null);
           }}
         >
-          <SelectTrigger className="h-auto border-0 bg-transparent shadow-none p-0 gap-1.5 focus-visible:ring-0 w-auto text-sm text-zinc-700">
-            <span className={cn('text-sm', currentBranch ? 'text-zinc-700' : 'text-zinc-400')}>
+          <SelectTrigger className="h-auto border-0 bg-transparent shadow-none p-0 gap-1.5 focus-visible:ring-0 w-auto text-sm text-zinc-700 dark:text-zinc-300">
+            <span className={cn('text-sm', currentBranch ? 'text-zinc-700 dark:text-zinc-300' : 'text-zinc-400 dark:text-zinc-500')}>
               {toTitleCase(currentBranch?.name) || 'No branch'}
             </span>
           </SelectTrigger>
@@ -151,11 +150,10 @@ export const createUserColumns = ({
       const isPending = user.status === 'pending';
       return (
         <div className="flex items-center justify-end gap-3">
-          {/* Pending users: large, obvious approve/reject icons */}
           {isPending && isSuperadmin && onApprove && (
             <button
               onClick={(e) => { e.stopPropagation(); onApprove(user); }}
-              className="p-1.5 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
+              className="p-1.5 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 rounded-md transition-colors"
               title="Approve"
             >
               <CheckCircleIcon size={22} weight="fill" />
@@ -164,14 +162,13 @@ export const createUserColumns = ({
           {isPending && isSuperadmin && onReject && (
             <button
               onClick={(e) => { e.stopPropagation(); onReject(user); }}
-              className="p-1.5 text-red-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+              className="p-1.5 text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded-md transition-colors"
               title="Reject"
             >
               <XCircleIcon size={22} weight="fill" />
             </button>
           )}
 
-          {/* Active users: existing actions */}
           {!isPending && onEdit && (
             <Button
               size="sm"
@@ -180,16 +177,6 @@ export const createUserColumns = ({
             >
               <PencilSimpleIcon size={13} />
               Edit
-            </Button>
-          )}
-          {!isPending && onDocuments && (
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={(e) => { e.stopPropagation(); onDocuments(user); }}
-            >
-              <FolderOpenIcon size={13} />
-              Docs
             </Button>
           )}
           {!isSelf && !isPending && isSuperadmin && onDelete && (

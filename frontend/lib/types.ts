@@ -1,15 +1,12 @@
-import { ItemStatus, PaymentMethod, ServiceType, TransactionStatus } from './constants';
+import type { UserType, UserStatus, StudentStatus, PaymentStatus, PaymentMethod, PeriodStatus } from './constants';
+export type { UserType, UserStatus, StudentStatus, PaymentStatus, PaymentMethod, PeriodStatus };
 
-export interface CardBank {
-  id: number;
-  name: string;
-  feePercent: string; // numeric from DB, e.g. '3.00'
-  isDefault: boolean;
-  createdAt: string;
-}
+// ---------------------------------------------------------------------------
+// Core entities
+// ---------------------------------------------------------------------------
 
 export interface Branch {
-  id: number;
+  id: string;
   name: string;
   streetName: string | null;
   barangay: string | null;
@@ -18,169 +15,8 @@ export interface Branch {
   country: string | null;
   phone: string | null;
   isActive: boolean;
-  createdAt: string;
-}
-
-export interface User {
-  id: string;
-  email?: string;
-  phone?: string;
-}
-
-export type { TransactionStatus, ItemStatus, PaymentMethod, ServiceType } from './constants';
-
-export interface Customer {
-  id: number;
-  phone: string;
-  name: string | null;
-  email: string | null;
-  streetName: string | null;
-  city: string | null;
-  country: string | null;
-  createdAt: string;
-  updatedAt: string | null;
-  shoesCount?: number;
-}
-
-export interface Service {
-  id: number;
-  name: string;
-  type: ServiceType;
-  price: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string | null;
-}
-
-export interface Promo {
-  id: number;
-  name: string;
-  code: string;
-  percent: string;
-  dateFrom: string | null;
-  dateTo: string | null;
-  isActive: boolean;
-  maxUses: number | null;
-  usageCount?: number;  // computed by backend
-  createdAt: string;
-  updatedAt: string | null;
-}
-
-export interface TransactionItem {
-  id: number;
-  transactionId: number;
-  shoeDescription: string | null;
-  serviceId: number | null;
-  status: ItemStatus;
-  beforeImageUrl: string | null;
-  afterImageUrl: string | null;
-  price: string | null;
-  service?: { id: number; name: string; type: string } | null;
-  addonServices?: { id: number; name: string; type: string }[] | null;
-}
-
-export interface ClaimPayment {
-  id: number;
-  transactionId: number;
-  method: PaymentMethod;
-  amount: string;
-  referenceNumber: string | null;
-  paidAt: string;
-  // Card fee fields — populated when method='card', zero otherwise
-  cardBank: string | null;
-  fee: string;        // scaled string, e.g. '3000' = ₱30.00
-  feePercent: string; // e.g. '3.00' or '3.50'
-}
-
-export interface TransactionPhoto {
-  id: number;
-  transactionId: number;
-  type: 'before' | 'after';
-  url: string;
-  createdAt: string;
-}
-
-export interface AssignableUser {
-  id: string;
-  nickname: string | null;
-  fullName: string | null;
-  email: string;
-  userType: string;
-  branchId: number | null;
-}
-
-export interface Transaction {
-  id: number;
-  number: string;
-  customerName: string | null;
-  customerPhone: string | null;
-  customerEmail: string | null;
-  customerStreetName: string | null;
-  customerCity: string | null;
-  status: TransactionStatus;
-  note: string | null;
-  pickupDate: string | null;
-  newPickupDate: string | null;
-  total: string;
-  paid: string;
-  promoId: number | null;
-  branchId: number | null;
-  staffId?: string | null;
-  createdAt: string;
-  claimedAt: string | null;
   deletedAt: string | null;
-  updatedAt: string | null;
-  staffNickname?: string | null;
-  branchName?: string | null;
-  branchStreetName?: string | null;
-  branchBarangay?: string | null;
-  branchCity?: string | null;
-  branchProvince?: string | null;
-  branchPhone?: string | null;
-  promo?: Promo | null;
-  items?: TransactionItem[];
-  payments?: ClaimPayment[];
-  photos?: TransactionPhoto[];
-  itemCount?: number;
-}
-
-export interface Expense {
-  id: number;
-  dateKey: string;
-  category: string | null;
-  note: string | null;
-  method: string | null;
-  amount: string;
-  staffId: string | null;
-  photoUrl?: string | null;
   createdAt: string;
-}
-
-export interface ExpenseSummary {
-  dateKey: string;
-  total: string;
-}
-
-export interface AuditEntry {
-  id: number;
-  createdAt: string;
-  action: string;
-  auditType: string | null;
-  entityType: string;
-  entityId: string | null;
-  source: string | null;
-  performedBy: string | null;
-  performedByEmail: string | null;
-  performedByFullName: string | null;
-  performedByNickname: string | null;
-  branchId: number | null;
-  details: Record<string, unknown> | null;
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  page: number;
-  limit: number;
 }
 
 export interface AppUser {
@@ -193,110 +29,142 @@ export interface AppUser {
   address: string | null;
   emergencyContactName: string | null;
   emergencyContactNumber: string | null;
-  userType: 'admin' | 'staff' | 'superadmin';
-  status: 'active' | 'pending' | 'rejected';
-  branchId: number | null;
+  userType: UserType;
+  status: UserStatus;
+  branchId: string | null;
   isActive: boolean;
+  deletedAt: string | null;
   createdAt: string;
 }
 
-export interface StaffDocument {
-  id: number;
-  staffId: string;
-  url: string;
-  label: string | null;
-  uploadedAt: string;
+export interface Family {
+  id: string;
+  guardianName: string;
+  guardianPhone: string;
+  guardianEmail: string | null;
+  streetName: string | null;
+  barangay: string | null;
+  city: string | null;
+  province: string | null;
+  country: string | null;
+  notes: string | null;
+  branchId: string;
+  deletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  students?: Student[];
 }
 
-export interface DepositAuditEntry {
-  id: number;
+export interface Student {
+  id: string;
+  familyId: string;
+  branchId: string;
+  firstName: string;
+  lastName: string;
+  level: string | null;
+  enrollmentDate: string;
+  status: StudentStatus;
+  deletedAt: string | null;
   createdAt: string;
+  updatedAt: string;
+  // joined fields
+  guardianName?: string | null;
+  teacherId?: string | null;
+  teacherName?: string | null;
+  // from findOne
+  family?: Family | null;
+  currentAssignment?: StudentTeacherAssignment | null;
+  currentPeriod?: PaymentPeriod | null;
+}
+
+export interface StudentTeacherAssignment {
+  id: string;
+  studentId: string;
+  teacherId: string;
+  branchId: string;
+  isActive: boolean;
+  assignedAt: string;
+  unassignedAt: string | null;
+  // joined fields
+  teacherName?: string | null;
+  teacherEmail?: string | null;
+}
+
+export interface PaymentPeriod {
+  id: string;
+  studentId: string;
+  periodMonth: number;
+  periodYear: number;
+  expectedAmount: number;
+  paidAmount: number;
+  dueDate: string;
+  status: PeriodStatus;
+  deletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  // joined fields
+  studentFirstName?: string | null;
+  studentLastName?: string | null;
+  payments?: Payment[];
+}
+
+export interface Payment {
+  id: string;
+  number: string;
+  studentId: string;
+  familyId: string;
+  periodId: string;
+  amount: number;
+  expectedAmountSnapshot: number;
+  paymentMethod: PaymentMethod;
+  referenceNumber: string | null;
+  receiptImageUrl: string | null;
+  paymentDate: string;
+  status: PaymentStatus;
+  note: string | null;
+  recordedBy: string;
+  verifiedBy: string | null;
+  verifiedAt: string | null;
+  branchId: string;
+  deletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  // joined fields
+  studentFirstName?: string | null;
+  studentLastName?: string | null;
+  guardianName?: string | null;
+  recordedByName?: string | null;
+}
+
+export interface AuditEntry {
+  id: string;
+  createdAt: string;
+  action: string;
+  auditType: string | null;
+  entityType: string;
+  entityId: string | null;
+  source: string | null;
   performedBy: string | null;
   performedByEmail: string | null;
-  branchId: number | null;
-  details: {
-    year: number;
-    month: number;
-    method: string;
-    added: string;
-    total: string;
-    origin?: string;
-  } | null;
+  performedByFullName: string | null;
+  branchId: string | null;
+  details: Record<string, unknown> | null;
 }
 
-export interface TodayCollection {
-  id: number;
-  transactionId: number;
-  method: string;
-  amount: string;
-  paidAt: string;
-  txnNumber: string;
-  customerName: string | null;
+export interface AssignableUser {
+  id: string;
+  nickname: string | null;
+  fullName: string | null;
+  email: string;
+  userType: UserType;
+  branchId: string | null;
 }
 
-export interface DashboardSummary {
-  monthly: {
-    transactionCount: number;
-    totalPairs: number;
-    totalRevenue: string;
-    totalPaid: string;
-    totalBalance: string;
-    totalExpenses: string;
-    netIncome: string;
-    byStatus: Record<string, number> & { total: number };
-  };
-  collections: {
-    cash: string;
-    gcash: string;
-    card: string;
-    bank_deposit: string;
-    cardFee?: string;
-  };
-  todayCollections: TodayCollection[];
-  todayCollectionTotal: string;
-  daily: {
-    count: number;
-    totalRevenue: string;
-    totalPaid: string;
-    totalBalance: string;
-  };
-}
+// ---------------------------------------------------------------------------
+// API response helpers
+// ---------------------------------------------------------------------------
 
-export interface ReportSummary {
-  collections: {
-    cash: string;
-    gcash: string;
-    card: string;
-    bank_deposit: string;
-    total: string;
-  };
-  expenses: {
-    total: string;
-    items: Expense[];
-  };
-  transactions: {
-    total: number;
-    claimed: number;
-    cancelled: number;
-    pending: number;
-    in_progress: number;
-    done: number;
-  };
-  shoesCount: number;
-  net: string;
-  topServices: {
-    name: string;
-    count: number;
-    revenue: string;
-  }[];
-  txnList: {
-    id: number;
-    number: string;
-    customerName: string | null;
-    createdAt: string;
-    status: TransactionStatus;
-    total: string;
-    paid: string;
-    itemCount: number;
-  }[];
+export interface BulkGenerateResult {
+  created: number;
+  skipped: number;
 }

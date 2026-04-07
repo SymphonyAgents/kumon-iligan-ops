@@ -1,32 +1,22 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeftIcon,
-  FileTextIcon,
-  TrashIcon,
-  ArrowSquareOutIcon,
-  UploadSimpleIcon,
-  CameraIcon,
   CheckCircleIcon,
   XCircleIcon,
 } from '@phosphor-icons/react';
-import { toast } from 'sonner';
-import { cn, formatDatetime } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { toTitleCase } from '@/utils/text';
-import { ROLE_STYLES, STAFF_SECTIONS, type StaffSection } from '@/lib/constants';
+import { USER_TYPE_STYLES, USER_TYPE_LABELS } from '@/lib/constants';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { api } from '@/lib/api';
 import {
   useUserQuery,
   useUpdateUserProfileMutation,
-  useStaffDocumentsQuery,
-  useAddDocumentMutation,
-  useDeleteDocumentMutation,
   useApproveUserMutation,
   useRejectUserMutation,
 } from '@/hooks/useUsersQuery';
@@ -54,22 +44,15 @@ export default function StaffProfilePage() {
   const { data: currentUser } = useCurrentUserQuery();
   const isAdmin = currentUser?.userType === 'admin' || currentUser?.userType === 'superadmin';
   const isSuperadmin = currentUser?.userType === 'superadmin';
-  const isSelf = currentUser?.id === userId;
-  const canUpload = isAdmin || isSelf;
 
   const { data: user, isLoading } = useUserQuery(userId);
-  const { data: docs = [], isLoading: docsLoading } = useStaffDocumentsQuery(userId);
 
   const updateMut = useUpdateUserProfileMutation();
-  const addDocMut = useAddDocumentMutation(userId);
-  const deleteDocMut = useDeleteDocumentMutation(userId);
-  const approveMut = useApproveUserMutation(() => { setApproveOpen(false); router.push('/users?tab=pending'); });
-  const rejectMut = useRejectUserMutation(() => { setRejectOpen(false); router.push('/users?tab=pending'); });
+  const approveMut = useApproveUserMutation(() => { setApproveOpen(false); router.push('/staff?tab=pending'); });
+  const rejectMut = useRejectUserMutation(() => { setRejectOpen(false); router.push('/staff?tab=pending'); });
 
   const [approveOpen, setApproveOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
-
-  const [section, setSection] = useState<StaffSection>('profile');
 
   const [form, setForm] = useState({
     fullName: '',
@@ -145,89 +128,6 @@ export default function StaffProfilePage() {
     });
   }
 
-  const fileRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [docLabel, setDocLabel] = useState('');
-  const [cameraOpen, setCameraOpen] = useState(false);
-  const [capturedImage, setCapturedImage] = useState<{ url: string; file: File } | null>(null);
-
-  async function openCamera() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-      streamRef.current = stream;
-      setCapturedImage(null);
-      setCameraOpen(true);
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          void videoRef.current.play();
-        }
-      }, 50);
-    } catch {
-      toast.error('Camera not available');
-    }
-  }
-
-  function closeCamera() {
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-    setCameraOpen(false);
-    setCapturedImage(null);
-  }
-
-  function capturePhoto() {
-    const video = videoRef.current;
-    if (!video) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d')?.drawImage(video, 0, 0);
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      const file = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
-      // stop stream and show preview
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-      setCapturedImage({ url: URL.createObjectURL(blob), file });
-    }, 'image/jpeg', 0.9);
-  }
-
-  function retakePhoto() {
-    if (capturedImage) URL.revokeObjectURL(capturedImage.url);
-    setCapturedImage(null);
-    // restart stream
-    void openCamera();
-  }
-
-  function confirmPhoto() {
-    if (!capturedImage) return;
-    const file = capturedImage.file;
-    URL.revokeObjectURL(capturedImage.url);
-    setCapturedImage(null);
-    setCameraOpen(false);
-    void handleDocUpload(file);
-  }
-
-  async function handleDocUpload(file: File) {
-    setUploading(true);
-    try {
-      const ext = file.name.split('.').pop() ?? 'bin';
-      const { signedUrl, publicUrl } = await api.expenses.uploadUrl(ext);
-      const uploadRes = await fetch(signedUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      if (!uploadRes.ok) throw new Error('Upload failed');
-      await addDocMut.mutateAsync({ url: publicUrl, label: docLabel.trim() || file.name });
-      setDocLabel('');
-      if (fileRef.current) fileRef.current.value = '';
-      toast.success('Document uploaded');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Upload failed');
-    } finally {
-      setUploading(false);
-    }
-  }
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-64">
@@ -239,7 +139,7 @@ export default function StaffProfilePage() {
   if (!user) {
     return (
       <div className="text-center py-16">
-        <p className="text-sm text-zinc-400">Staff member not found.</p>
+        <p className="text-sm text-zinc-400 dark:text-zinc-500">User not found.</p>
       </div>
     );
   }
@@ -268,90 +168,29 @@ export default function StaffProfilePage() {
         loading={rejectMut.isPending}
       />
 
-      {/* Hidden file input */}
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*,.pdf,.doc,.docx"
-        className="hidden"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleDocUpload(f); }}
-      />
-
-      {/* Camera modal — fullscreen on mobile */}
-      {cameraOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black sm:items-center sm:justify-center sm:bg-black/80">
-          <div className="flex flex-col flex-1 sm:flex-none sm:rounded-xl sm:overflow-hidden sm:shadow-xl sm:w-full sm:max-w-md bg-black">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-black/60 sm:bg-zinc-900">
-              <span className="text-sm font-semibold text-white">
-                {capturedImage ? 'Preview' : 'Take Photo'}
-              </span>
-              <button onClick={closeCamera} className="text-xs text-zinc-400 hover:text-white transition-colors">Cancel</button>
-            </div>
-
-            {/* Video / Preview */}
-            <div className="flex-1 sm:flex-none relative">
-              {capturedImage ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={capturedImage.url} alt="Preview" className="w-full sm:max-h-96 object-contain bg-black" />
-              ) : (
-                <video ref={videoRef} className="w-full sm:max-h-96 object-cover bg-black" playsInline muted />
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3 justify-center p-4 bg-black/60 sm:bg-zinc-900">
-              {capturedImage ? (
-                <>
-                  <button
-                    onClick={retakePhoto}
-                    className="flex-1 sm:flex-none px-5 py-2.5 text-sm font-medium text-zinc-300 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors"
-                  >
-                    Retake
-                  </button>
-                  <button
-                    onClick={confirmPhoto}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors"
-                  >
-                    Use Photo
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={capturePhoto}
-                  className="w-16 h-16 flex items-center justify-center rounded-full border-4 border-white bg-white/20 hover:bg-white/30 transition-colors"
-                >
-                  <div className="w-10 h-10 rounded-full bg-white" />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Back link */}
       <div className="mb-6">
         <Link
-          href={ROUTES.STAFF}
-          className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-950 transition-colors"
+          href={ROUTES.USERS}
+          className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-950 dark:hover:text-zinc-50 transition-colors"
         >
           <ArrowLeftIcon size={14} />
-          Staff
+          Users
         </Link>
       </div>
 
       {/* Identity header */}
-      <div className="flex items-center gap-4 mb-8 pb-6 border-b border-zinc-200">
-        <div className="w-14 h-14 rounded-full bg-zinc-950 text-white flex items-center justify-center text-base font-bold shrink-0 select-none">
+      <div className="flex items-center gap-4 mb-8 pb-6 border-b border-zinc-200 dark:border-zinc-800">
+        <div className="w-14 h-14 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 flex items-center justify-center text-base font-bold shrink-0 select-none">
           {initials(user)}
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-semibold text-zinc-950 truncate">
+          <h1 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50 truncate">
             {user.fullName ? (
               <>
                 {toTitleCase(user.fullName)}
                 {user.nickname && (
-                  <span className="font-normal text-zinc-400"> ({toTitleCase(user.nickname)})</span>
+                  <span className="font-normal text-zinc-400 dark:text-zinc-500"> ({toTitleCase(user.nickname)})</span>
                 )}
               </>
             ) : user.nickname ? (
@@ -373,18 +212,18 @@ export default function StaffProfilePage() {
         </div>
         <span className={cn(
           'shrink-0 inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wide',
-          ROLE_STYLES[user.userType] ?? 'bg-zinc-100 text-zinc-600',
+          USER_TYPE_STYLES[user.userType] ?? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300',
         )}>
-          {user.userType}
+          {USER_TYPE_LABELS[user.userType] ?? user.userType}
         </span>
       </div>
 
       {/* Pending approval action strip */}
       {isPendingUser && isSuperadmin && (
-        <div className="mb-6 flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+        <div className="mb-6 flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
           <div className="flex-1">
-            <p className="text-sm font-medium text-amber-800">This user is pending approval</p>
-            <p className="text-xs text-amber-600 mt-0.5">Approve or reject their access to the system.</p>
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">This user is pending approval</p>
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Approve or reject their access to the system.</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -405,205 +244,87 @@ export default function StaffProfilePage() {
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Nav — horizontal tabs on mobile, vertical list on desktop */}
-        <nav className="lg:w-44 shrink-0">
-          <div className="flex lg:hidden gap-1 overflow-x-auto pb-2 -mx-1 px-1">
-            {STAFF_SECTIONS.map(({ id, label }) => (
-              <button
-                key={id}
-                onClick={() => setSection(id)}
-                className={cn(
-                  'whitespace-nowrap px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 shrink-0',
-                  section === id ? 'bg-zinc-950 text-white' : 'text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100',
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="hidden lg:flex flex-col gap-0.5">
-            {STAFF_SECTIONS.map(({ id, label }) => (
-              <button
-                key={id}
-                onClick={() => setSection(id)}
-                className={cn(
-                  'text-left w-full px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150',
-                  section === id ? 'bg-zinc-950 text-white' : 'text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100',
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </nav>
+      {/* Profile card */}
+      <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg p-5 sm:p-6 space-y-4">
+        <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">Profile</h2>
+        <Input
+          label="Email"
+          value={user.email}
+          readOnly
+          className="bg-zinc-50 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400"
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="Full Name"
+            value={form.fullName}
+            onChange={(e) => set('fullName', e.target.value)}
+            placeholder="Juan dela Cruz"
+            readOnly={!isAdmin}
+          />
+          <Input
+            label="Nickname"
+            value={form.nickname}
+            onChange={(e) => set('nickname', e.target.value)}
+            placeholder="Juan"
+            readOnly={!isAdmin}
+          />
+          <Input
+            label="Contact Number"
+            value={form.contactNumber}
+            onChange={(e) => set('contactNumber', e.target.value)}
+            onBlur={() => touch('contactNumber')}
+            placeholder="09XX XXX XXXX"
+            readOnly={!isAdmin}
+            error={errors.contactNumber}
+          />
+          <Input
+            label="Birthday"
+            type="date"
+            value={form.birthday}
+            onChange={(e) => set('birthday', e.target.value)}
+            onBlur={() => touch('birthday')}
+            readOnly={!isAdmin}
+            error={errors.birthday}
+          />
+        </div>
+        <Input
+          label="Address"
+          value={form.address}
+          onChange={(e) => set('address', e.target.value)}
+          placeholder="Street, Barangay, City"
+          readOnly={!isAdmin}
+        />
+      </div>
 
-        {/* Section content */}
-        <div className="flex-1 min-w-0 space-y-4">
-
-          {/* Profile + Emergency Contact + Save */}
-          {section === 'profile' && (
-            <>
-              {/* Profile card */}
-              <div className="bg-white border border-zinc-200 rounded-lg p-5 sm:p-6 space-y-4">
-                <h2 className="text-sm font-semibold text-zinc-950">Profile</h2>
-                <Input
-                  label="Email"
-                  value={user.email}
-                  readOnly
-                  className="bg-zinc-50 text-zinc-500"
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input
-                    label="Full Name"
-                    value={form.fullName}
-                    onChange={(e) => set('fullName', e.target.value)}
-                    placeholder="Juan dela Cruz"
-                    readOnly={!isAdmin}
-                  />
-                  <Input
-                    label="Nickname"
-                    value={form.nickname}
-                    onChange={(e) => set('nickname', e.target.value)}
-                    placeholder="Juan"
-                    readOnly={!isAdmin}
-                  />
-                  <Input
-                    label="Contact Number"
-                    value={form.contactNumber}
-                    onChange={(e) => set('contactNumber', e.target.value)}
-                    onBlur={() => touch('contactNumber')}
-                    placeholder="09XX XXX XXXX"
-                    readOnly={!isAdmin}
-                    error={errors.contactNumber}
-                  />
-                  <Input
-                    label="Birthday"
-                    type="date"
-                    value={form.birthday}
-                    onChange={(e) => set('birthday', e.target.value)}
-                    onBlur={() => touch('birthday')}
-                    readOnly={!isAdmin}
-                    error={errors.birthday}
-                  />
-                </div>
-                <Input
-                  label="Address"
-                  value={form.address}
-                  onChange={(e) => set('address', e.target.value)}
-                  placeholder="Street, Barangay, City"
-                  readOnly={!isAdmin}
-                />
-              </div>
-
-              {/* Emergency Contact card */}
-              <div className="bg-white border border-zinc-200 rounded-lg p-5 sm:p-6 space-y-4">
-                <h2 className="text-sm font-semibold text-zinc-950">Emergency Contact</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input
-                    label="Name"
-                    value={form.emergencyContactName}
-                    onChange={(e) => set('emergencyContactName', e.target.value)}
-                    placeholder="Full name"
-                    readOnly={!isAdmin}
-                  />
-                  <Input
-                    label="Number"
-                    value={form.emergencyContactNumber}
-                    onChange={(e) => set('emergencyContactNumber', e.target.value)}
-                    placeholder="09XX XXX XXXX"
-                    readOnly={!isAdmin}
-                  />
-                </div>
-              </div>
-
-              {/* Single save button for all profile changes */}
-              {isAdmin && (
-                <div className="flex justify-end">
-                  <Button size="sm" disabled={updateMut.isPending} onClick={handleSave}>
-                    {updateMut.isPending ? <Spinner size={14} /> : 'Save Changes'}
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Documents */}
-          {section === 'documents' && (
-            <div className="bg-white border border-zinc-200 rounded-lg p-5 sm:p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-zinc-950">Documents</h2>
-                {canUpload && (
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={() => void openCamera()}
-                      disabled={uploading}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-md transition-colors disabled:opacity-50"
-                    >
-                      <CameraIcon size={13} />
-                      Camera
-                    </button>
-                    <button
-                      onClick={() => fileRef.current?.click()}
-                      disabled={uploading}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-white bg-zinc-950 hover:bg-zinc-800 rounded-md transition-colors disabled:opacity-50"
-                    >
-                      {uploading ? <Spinner size={12} /> : <UploadSimpleIcon size={13} />}
-                      Add Document
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {canUpload && (
-                <Input
-                  placeholder="Document label (optional)"
-                  value={docLabel}
-                  onChange={(e) => setDocLabel(e.target.value)}
-                />
-              )}
-
-              {docsLoading ? (
-                <div className="flex justify-center py-8">
-                  <Spinner size={20} className="text-zinc-300" />
-                </div>
-              ) : docs.length === 0 ? (
-                <p className="text-sm text-zinc-400 py-6 text-center">No documents uploaded yet.</p>
-              ) : (
-                <div className="divide-y divide-zinc-100">
-                  {docs.map((doc) => (
-                    <div key={doc.id} className="flex items-center gap-3 py-3">
-                      <FileTextIcon size={16} className="text-zinc-400 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-zinc-950 truncate">{doc.label ?? 'Untitled'}</p>
-                        <p className="text-xs text-zinc-400">{formatDatetime(doc.uploadedAt)}</p>
-                      </div>
-                      <a
-                        href={doc.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-1.5 text-zinc-400 hover:text-zinc-700 rounded transition-colors"
-                      >
-                        <ArrowSquareOutIcon size={15} />
-                      </a>
-                      {canUpload && (
-                        <button
-                          onClick={() => deleteDocMut.mutate(doc.id)}
-                          disabled={deleteDocMut.isPending}
-                          className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                        >
-                          <TrashIcon size={15} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
+      {/* Emergency Contact card */}
+      <div className="mt-4 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg p-5 sm:p-6 space-y-4">
+        <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">Emergency Contact</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="Name"
+            value={form.emergencyContactName}
+            onChange={(e) => set('emergencyContactName', e.target.value)}
+            placeholder="Full name"
+            readOnly={!isAdmin}
+          />
+          <Input
+            label="Number"
+            value={form.emergencyContactNumber}
+            onChange={(e) => set('emergencyContactNumber', e.target.value)}
+            placeholder="09XX XXX XXXX"
+            readOnly={!isAdmin}
+          />
         </div>
       </div>
+
+      {/* Single save button for all profile changes */}
+      {isAdmin && (
+        <div className="flex justify-end mt-4">
+          <Button size="sm" disabled={updateMut.isPending} onClick={handleSave}>
+            {updateMut.isPending ? <Spinner size={14} /> : 'Save Changes'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

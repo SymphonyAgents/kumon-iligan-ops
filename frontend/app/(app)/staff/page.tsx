@@ -12,6 +12,7 @@ import { useUsersQuery, useUpdateUserRoleMutation, useUpdateUserBranchMutation, 
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 import { useBranchesQuery } from '@/hooks/useBranchesQuery';
 import { toTitleCase } from '@/utils/text';
+import { USER_TYPE } from '@/lib/constants';
 import { UserRoleConfirmDialog, type PendingRoleChange } from '@/components/users/UserRoleConfirmDialog';
 import { UserBranchConfirmDialog, type PendingBranchChange } from '@/components/users/UserBranchConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -22,10 +23,10 @@ type Tab = 'approved' | 'pending';
 export default function StaffPage() {
   const router = useRouter();
   const { data: currentUser, isSuccess: userLoaded } = useCurrentUserQuery();
-  const isAdmin = currentUser?.userType === 'admin' || currentUser?.userType === 'superadmin';
+  const isAdmin = currentUser?.userType === USER_TYPE.ADMIN || currentUser?.userType === USER_TYPE.SUPERADMIN;
 
   const { data: users = [], isLoading } = useUsersQuery();
-  const { data: branches = [] } = useBranchesQuery(false);
+  const { data: branches = [] } = useBranchesQuery();
   const updateRoleMut = useUpdateUserRoleMutation();
   const updateBranchMut = useUpdateUserBranchMutation();
   const deleteMut = useDeleteUserMutation(() => setDeleteTarget(null));
@@ -39,7 +40,7 @@ export default function StaffPage() {
   const [approveTarget, setApproveTarget] = useState<AppUser | null>(null);
   const [rejectTarget, setRejectTarget] = useState<AppUser | null>(null);
 
-  const isSuperadmin = currentUser?.userType === 'superadmin';
+  const isSuperadmin = currentUser?.userType === USER_TYPE.SUPERADMIN;
 
   const columns = useMemo(
     () => createUserColumns({
@@ -94,12 +95,12 @@ export default function StaffPage() {
   if (userLoaded && !isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center min-h-64 gap-3 text-center">
-        <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center">
-          <LockSimpleIcon size={20} className="text-zinc-400" />
+        <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+          <LockSimpleIcon size={20} className="text-zinc-400 dark:text-zinc-500" />
         </div>
         <div>
-          <p className="text-sm font-medium text-zinc-950">Access restricted</p>
-          <p className="text-xs text-zinc-400 mt-0.5">Staff management is only available to admins.</p>
+          <p className="text-sm font-medium text-zinc-950 dark:text-zinc-50">Access restricted</p>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">User management is only available to admins.</p>
         </div>
       </div>
     );
@@ -109,7 +110,7 @@ export default function StaffPage() {
     <>
       <ConfirmDialog
         open={!!deleteTarget}
-        title="Remove staff member?"
+        title="Remove user?"
         description={`Remove ${deleteTarget?.email}? They will no longer be able to access the system.`}
         confirmLabel="Remove"
         onConfirm={() => { if (deleteTarget) deleteMut.mutate(deleteTarget.id); }}
@@ -162,24 +163,24 @@ export default function StaffPage() {
       />
       <div>
         <PageHeader
-          title="Staff"
+          title="Users"
           subtitle="Manage team roles and access"
         />
 
         {/* Tabs */}
-        <div className="flex gap-1 border-b border-zinc-200 mb-6">
+        <div className="flex gap-1 border-b border-zinc-200 dark:border-zinc-800 mb-6">
           <button
             onClick={() => setTab('approved')}
             className={cn(
               'px-4 py-2.5 text-sm font-medium transition-colors relative',
               tab === 'approved'
-                ? 'text-zinc-950'
-                : 'text-zinc-400 hover:text-zinc-600',
+                ? 'text-zinc-950 dark:text-zinc-50'
+                : 'text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300',
             )}
           >
             Approved
             {tab === 'approved' && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-950 rounded-t" />
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-950 dark:bg-white rounded-t" />
             )}
           </button>
           <button
@@ -187,8 +188,8 @@ export default function StaffPage() {
             className={cn(
               'px-4 py-2.5 text-sm font-medium transition-colors relative',
               tab === 'pending'
-                ? 'text-zinc-950'
-                : 'text-zinc-400 hover:text-zinc-600',
+                ? 'text-zinc-950 dark:text-zinc-50'
+                : 'text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300',
             )}
           >
             <span className="flex items-center gap-1.5">
@@ -198,7 +199,7 @@ export default function StaffPage() {
               )}
             </span>
             {tab === 'pending' && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-950 rounded-t" />
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-950 dark:bg-white rounded-t" />
             )}
           </button>
         </div>
@@ -212,18 +213,18 @@ export default function StaffPage() {
                 data={[]}
                 isLoading
                 loadingRows={4}
-                emptyTitle="No staff found"
-                emptyDescription="Staff appear here once they sign in."
+                emptyTitle="No users found"
+                emptyDescription="Users appear here once they sign in."
               />
             ) : grouped.length === 0 ? (
-              <p className="text-sm text-zinc-400">No approved staff found.</p>
+              <p className="text-sm text-zinc-400">No approved users found.</p>
             ) : (
               <div className="space-y-8">
                 {grouped.map((group) => (
                   <div key={group.label}>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-3">
                       {group.label}
-                      <span className="ml-2 font-normal normal-case tracking-normal text-zinc-300">
+                      <span className="ml-2 font-normal normal-case tracking-normal text-zinc-300 dark:text-zinc-600">
                         {group.users.length} {group.users.length === 1 ? 'member' : 'members'}
                       </span>
                     </p>
@@ -231,7 +232,7 @@ export default function StaffPage() {
                       columns={columns}
                       data={group.users}
                       isLoading={false}
-                      emptyTitle="No staff"
+                      emptyTitle="No users"
                       emptyDescription=""
                       onRowClick={(user) => router.push(`/staff/${user.id}`)}
                     />
@@ -251,20 +252,20 @@ export default function StaffPage() {
                 data={[]}
                 isLoading
                 loadingRows={3}
-                emptyTitle="No pending staff"
+                emptyTitle="No pending users"
                 emptyDescription=""
               />
             ) : pendingUsers.length === 0 ? (
               <div className="text-center py-16">
                 <p className="text-sm text-zinc-400">No pending approval requests.</p>
-                <p className="text-xs text-zinc-300 mt-1">New signups will appear here for review.</p>
+                <p className="text-xs text-zinc-300 dark:text-zinc-600 mt-1">New signups will appear here for review.</p>
               </div>
             ) : (
               <DataTable
                 columns={columns}
                 data={pendingUsers}
                 isLoading={false}
-                emptyTitle="No pending staff"
+                emptyTitle="No pending users"
                 emptyDescription=""
                 onRowClick={(user) => router.push(`/staff/${user.id}`)}
               />

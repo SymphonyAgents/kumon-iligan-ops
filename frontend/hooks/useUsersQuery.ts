@@ -7,12 +7,11 @@ import type { AppUser } from '@/lib/types';
 
 const USERS_KEY = ['users'];
 const ASSIGNABLE_KEY = ['users', 'assignable'];
-const docsKey = (id: string) => ['users', id, 'documents'];
 
-export function useUsersQuery() {
+export function useUsersQuery(branchId?: string) {
   return useQuery({
-    queryKey: USERS_KEY,
-    queryFn: () => api.users.list(),
+    queryKey: [...USERS_KEY, branchId],
+    queryFn: () => api.users.list(branchId),
   });
 }
 
@@ -24,11 +23,11 @@ export function useUserQuery(id: string) {
   });
 }
 
-export function useAssignableUsersQuery() {
+export function useAssignableUsersQuery(branchId?: string | null) {
   return useQuery({
-    queryKey: ASSIGNABLE_KEY,
-    queryFn: () => api.users.listAssignable(),
-    staleTime: 5 * 60 * 1000, // 5 min — user list rarely changes
+    queryKey: [...ASSIGNABLE_KEY, branchId],
+    queryFn: () => api.users.assignable(branchId),
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -47,7 +46,7 @@ export function useUpdateUserRoleMutation() {
 export function useUpdateUserBranchMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, branchId }: { id: string; branchId: number }) =>
+    mutationFn: ({ id, branchId }: { id: string; branchId: string }) =>
       api.users.updateBranch(id, branchId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: USERS_KEY });
@@ -107,37 +106,5 @@ export function useUpdateUserProfileMutation(onSuccess?: () => void) {
       onSuccess?.();
     },
     onError: (err: Error) => toast.error('Failed to update profile', { description: err.message }),
-  });
-}
-
-export function useStaffDocumentsQuery(userId: string) {
-  return useQuery({
-    queryKey: docsKey(userId),
-    queryFn: () => api.users.getDocuments(userId),
-    enabled: !!userId,
-  });
-}
-
-export function useAddDocumentMutation(userId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (body: { url: string; label?: string }) =>
-      api.users.addDocument(userId, body),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: docsKey(userId) });
-    },
-    onError: (err: Error) => toast.error('Failed to save document', { description: err.message }),
-  });
-}
-
-export function useDeleteDocumentMutation(userId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (docId: number) => api.users.deleteDocument(userId, docId),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: docsKey(userId) });
-      toast.success('Document removed');
-    },
-    onError: (err: Error) => toast.error('Failed to remove document', { description: err.message }),
   });
 }

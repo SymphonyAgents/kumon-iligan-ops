@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
-import { STAFF_ALLOWED_PATHS } from '@/lib/constants';
+import { USER_TYPE } from '@/lib/constants';
 
 interface RequireAdminProps {
   children: React.ReactNode;
@@ -14,17 +14,19 @@ export function RequireAdmin({ children }: RequireAdminProps) {
   const pathname = usePathname();
   const { data: user, isLoading } = useCurrentUserQuery();
 
-  const isStaffAllowed = STAFF_ALLOWED_PATHS.some((p) => pathname?.startsWith(p));
+  // Teachers can access payments
+  const teacherAllowedPaths = ['/payments'];
+  const isTeacherAllowed = teacherAllowedPaths.some((p) => pathname?.startsWith(p));
 
   useEffect(() => {
-    if (!isLoading && user && user.userType === 'staff' && !isStaffAllowed) {
-      router.replace('/transactions');
+    if (!isLoading && user && user.userType === USER_TYPE.TEACHER && !isTeacherAllowed) {
+      router.replace('/');
     }
-  }, [user, isLoading, router, isStaffAllowed]);
+  }, [user, isLoading, router, isTeacherAllowed]);
 
   if (isLoading) return null;
   if (!user) return null;
-  if (user.userType === 'staff' && !isStaffAllowed) return null;
+  if (user.userType === USER_TYPE.TEACHER && !isTeacherAllowed) return null;
 
   return <>{children}</>;
 }
