@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { DbModule } from './db/db.module';
-import { SupabaseModule } from './supabase/supabase.module';
 import { AuthModule } from './auth/auth.module';
 import { AuditModule } from './audit/audit.module';
 import { EmailModule } from './email/email.module';
@@ -22,7 +21,6 @@ import { CardBanksModule } from './card-banks/card-banks.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DbModule,
-    SupabaseModule,
     AuthModule,
     AuditModule,
     EmailModule,

@@ -2,31 +2,25 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createBrowserClient } from '@supabase/ssr';
+import { useSession } from 'next-auth/react';
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 import { Spinner } from '@/components/ui/spinner';
 
 export function OnboardingCheck() {
   const router = useRouter();
+  const { status } = useSession();
   const { data: user, isLoading } = useCurrentUserQuery();
 
   const isPending = !isLoading && !!user && user.status === 'pending';
   const isRejected = !isLoading && !!user && user.status === 'rejected';
   const needsOnboarding = !isLoading && !!user && user.status === 'active' && user.branchId === null;
 
-  // Force logout + redirect when Supabase refresh token is invalid/expired
+  // Redirect to login if session is lost
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    );
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
-        router.push('/login');
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [router]);
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
 
   useEffect(() => {
     if (isPending || isRejected) {

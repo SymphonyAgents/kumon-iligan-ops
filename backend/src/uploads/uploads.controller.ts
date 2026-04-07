@@ -1,5 +1,5 @@
 import { Controller, Post, Body, Req, UseGuards, ForbiddenException } from '@nestjs/common';
-import { SupabaseAuthGuard } from '../auth/auth.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import type { AuthedRequest } from '../auth/auth.types';
 import { UploadsService } from './uploads.service';
 import { UsersService } from '../users/users.service';
@@ -12,7 +12,7 @@ export class UploadsController {
     private readonly usersService: UsersService,
   ) {}
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Post('presigned-url')
   async createPresignedUrl(@Body() dto: PresignedUrlDto, @Req() req: AuthedRequest) {
     // Verify user has branch-level access to the transaction they're uploading for

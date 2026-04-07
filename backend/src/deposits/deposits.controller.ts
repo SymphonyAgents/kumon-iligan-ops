@@ -1,13 +1,13 @@
 import { Controller, Get, Patch, Body, Query, Req, UseGuards, ForbiddenException, BadRequestException } from '@nestjs/common';
 import type { AuthedRequest } from '../auth/auth.types';
-import { SupabaseAuthGuard } from '../auth/auth.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { DepositsService } from './deposits.service';
 import { UsersService } from '../users/users.service';
 
 @Controller('deposits')
-@UseGuards(SupabaseAuthGuard, RolesGuard)
+@UseGuards(AuthGuard, RolesGuard)
 @Roles('admin', 'superadmin')
 export class DepositsController {
   constructor(

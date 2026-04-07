@@ -9,7 +9,7 @@ import {
   ParseIntPipe,
   UseGuards,
 } from '@nestjs/common';
-import { SupabaseAuthGuard } from '../auth/auth.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CardBanksService } from './card-banks.service';
@@ -17,7 +17,7 @@ import { CreateCardBankDto } from './dto/create-card-bank.dto';
 import { UpdateCardBankDto } from './dto/update-card-bank.dto';
 
 @Controller('card-banks')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(AuthGuard)
 export class CardBanksController {
   constructor(private readonly cardBanksService: CardBanksService) {}
 

@@ -1,11 +1,11 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
-import { SupabaseAuthGuard } from '../auth/auth.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { CustomersService } from './customers.service';
 
 @Controller('customers')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(AuthGuard)
 export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}
 

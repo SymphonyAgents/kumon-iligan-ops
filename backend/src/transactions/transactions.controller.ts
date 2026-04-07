@@ -15,7 +15,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { SupabaseAuthGuard } from '../auth/auth.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/auth.types';
@@ -61,7 +61,7 @@ export class TransactionsController {
     }
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Get()
   async findAll(
     @Req() req: AuthedRequest,
@@ -85,7 +85,7 @@ export class TransactionsController {
     });
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Get('recent')
   async findRecent(@Req() req: AuthedRequest, @Query('limit') limit?: string) {
     const branch = await this.scopedBranchId(req.user.id);
@@ -95,14 +95,14 @@ export class TransactionsController {
     );
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Get('upcoming')
   async findUpcoming(@Req() req: AuthedRequest) {
     const branch = await this.scopedBranchId(req.user.id);
     return this.transactionsService.findUpcoming(branch);
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Get('upcoming/monthly')
   async findUpcomingByMonth(
     @Req() req: AuthedRequest,
@@ -117,14 +117,14 @@ export class TransactionsController {
     );
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Get('today-collections')
   async todayCollections(@Req() req: AuthedRequest) {
     const branch = await this.scopedBranchId(req.user.id);
     return this.transactionsService.todayCollections(branch);
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Get('dashboard')
   async dashboardSummary(
     @Req() req: AuthedRequest,
@@ -140,7 +140,7 @@ export class TransactionsController {
     );
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Get('collections/history')
   async collectionsHistory(
     @Req() req: AuthedRequest,
@@ -158,7 +158,7 @@ export class TransactionsController {
     );
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Get('collections/summary')
   async collectionsSummary(
     @Req() req: AuthedRequest,
@@ -174,7 +174,7 @@ export class TransactionsController {
     );
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Get('number/:number')
   async findByNumber(@Param('number') number: string, @Req() req: AuthedRequest) {
     const txn = await this.transactionsService.findByNumber(number);
@@ -182,7 +182,7 @@ export class TransactionsController {
     return txn;
   }
 
-  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles('admin', 'superadmin')
   @Get('deleted')
   async findDeleted(@Req() req: AuthedRequest) {
@@ -190,7 +190,7 @@ export class TransactionsController {
     return this.transactionsService.findDeleted(branch);
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number, @Req() req: AuthedRequest) {
     const txn = await this.transactionsService.findOne(id);
@@ -198,7 +198,7 @@ export class TransactionsController {
     return txn;
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Post()
   async create(@Body() dto: CreateTransactionDto, @Req() req: AuthedRequest) {
     // Require branch assignment before creating transactions
@@ -209,7 +209,7 @@ export class TransactionsController {
     return this.transactionsService.create(dto, 'pos', req.user?.id);
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Patch(':id')
   async update(
     @Param('id', ParseIntPipe) id: number,
@@ -221,7 +221,7 @@ export class TransactionsController {
     return this.transactionsService.update(id, dto, 'pos', req.user?.id);
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Patch(':id/items/:itemId')
   async updateItem(
     @Param('id', ParseIntPipe) id: number,
@@ -234,7 +234,7 @@ export class TransactionsController {
     return this.transactionsService.updateItem(id, itemId, dto, req.user?.id);
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Post(':id/payments')
   async addPayment(
     @Param('id', ParseIntPipe) id: number,
@@ -252,7 +252,7 @@ export class TransactionsController {
    * Changes involving bank_deposit require manual deposit record reconciliation (surfaced
    * in the response via `bankDepositWarning` flag).
    */
-  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles('superadmin')
   @Patch(':id/payments/:paymentId/method')
   async updatePaymentMethod(
@@ -275,7 +275,7 @@ export class TransactionsController {
    * Superadmin batch-edit: update item shoe descriptions, services, and/or payment methods
    * in a single atomic operation. Service changes are blocked if payments already exist.
    */
-  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles('superadmin')
   @Patch(':id/edit')
   async editTransaction(
@@ -288,7 +288,7 @@ export class TransactionsController {
     return this.transactionsService.editTransaction(id, dto, req.user?.id);
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Post(':id/sms/pickup-ready')
   async sendPickupReadySms(@Param('id', ParseIntPipe) id: number, @Req() req: AuthedRequest) {
     const txn = await this.transactionsService.findOne(id);
@@ -296,7 +296,7 @@ export class TransactionsController {
     return this.transactionsService.sendPickupReadySms(id, req.user?.id);
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Post(':id/photos')
   async addPhoto(
     @Param('id', ParseIntPipe) id: number,
@@ -308,7 +308,7 @@ export class TransactionsController {
     return this.transactionsService.addPhoto(id, dto);
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Delete(':id/photos/:photoId')
   async removePhoto(
     @Param('id', ParseIntPipe) id: number,
@@ -320,7 +320,7 @@ export class TransactionsController {
     return this.transactionsService.removePhoto(id, photoId);
   }
 
-  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles('admin', 'superadmin')
   @Patch(':id/restore')
   async restore(@Param('id', ParseIntPipe) id: number, @Req() req: AuthedRequest) {
@@ -330,7 +330,7 @@ export class TransactionsController {
     return this.transactionsService.restore(id, req.user?.id, branch);
   }
 
-  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles('admin', 'superadmin')
   @Delete(':id')
   async remove(@Param('id', ParseIntPipe) id: number, @Req() req: AuthedRequest) {

@@ -1,5 +1,5 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
-import { SupabaseAuthGuard } from '../auth/auth.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/auth.types';
@@ -7,7 +7,7 @@ import { ReportsService } from './reports.service';
 import { UsersService } from '../users/users.service';
 
 @Controller('reports')
-@UseGuards(SupabaseAuthGuard, RolesGuard)
+@UseGuards(AuthGuard, RolesGuard)
 @Roles('admin', 'superadmin')
 export class ReportsController {
   constructor(

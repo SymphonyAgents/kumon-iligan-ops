@@ -1,17 +1,15 @@
 'use client';
 
 import Image from 'next/image';
-import { createClient } from '@/lib/supabase/client';
+import { signOut } from 'next-auth/react';
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 
 export default function PendingApprovalPage() {
   const { data: user } = useCurrentUserQuery();
   const isRejected = user?.status === 'rejected';
 
-  async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    window.location.href = '/login';
+  function handleSignOut() {
+    signOut({ callbackUrl: '/login' });
   }
 
   return (

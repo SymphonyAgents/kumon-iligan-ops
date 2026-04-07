@@ -10,7 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { SupabaseAuthGuard } from '../auth/auth.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import type { AuthedRequest } from '../auth/auth.types';
@@ -18,7 +18,7 @@ import { BranchesService } from './branches.service';
 import { CreateBranchDto } from './dto/create-branch.dto';
 
 @Controller('branches')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(AuthGuard)
 export class BranchesController {
   constructor(private readonly branchesService: BranchesService) {}
 

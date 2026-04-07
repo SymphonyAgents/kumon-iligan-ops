@@ -17,11 +17,10 @@ import {
   useAddDocumentMutation,
   useDeleteDocumentMutation,
 } from '@/hooks/useUsersQuery';
-import { createClient } from '@/lib/supabase/client';
+import { api } from '@/lib/api';
 import { formatDatetime } from '@/lib/utils';
 import type { AppUser } from '@/lib/types';
 
-const BUCKET = 'staff-documents';
 
 interface StaffDocumentsDialogProps {
   user: AppUser | null;
@@ -41,26 +40,15 @@ export function StaffDocumentsDialog({ user, onClose }: StaffDocumentsDialogProp
     if (!user) return;
     setUploading(true);
     try {
-      const supabase = createClient();
       const ext = file.name.split('.').pop() ?? 'bin';
-      const path = `${user.id}/${Date.now()}.${ext}`;
-
-      const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
-
-      if (error) throw new Error(error.message);
-
-      const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
-
-      await addMut.mutateAsync({ url: urlData.publicUrl, label: label.trim() || file.name });
+      const { signedUrl, publicUrl } = await api.expenses.uploadUrl(ext);
+      const uploadRes = await fetch(signedUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
+      if (!uploadRes.ok) throw new Error('Upload failed');
+      await addMut.mutateAsync({ url: publicUrl, label: label.trim() || file.name });
       setLabel('');
       if (fileRef.current) fileRef.current.value = '';
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Upload failed';
-      // Surface to user via sonner — the mutation already handles errors, but
-      // storage errors bypass the mutation, so throw to let the catch show it
       console.error(msg);
     } finally {
       setUploading(false);

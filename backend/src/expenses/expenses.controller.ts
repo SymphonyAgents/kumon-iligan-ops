@@ -13,7 +13,7 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
-import { SupabaseAuthGuard } from '../auth/auth.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/auth.types';
@@ -39,7 +39,7 @@ export class ExpensesController {
   }
 
   // Requires auth — financial data must not be public
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Get()
   async findByDate(@Query('date') date: string, @Req() req: AuthedRequest) {
     const dbUser = await this.usersService.findById(req.user.id) as { userType: string; branchId?: number | null } | null;
@@ -48,7 +48,7 @@ export class ExpensesController {
     return this.expensesService.findByDate(date, isStaff ? req.user.id : undefined, isStaff ? undefined : branchId);
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Get('summary')
   async summary(@Query('date') date: string, @Req() req: AuthedRequest) {
     const dbUser = await this.usersService.findById(req.user.id) as { userType: string; branchId?: number | null } | null;
@@ -57,7 +57,7 @@ export class ExpensesController {
     return this.expensesService.summary(date, isStaff ? req.user.id : undefined, isStaff ? undefined : branchId);
   }
 
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Get('monthly')
   async findByMonth(
     @Req() req: AuthedRequest,
@@ -77,7 +77,7 @@ export class ExpensesController {
   }
 
   // Generate a presigned URL for uploading an expense receipt photo
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Post('upload-url')
   async getUploadUrl(@Body('extension') extension: string) {
     if (!extension) throw new BadRequestException('extension is required');
@@ -89,7 +89,7 @@ export class ExpensesController {
   }
 
   // Any authenticated user can log an expense (staff via POS)
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(AuthGuard)
   @Post()
   async create(@Body() dto: CreateExpenseDto, @Req() req: AuthedRequest) {
     const dbUser = await this.usersService.findById(req.user.id);
@@ -100,7 +100,7 @@ export class ExpensesController {
   }
 
   // Admin-only: edit or delete existing expenses
-  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles('admin', 'superadmin')
   @Patch(':id')
   async update(
@@ -113,7 +113,7 @@ export class ExpensesController {
     return this.expensesService.update(id, dto, req.user?.id, branchId);
   }
 
-  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles('admin', 'superadmin')
   @Delete(':id')
   async remove(@Param('id', ParseIntPipe) id: number, @Req() req: AuthedRequest) {

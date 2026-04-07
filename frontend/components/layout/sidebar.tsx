@@ -23,7 +23,7 @@ import {
   FileTextIcon,
   CreditCardIcon,
 } from '@phosphor-icons/react';
-import { createBrowserClient } from '@supabase/ssr';
+import { signOut as nextAuthSignOut } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 import { useUpcomingPickupsQuery } from '@/hooks/useTransactionsQuery';
@@ -119,12 +119,7 @@ export function Sidebar() {
   async function handleSignOut() {
     setShowSignOutDialog(false);
     setSigningOut(true);
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    );
-    await supabase.auth.signOut();
-    router.push(ROUTES.LOGIN);
+    await nextAuthSignOut({ callbackUrl: ROUTES.LOGIN });
   }
 
   const navLinks = (

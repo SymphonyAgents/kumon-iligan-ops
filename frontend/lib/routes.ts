@@ -16,7 +16,7 @@ export const ROUTES = {
   ONBOARDING: '/onboarding',
 } as const;
 
-// '/' (dashboard) is protected directly in proxy.ts — not here, since startsWith('/') matches everything
+// '/' (dashboard) is protected by NextAuth middleware — not here, since startsWith('/') matches everything
 export const PROTECTED_ROUTES: string[] = [
   ROUTES.TRANSACTIONS,
   ROUTES.UPCOMING_PICKUPS,

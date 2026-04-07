@@ -11,7 +11,7 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
-import { SupabaseAuthGuard } from '../auth/auth.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/auth.types';
@@ -20,7 +20,7 @@ import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 
 @Controller('services')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(AuthGuard)
 export class ServicesController {
   constructor(private readonly servicesService: ServicesService) {}
 
@@ -35,14 +35,14 @@ export class ServicesController {
   }
 
   // Admin-only mutations
-  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles('admin', 'superadmin')
   @Post()
   create(@Body() dto: CreateServiceDto, @Req() req: AuthedRequest) {
     return this.servicesService.create(dto, req.user?.id);
   }
 
-  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles('admin', 'superadmin')
   @Patch(':id')
   update(
@@ -53,7 +53,7 @@ export class ServicesController {
     return this.servicesService.update(id, dto, req.user?.id);
   }
 
-  @UseGuards(SupabaseAuthGuard, RolesGuard)
+  @UseGuards(AuthGuard, RolesGuard)
   @Roles('admin', 'superadmin')
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number, @Req() req: AuthedRequest) {

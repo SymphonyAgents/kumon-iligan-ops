@@ -1,4 +1,3 @@
-import { createClient } from './supabase/client';
 import type {
   Transaction,
   TransactionPhoto,
@@ -31,13 +30,13 @@ export class ApiError extends Error {
 }
 
 async function getAuthHeaders(): Promise<HeadersInit> {
-  const supabase = createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  // Fetch NextAuth session from the client-side session endpoint
+  const res = await fetch('/api/auth/session');
+  const session = res.ok ? await res.json() : null;
+  const userId = session?.user?.id;
   return {
     'Content-Type': 'application/json',
-    ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+    ...(userId ? { 'x-user-id': userId } : {}),
   };
 }
 

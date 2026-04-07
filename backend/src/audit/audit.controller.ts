@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
-import { SupabaseAuthGuard } from '../auth/auth.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/auth.types';
@@ -7,7 +7,7 @@ import { AuditService } from './audit.service';
 import { UsersService } from '../users/users.service';
 
 @Controller('audit')
-@UseGuards(SupabaseAuthGuard, RolesGuard)
+@UseGuards(AuthGuard, RolesGuard)
 @Roles('admin', 'superadmin')
 export class AuditController {
   constructor(

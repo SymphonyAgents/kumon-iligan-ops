@@ -265,4 +265,63 @@ export class UsersService {
 
     return updated;
   }
+
+
+  async syncUser(data: {
+    id: string;
+    email: string;
+    name: string | null;
+    image: string | null;
+  }): Promise<{
+    id: string;
+    userType: string;
+    status: string;
+    branchId: number | null;
+    fullName: string | null;
+    nickname: string | null;
+  }> {
+    // Find existing user
+    const [existing] = await this.drizzle.db
+      .select()
+      .from(users)
+      .where(eq(users.id, data.id));
+
+    if (existing) {
+      return {
+        id: existing.id,
+        userType: existing.userType,
+        status: existing.status,
+        branchId: existing.branchId,
+        fullName: existing.fullName,
+        nickname: existing.nickname,
+      };
+    }
+
+    // First user ever → auto-superadmin + active (prevents lockout)
+    const [{ count: userCount }] = await this.drizzle.db
+      .select({ count: sql<number>`count(*)` })
+      .from(users);
+    const isFirstUser = Number(userCount) === 0;
+
+    // Create new user
+    const [created] = await this.drizzle.db
+      .insert(users)
+      .values({
+        id: data.id,
+        email: data.email,
+        fullName: data.name,
+        userType: isFirstUser ? 'superadmin' : 'teacher',
+        status: isFirstUser ? 'active' : 'pending',
+      })
+      .returning();
+
+    return {
+      id: created.id,
+      userType: created.userType,
+      status: created.status,
+      branchId: created.branchId,
+      fullName: created.fullName,
+      nickname: created.nickname,
+    };
+  }
 }

@@ -14,17 +14,27 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import type { AuthedRequest } from '../auth/auth.types';
-import { SupabaseAuthGuard } from '../auth/auth.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { Public } from '../auth/public.decorator';
 import { UsersService } from './users.service';
 import type { UserType } from '../db/constants';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 
 @Controller('users')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(AuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  /** Called by NextAuth jwt callback — no auth required (server-to-server). */
+  @Public()
+  @Post('sync')
+  async sync(
+    @Body() body: { id: string; email: string; name: string | null; image: string | null },
+  ) {
+    return this.usersService.syncUser(body);
+  }
 
   @Get('me')
   async getMe(@Request() req: { user: { id: string } }) {
