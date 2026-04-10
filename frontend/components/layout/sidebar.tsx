@@ -17,6 +17,7 @@ import {
   UsersThreeIcon,
   GraduationCapIcon,
   FileTextIcon,
+  NotePencilIcon,
 } from '@phosphor-icons/react';
 import { signOut as nextAuthSignOut } from 'next-auth/react';
 import { cn } from '@/lib/utils';
@@ -59,7 +60,8 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Tuition',
     items: [
-      { href: ROUTES.PAYMENTS, label: 'Payments', icon: CurrencyDollarIcon, adminOnly: false, superadminOnly: false },
+      { href: ROUTES.SDC, label: 'My Students', icon: NotePencilIcon, adminOnly: false, superadminOnly: false },
+      { href: ROUTES.PAYMENTS, label: 'All Payments', icon: CurrencyDollarIcon, adminOnly: false, superadminOnly: false },
       { href: ROUTES.PAYMENT_PERIODS, label: 'Periods', icon: CalendarCheckIcon, adminOnly: true, superadminOnly: false },
     ],
   },

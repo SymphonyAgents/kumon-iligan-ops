@@ -1,6 +1,9 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  // Allow devserver-neo origin for HMR WebSocket (Next.js 16+)
+  allowedDevOrigins: ['kumon-iligan.devapp.symph.co'],
+
   // Add image domains and other config as needed
   transpilePackages: ['@react-pdf/renderer'],
 
