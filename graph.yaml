@@ -1,0 +1,136 @@
+version: 1
+seq: 15
+artifacts:
+  discovery/brief.md:
+    aspect: discovery
+    role: root
+    produces:
+    - client_problem
+    - solution_overview
+    - target_audience
+    - platform_constraints
+    - urgency
+    description: "Discovery brief \u2014 client problem, proposed solution, audience, platform constraints"
+  discovery/prd.md:
+    aspect: discovery
+    produces:
+    - feature_requirements
+    - value_proposition
+    - poc_scope
+    - future_roadmap
+    depends_on:
+    - artifact: discovery/brief.md
+      consumes:
+      - client_problem
+      - solution_overview
+      - target_audience
+    last_modified: '2026-04-06T14:55:57.267775+00:00'
+    modified_by: Scout
+    hash: sha256:dde837f9c1066be70300b934ff6092f0882f4f93321da4ef34e08cbb9c423fef
+    description: "Product requirements document \u2014 PoC feature scope, value prop, roadmap"
+  discovery/user-stories.md:
+    aspect: discovery
+    produces:
+    - screen_inventory
+    - acceptance_criteria
+    - role_flows
+    depends_on:
+    - artifact: discovery/prd.md
+      consumes:
+      - feature_requirements
+      - poc_scope
+    description: "User stories \u2014 teacher, admin, superadmin flows with acceptance criteria"
+  build/build-plan.md:
+    aspect: build
+    produces:
+    - architecture_decisions
+    - component_map
+    - fork_strategy
+    depends_on:
+    - artifact: discovery/prd.md
+      consumes:
+      - feature_requirements
+      - poc_scope
+    - artifact: discovery/user-stories.md
+      consumes:
+      - screen_inventory
+    description: "Build plan \u2014 fork strategy, architecture decisions, component map"
+  _app:
+    aspect: build
+    type: code
+    produces:
+    - live_app
+    depends_on:
+    - artifact: build/build-plan.md
+      consumes:
+      - architecture_decisions
+      - component_map
+    - artifact: discovery/user-stories.md
+      consumes:
+      - screen_inventory
+      - acceptance_criteria
+      - role_flows
+    repo: SymphonyAgents/kumon-pay
+    description: "Application codebase \u2014 fork of sneaker-doc-pos adapted for Kumon tuition payments"
+  discovery/erd.md:
+    aspect: discovery
+    role: root
+    produces:
+    - db_schema
+    - entity_relationships
+    - domain_constants
+    - data_model
+    last_modified: '2026-04-06T14:23:22.887872+00:00'
+    modified_by: Aria
+    hash: sha256:1891277cf71ded5ac5cc7a889889b349cc27fc8be4a2fe7745c59b69f6388a36
+    description: "ERD \u2014 8 entities adapted from sneaker-doc-pos, with Kumon domain constants and design decisions"
+  discovery/user-flow-teacher-sdc.md:
+    aspect: discovery
+    produces:
+    - sdc_step_flow
+    - manual_vs_automatic_fields
+    - payment_status_indicators
+    - multi_sibling_flow
+    - payment_status_lifecycle
+    - validation_rules
+    depends_on:
+    - artifact: discovery/erd.md
+      consumes:
+      - db_schema
+      - entity_relationships
+      - domain_constants
+    last_modified: '2026-04-06T14:43:49.745510+00:00'
+    modified_by: Scout
+    hash: sha256:05c97619129f5b27819a99c8854fa2bd61aa56f8f56799dd7568f68acacb3cd4
+    description: "User flow for the Teacher SDC (Source Data Capture) screen \u2014 the mobile-first payment recording form"
+  design/screens/kumon-iligan-ops-standalone-v2.html:
+    aspect: design
+    produces:
+    - screen_mockup_standalone
+    - color_palette
+    - typography
+    - component_patterns
+    depends_on:
+    - artifact: discovery/brief.md
+    - artifact: discovery/prd.md
+    last_modified: '2026-05-07T05:22:08.223555+00:00'
+    modified_by: Vins
+    hash: sha256:07073db127d55c6225b9d3d010fc584f4a8cb93daa32722881edce3a68a535b1
+    description: 'Official design system reference: standalone HTML with full UI layout, color palette, typography, and component
+      patterns for Kumon Iligan Ops'
+stale:
+- artifact: discovery/user-stories.md
+  stale_since: '2026-04-06T14:55:57.267775+00:00'
+  reason: Direct dependency 'discovery/prd.md' was modified at 2026-04-06T14:55:57.267775+00:00 by Scout.
+  severity: high
+  triggered_by: discovery/prd.md
+- artifact: build/build-plan.md
+  stale_since: '2026-04-06T14:55:57.267775+00:00'
+  reason: Direct dependency 'discovery/prd.md' was modified at 2026-04-06T14:55:57.267775+00:00 by Scout.
+  severity: high
+  triggered_by: discovery/prd.md
+- artifact: _app
+  stale_since: '2026-04-06T14:55:57.267775+00:00'
+  reason: "Transitively stale \u2014 upstream dependency chain includes 'discovery/prd.md' which was modified at 2026-04-06T14:55:57.267775+00:00."
+  severity: medium
+  triggered_by: discovery/prd.md
