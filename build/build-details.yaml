@@ -1,0 +1,39 @@
+prod_url: https://kumon-iligan.symph.co
+lb_ip: 34.160.124.41
+gcp_project: kumon-iligan-ops
+region: asia-southeast1
+
+services:
+  frontend:
+    name: kumon-iligan-frontend
+    url: https://kumon-iligan-frontend-eu7lzuq4wq-as.a.run.app
+    port: 8080
+  backend:
+    name: kumon-iligan-backend
+    url: https://kumon-iligan-backend-eu7lzuq4wq-as.a.run.app
+    port: 8080
+
+registry: asia-southeast1-docker.pkg.dev/kumon-iligan-ops/kumon-iligan
+
+lb_resources:
+  https_forwarding_rule: kumon-iligan-https-rule
+  http_forwarding_rule: kumon-iligan-http-rule
+  url_map: kumon-iligan-url-map
+  ssl_cert: kumon-iligan-ssl-cert
+  backend_service: kumon-iligan-backend
+  neg: kumon-iligan-neg
+  static_ip: kumon-iligan-lb-ip
+
+cloud_armor:
+  policy: kumon-iligan-armor
+  mode: standard
+  owasp_rules: preview
+  rate_limiting: enforced
+  rate_limit: 300 req/min per IP
+
+tech_stack:
+  frontend: Next.js 16 + shadcn + Tailwind + TanStack Query
+  backend: NestJS + Drizzle ORM + Supabase Postgres
+  auth: NextAuth v5 (Google OAuth)
+  package_manager: pnpm (monorepo)
+  node_version: 22
