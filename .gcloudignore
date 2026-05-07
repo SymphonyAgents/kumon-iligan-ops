@@ -3,3 +3,16 @@ node_modules
 frontend/node_modules
 backend/node_modules
 frontend/.next
+frontend/.turbo
+backend/dist
+*.log
+.env
+.env.*
+*.pem
+*.key
+*-service-account.json
+.DS_Store
+design
+docs
+scripts
+worktrees
