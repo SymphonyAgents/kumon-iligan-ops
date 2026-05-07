@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
+import { Input, Select, Textarea } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { useStudentQuery } from '@/hooks/useStudentsQuery';
@@ -37,21 +38,17 @@ const METHOD_LABELS: Record<string, string> = {
   [PAYMENT_METHOD.OTHER]:         'Other',
 };
 
-// ── Field component ────────────────────────────────────────────────────────
-function Field({ label, required, children, error }: { label: string; required?: boolean; children: React.ReactNode; error?: string }) {
+// ── Field wrapper (label + required marker only, no error, that goes in Input) ──
+function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-        {label}{required && <span className="text-red-500 ml-0.5">*</span>}
-      </label>
+      <span className="text-xs font-medium text-muted-foreground">
+        {label}{required && <span className="text-destructive ml-0.5">*</span>}
+      </span>
       {children}
-      {error && <p className="text-xs text-red-500">{error}</p>}
     </div>
   );
 }
-
-const INPUT_CLS = 'w-full px-3 py-2.5 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-950 dark:text-zinc-50 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500';
-const SELECT_CLS = `${INPUT_CLS} cursor-pointer`;
 
 // ── Receipt uploader ───────────────────────────────────────────────────────
 function ReceiptUpload({
@@ -208,7 +205,7 @@ export default function SDCFormPage() {
       setUploading(true);
 
       // 1. Get presigned upload URL
-      const { uploadUrl, publicUrl } = await api.payments.getUploadUrl({
+      const { uploadUrl, fileUrl } = await api.payments.getUploadUrl({
         fileName: receiptFile.name,
         fileType: receiptFile.type,
       });
@@ -227,7 +224,7 @@ export default function SDCFormPage() {
         amount: toScaled(amount),
         paymentMethod: method,
         referenceNumber: referenceNumber.trim(),
-        receiptImageUrl: publicUrl,
+        receiptImageUrl: fileUrl,
         paymentDate,
         note: note.trim() || undefined,
       });
@@ -335,63 +332,67 @@ export default function SDCFormPage() {
           {/* ── Payment form fields ────────────────────────────────────── */}
           <div className="flex flex-col gap-4">
 
-            <Field label="Reference number" required error={errors.ref}>
-              <input
-                type="text"
-                value={referenceNumber}
-                onChange={e => { setRef(e.target.value); if (errors.ref) setErrors(p => ({ ...p, ref: '' })); }}
-                placeholder="GCash or bank transaction reference"
-                className={cn(INPUT_CLS, errors.ref && 'border-red-400 dark:border-red-600')}
-              />
-            </Field>
+            <Input
+              label="Reference number"
+              required
+              type="text"
+              value={referenceNumber}
+              onChange={e => { setRef(e.target.value); if (errors.ref) setErrors(p => ({ ...p, ref: '' })); }}
+              placeholder="GCash or bank transaction reference"
+              error={errors.ref}
+            />
 
-            <Field label="Amount paid" required error={errors.amount}>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground">
+                Amount paid<span className="text-destructive ml-0.5">*</span>
+              </span>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-400 font-medium pointer-events-none">₱</span>
-                <input
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium pointer-events-none">₱</span>
+                <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={amount}
                   onChange={e => { setAmount(e.target.value); if (errors.amount) setErrors(p => ({ ...p, amount: '' })); }}
                   placeholder={currentPeriod ? String(currentPeriod.expectedAmount / 100) : '0.00'}
-                  className={cn(INPUT_CLS, 'pl-7', errors.amount && 'border-red-400 dark:border-red-600')}
+                  error={errors.amount}
+                  className="pl-8"
                 />
               </div>
               {amountWarn && (
-                <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                <div className="flex items-center gap-1.5 text-[var(--color-warn)]">
                   <WarningIcon size={14} weight="fill" />
                   <p className="text-xs">
                     Amount differs from expected ({fmt(expectedAmount)}) by more than 10%. Please verify.
                   </p>
                 </div>
               )}
-            </Field>
+            </div>
 
-            <Field label="Payment method" required error={errors.method}>
-              <select
-                value={method}
-                onChange={e => { setMethod(e.target.value); if (errors.method) setErrors(p => ({ ...p, method: '' })); }}
-                className={cn(SELECT_CLS, errors.method && 'border-red-400 dark:border-red-600')}
-              >
-                <option value="">Select method…</option>
-                {Object.entries(METHOD_LABELS).map(([val, label]) => (
-                  <option key={val} value={val}>{label}</option>
-                ))}
-              </select>
-            </Field>
+            <Select
+              label="Payment method"
+              required
+              value={method}
+              onChange={e => { setMethod(e.target.value); if (errors.method) setErrors(p => ({ ...p, method: '' })); }}
+              error={errors.method}
+            >
+              <option value="">Select method…</option>
+              {Object.entries(METHOD_LABELS).map(([val, label]) => (
+                <option key={val} value={val}>{label}</option>
+              ))}
+            </Select>
 
-            <Field label="Payment date" required error={errors.date}>
-              <input
-                type="date"
-                value={paymentDate}
-                max={new Date().toISOString().split('T')[0]}
-                onChange={e => { setDate(e.target.value); if (errors.date) setErrors(p => ({ ...p, date: '' })); }}
-                className={cn(INPUT_CLS, errors.date && 'border-red-400 dark:border-red-600')}
-              />
-            </Field>
+            <Input
+              label="Payment date"
+              required
+              type="date"
+              value={paymentDate}
+              max={new Date().toISOString().split('T')[0]}
+              onChange={e => { setDate(e.target.value); if (errors.date) setErrors(p => ({ ...p, date: '' })); }}
+              error={errors.date}
+            />
 
-            <Field label="Receipt screenshot" required error={errors.receipt}>
+            <Field label="Receipt screenshot" required>
               <ReceiptUpload
                 file={receiptFile}
                 preview={receiptPreview}
@@ -400,15 +401,13 @@ export default function SDCFormPage() {
               />
             </Field>
 
-            <Field label="Notes">
-              <textarea
-                value={note}
-                onChange={e => setNote(e.target.value)}
-                placeholder="Optional — e.g. 'parent will pay remaining next week'"
-                rows={3}
-                className={cn(INPUT_CLS, 'resize-none')}
-              />
-            </Field>
+            <Textarea
+              label="Notes"
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              placeholder="Optional, e.g. 'parent will pay remaining next week'"
+              rows={3}
+            />
           </div>
 
           {/* ── Submit error ───────────────────────────────────────────── */}
