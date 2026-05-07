@@ -45,6 +45,8 @@ steps:
       - NEXT_PUBLIC_API_URL=/api/backend
       - --build-arg
       - NEXT_PUBLIC_APP_URL=$_APP_URL
+      - --build-arg
+      - BACKEND_URL=$_BACKEND_URL
       - -t
       - $_REGISTRY/$PROJECT_ID/kumon-iligan/frontend:$SHORT_SHA
       - -t

@@ -5,14 +5,17 @@ WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# NEXT_PUBLIC_API_URL baked into browser bundle: always /api/backend.
-# The actual backend URL is server-side only via BACKEND_URL env var
-# (used by next.config.ts rewrites at runtime, never in the image).
+# NEXT_PUBLIC_API_URL: baked into browser bundle, always /api/backend.
+# BACKEND_URL: baked into routes-manifest.json by next.config.ts rewrites
+#   (must be set at BUILD time because rewrites compile into the manifest).
 ARG NEXT_PUBLIC_API_URL=/api/backend
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
 ARG NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+
+ARG BACKEND_URL=http://localhost:3001
+ENV BACKEND_URL=${BACKEND_URL}
 
 # Copy workspace manifests for layer caching
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
