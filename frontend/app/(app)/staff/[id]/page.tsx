@@ -79,11 +79,11 @@ export default function StaffProfilePage() {
 
  const errors = {
  contactNumber:
- className="touched.contactNumber && form.contactNumber && !PHONE_RE.test(form.contactNumber)"
+ touched.contactNumber && form.contactNumber && !PHONE_RE.test(form.contactNumber)
  ? 'Enter a valid PH mobile number (e.g. 09XX XXX XXXX)'
  : undefined,
  birthday:
- className="touched.birthday && !isValidDate(form.birthday)"
+ touched.birthday && !isValidDate(form.birthday)
  ? 'Enter a valid date'
  : undefined,
  };
