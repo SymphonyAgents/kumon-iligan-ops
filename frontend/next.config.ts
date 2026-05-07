@@ -1,6 +1,10 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  // Standalone output: bundles only the files needed for production,
+  // making Docker images much smaller. Required by Dockerfile.frontend.
+  output: 'standalone',
+
   // Allow devserver-neo origin for HMR WebSocket (Next.js 16+)
   allowedDevOrigins: ['kumon-iligan.devapp.symph.co'],
 

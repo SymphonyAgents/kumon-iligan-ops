@@ -1,41 +1,52 @@
-FROM node:20-alpine AS builder
+# ---- Build Stage ----
+FROM node:22-alpine AS builder
+RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
-# Copy frontend package.json and install with npm (not pnpm - avoids symlink issues)
-COPY frontend/package.json ./
-RUN npm install
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Copy source and build
-COPY frontend ./
+# NEXT_PUBLIC_API_URL baked into browser bundle: always /api/backend.
+# The actual backend URL is server-side only via BACKEND_URL env var
+# (used by next.config.ts rewrites at runtime, never in the image).
+ARG NEXT_PUBLIC_API_URL=/api/backend
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
-ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_APP_URL
-ARG NEXT_PUBLIC_SUPABASE_URL
-ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
-ARG NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET
+ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
 
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
-ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
-ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
-ENV NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET=$NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET
+# Copy workspace manifests for layer caching
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY frontend/package.json ./frontend/
 
-RUN npm run build
+RUN pnpm install --no-frozen-lockfile
 
-FROM node:20-alpine AS runner
+COPY frontend ./frontend
+
+WORKDIR /app/frontend
+RUN pnpm build
+
+# ---- Production Stage ----
+FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV PORT=8080
-ENV HOSTNAME="0.0.0.0"
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Copy built app + dependencies
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/node_modules ./node_modules
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+# Standalone output (output:'standalone' in next.config.ts):
+#   frontend/server.js       : entry point
+#   frontend/.next/static/   : built JS/CSS
+#   frontend/public/         : static assets
+COPY --from=builder --chown=nextjs:nodejs /app/frontend/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/frontend/.next/static ./frontend/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/frontend/public ./frontend/public
+
+USER nextjs
 
 EXPOSE 8080
+ENV PORT=8080
+ENV HOSTNAME="0.0.0.0"
 
-CMD ["./node_modules/.bin/next", "start", "-p", "8080"]
+CMD ["node", "frontend/server.js"]
