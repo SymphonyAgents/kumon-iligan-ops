@@ -3,10 +3,9 @@ import Google from 'next-auth/providers/google';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
+    // NextAuth v5 convention: reads AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET automatically.
+    // Cloud Run sets these via --set-secrets=AUTH_GOOGLE_ID=...,AUTH_GOOGLE_SECRET=...
+    Google(),
   ],
   session: { strategy: 'jwt' },
   pages: { signIn: '/login' },
@@ -33,7 +32,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user, trigger, session }) {
       // On first sign-in: sync user to backend
       if (user) {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+        // Use BACKEND_URL (absolute, server-side only) not NEXT_PUBLIC_API_URL (relative, browser-only).
+        // NEXT_PUBLIC_API_URL = /api/backend is not valid in Node.js server-side fetch.
+        const apiUrl = process.env.BACKEND_URL ?? 'http://localhost:3001';
         try {
           const res = await fetch(`${apiUrl}/users/sync`, {
             method: 'POST',
@@ -67,7 +68,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       // On session refresh trigger
       if (trigger === 'update' && session?.refreshUser) {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+        const apiUrl = process.env.BACKEND_URL ?? 'http://localhost:3001';
         try {
           const res = await fetch(`${apiUrl}/users/${token.id}`, {
             headers: { 'x-user-id': token.id as string },
