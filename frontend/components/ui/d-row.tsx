@@ -12,7 +12,7 @@ interface DRowProps {
 export function DRow({ label, value, variant = 'default', className }: DRowProps) {
  return (
  <div className={cn('flex items-baseline justify-between gap-4', className)}>
- <span text-[12.5px] font-medium text-muted-foreground>{label}</span>
+ <span className="text-[12.5px] font-medium text-muted-foreground">{label}</span>
  <span
  className={cn(
  variant === 'accent' && 'text-[22px] font-semibold tracking-[-0.3px] text-foreground',
