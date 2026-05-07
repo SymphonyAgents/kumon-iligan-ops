@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { useStudentsQuery } from '@/hooks/useStudentsQuery';
 import { usePaymentsQuery } from '@/hooks/usePaymentsQuery';
@@ -22,9 +22,14 @@ function StatCard({ label, value, sub, color }: { label: string; value: string |
 
 export default function DashboardPage() {
   const { data: currentUser } = useCurrentUserQuery();
-  const now = new Date();
-  const month = now.getMonth() + 1;
-  const year = now.getFullYear();
+
+  // Use state for time-sensitive values to avoid server/client hydration mismatch
+  // (server renders in UTC, client renders in local timezone)
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => { setNow(new Date()); }, []);
+
+  const month = (now ?? new Date()).getMonth() + 1;
+  const year = (now ?? new Date()).getFullYear();
 
   const { data: students = [], isLoading: studentsLoading } = useStudentsQuery();
   const { data: payments = [], isLoading: paymentsLoading } = usePaymentsQuery();
@@ -46,7 +51,9 @@ export default function DashboardPage() {
     return { activeStudents, pendingPayments, verifiedThisMonth, overduePeriods };
   }, [students, payments, periods, month, year]);
 
-  const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 18 ? 'Good afternoon' : 'Good evening';
+  const greeting = now
+    ? now.getHours() < 12 ? 'Good morning' : now.getHours() < 18 ? 'Good afternoon' : 'Good evening'
+    : 'Hello';
   const name = currentUser?.nickname ?? currentUser?.fullName?.split(' ')[0] ?? '';
 
   return (
