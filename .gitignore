@@ -1,24 +1,15 @@
-# env files
+apps/
+worktrees/
 .env
-.env.local
-.env.*.local
-
-# build outputs
-dist/
-.next/
+.env.*
+*.pem
+*.p12
+*.key
+*-service-account.json
+*-firebase-adminsdk-*.json
+service-account*.json
+credentials*.json
 node_modules/
-*.js.map
-
-# TypeScript incremental build cache
-*.tsbuildinfo
-
-# OS
+firebase-debug.log
+firestore-debug.log
 .DS_Store
-
-# local docs — not for commits
-
-!AGENTS.md
-
-# Allow docs and project markdown
-!*.md
-!docs/
