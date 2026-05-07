@@ -5,6 +5,7 @@ import { QueryProvider } from '@/providers/query-provider';
 import { NavigationProgress } from '@/components/ui/navigation-progress';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'sonner';
+import { SessionProvider } from 'next-auth/react';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -42,9 +43,11 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <div id="js-error-banner" style={{display:'none',position:'fixed',top:0,left:0,right:0,background:'#ef4444',color:'#fff',padding:'12px',fontSize:'13px',zIndex:99999,wordBreak:'break-all'}} />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <NavigationProgress />
-          <QueryProvider>{children}</QueryProvider>
-          <Toaster position="bottom-right" richColors />
+          <SessionProvider>
+            <NavigationProgress />
+            <QueryProvider>{children}</QueryProvider>
+            <Toaster position="bottom-right" richColors />
+          </SessionProvider>
         </ThemeProvider>
       </body>
     </html>
