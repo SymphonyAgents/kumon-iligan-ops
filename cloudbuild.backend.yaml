@@ -46,11 +46,14 @@ steps:
       - '--min-instances=0'
       - '--max-instances=10'
       - '--set-secrets=DATABASE_URL=DATABASE_URL:latest,SUPABASE_URL=SUPABASE_URL:latest,SUPABASE_ANON_KEY=SUPABASE_ANON_KEY:latest,SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY:latest'
-      - '--set-env-vars=NODE_ENV=production,SUPABASE_STORAGE_BUCKET=receipts,CORS_ORIGIN=https://kumon-iligan-frontend-$(gcloud run services describe kumon-iligan-frontend --region=asia-southeast1 --format="value(status.url)" 2>/dev/null || echo "pending")'
+      - '--set-env-vars=NODE_ENV=production,SUPABASE_STORAGE_BUCKET=receipts,CORS_ORIGIN=${_CORS_ORIGIN}'
 
 images:
   - 'asia-southeast1-docker.pkg.dev/kumon-iligan-ops/kumon-iligan/backend:$SHORT_SHA'
   - 'asia-southeast1-docker.pkg.dev/kumon-iligan-ops/kumon-iligan/backend:latest'
+
+substitutions:
+  _CORS_ORIGIN: 'https://kumon-iligan-frontend-PLACEHOLDER.a.run.app'
 
 options:
   logging: CLOUD_LOGGING_ONLY
