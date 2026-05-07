@@ -1,14 +1,18 @@
 import { Sidebar } from '@/components/layout/sidebar';
 import { OnboardingCheck } from '@/components/auth/OnboardingCheck';
 
+// Spec: sidebar 232px fixed, main area padded 24px top, 32px sides, 36px bottom.
+// No max-width centering — content fills the workspace.
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-      <OnboardingCheck />
-      <Sidebar />
-      <div className="pt-14 lg:pt-0 lg:ml-56">
-        <main className="max-w-7xl mx-auto px-4 py-6 lg:px-8 lg:py-8">{children}</main>
-      </div>
-    </div>
-  );
+ return (
+ <div className="min-h-screen bg-background text-foreground">
+ <OnboardingCheck />
+ <Sidebar />
+ <div className="pt-14 lg:pt-0 lg:ml-[232px]">
+ <main className="px-5 pt-5 pb-9 sm:px-8 sm:pt-6 sm:pb-9 lg:px-8 lg:pt-6 lg:pb-9">
+ {children}
+ </main>
+ </div>
+ </div>
+ );
 }

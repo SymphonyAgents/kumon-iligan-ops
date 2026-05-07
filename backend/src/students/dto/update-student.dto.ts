@@ -1,9 +1,13 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, IsUUID } from 'class-validator';
 
 export class UpdateStudentDto {
   @IsOptional()
   @IsString()
   branchId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  familyId?: string;
 
   @IsOptional()
   @IsString()

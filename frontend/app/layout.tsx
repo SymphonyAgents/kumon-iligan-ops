@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   description: 'Tuition payment management for Kumon Iligan',
   manifest: '/manifest.json',
   icons: { icon: '/favicon.png' },
-  themeColor: '#09090b',
+  themeColor: '#1a1d1a',
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Kumon Iligan' },
 };
 

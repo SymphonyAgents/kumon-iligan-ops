@@ -2,33 +2,38 @@ import { cn } from '@/lib/utils';
 import { type ButtonHTMLAttributes } from 'react';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'dark';
-  size?: 'sm' | 'md';
+ variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'dark';
+ size?: 'sm' | 'md';
+ full?: boolean;
 }
 
+// Spec: 15px text, 12px 18px padding, radius 12, weight 500, letter-spacing -0.1.
+// Variants: primary (accent), secondary (outline), ghost (text-muted), danger (err border), dark (foreground).
 export function Button({
-  variant = 'primary',
-  size = 'md',
-  className,
-  children,
-  ...props
+ variant = 'primary',
+ size = 'md',
+ full = false,
+ className,
+ children,
+ ...props
 }: ButtonProps) {
-  return (
-    <button
-      className={cn(
-        'inline-flex items-center justify-center gap-1.5 font-medium transition-all duration-150 rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]',
-        size === 'sm' && 'px-3 py-1.5 text-xs',
-        size === 'md' && 'px-4 py-2 text-sm',
-        variant === 'primary' && 'bg-zinc-950 text-white hover:bg-zinc-800',
-        variant === 'secondary' && 'bg-white text-zinc-700 border border-zinc-200 hover:bg-zinc-50',
-        variant === 'ghost' && 'text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100',
-        variant === 'danger' && 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200',
-        variant === 'dark' && 'bg-zinc-800 text-white hover:bg-zinc-700',
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </button>
-  );
+ return (
+ <button
+ className={cn(
+ 'inline-flex items-center justify-center gap-1.5 rounded-xl font-medium tracking-[-0.1px] transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.985]',
+ size === 'sm' && 'px-3 py-1.5 text-[13px]',
+ size === 'md' && 'px-[18px] py-3 text-[15px]',
+ full && 'w-full',
+ variant === 'primary' && 'bg-primary text-primary-foreground hover:bg-primary/90',
+ variant === 'secondary' && 'bg-transparent text-foreground border border-border-strong hover:bg-secondary',
+ variant === 'ghost' && 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-secondary',
+ variant === 'danger' && 'bg-transparent text-err border border-err hover:bg-err/10',
+ variant === 'dark' && 'bg-foreground text-background hover:opacity-90',
+ className,
+ )}
+ {...props}
+ >
+ {children}
+ </button>
+ );
 }

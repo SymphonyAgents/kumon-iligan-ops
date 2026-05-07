@@ -308,11 +308,12 @@ export class UsersService {
     fullName: string | null;
     nickname: string | null;
   }> {
-    // Find existing user
+    // Find existing user — look up by email, since the OAuth-assigned id (UUID)
+    // can differ across sessions when no DB adapter is used. Email is the stable key.
     const [existing] = await this.drizzle.db
       .select()
       .from(users)
-      .where(eq(users.id, data.id));
+      .where(eq(users.email, data.email));
 
     if (existing) {
       return {
@@ -331,6 +332,13 @@ export class UsersService {
       .from(users);
     const isFirstUser = Number(userCount) === 0;
 
+    // Single-branch deployment: auto-assign Iligan Branch to every new user.
+    // Seeded by data migration; lookup by name (no hardcoded id).
+    const [defaultBranch] = await this.drizzle.db
+      .select({ id: branches.id })
+      .from(branches)
+      .where(eq(branches.name, 'Iligan Branch'));
+
     // Create new user
     const [created] = await this.drizzle.db
       .insert(users)
@@ -340,6 +348,7 @@ export class UsersService {
         fullName: data.name,
         userType: isFirstUser ? 'superadmin' : 'teacher',
         status: isFirstUser ? 'active' : 'pending',
+        branchId: defaultBranch?.id ?? null,
       })
       .returning();
 

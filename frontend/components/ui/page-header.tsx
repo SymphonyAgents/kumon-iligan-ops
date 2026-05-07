@@ -1,34 +1,43 @@
 import { cn } from '@/lib/utils';
+import { Kicker, DisplayHeading } from '@/components/ui/typography';
 
 interface PageHeaderProps {
-  title: string;
-  subtitle?: string;
-  action?: React.ReactNode;
-  backButton?: React.ReactNode;
-  className?: string;
+ title: string;
+ kicker?: string;
+ subtitle?: string;
+ action?: React.ReactNode;
+ backButton?: React.ReactNode;
+ className?: string;
 }
 
-export function PageHeader({ title, subtitle, action, backButton, className }: PageHeaderProps) {
-  if (backButton) {
-    return (
-      <div className={cn('flex items-center gap-3 mb-6 md:mb-8', className)}>
-        {backButton}
-        <div className="flex-1 min-w-0">
-          <h1 className="text-lg md:text-xl font-semibold text-zinc-950 dark:text-zinc-50 tracking-tight">{title}</h1>
-          {subtitle && <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-0.5">{subtitle}</p>}
-        </div>
-        {action && <div className="shrink-0">{action}</div>}
-      </div>
-    );
-  }
-
-  return (
-    <div className={cn('flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-6 md:mb-8', className)}>
-      <div>
-        <h1 className="text-lg md:text-xl font-semibold text-zinc-950 dark:text-zinc-50 tracking-tight">{title}</h1>
-        {subtitle && <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-0.5">{subtitle}</p>}
-      </div>
-      {action && <div className="shrink-0">{action}</div>}
-    </div>
-  );
+// Spec: 11px UPPERCASE kicker eyebrow + 28-32px display heading + 13px muted subline.
+// Header block sits at the top of every page; spec margin-bottom 20-24px.
+export function PageHeader({
+ title,
+ kicker,
+ subtitle,
+ action,
+ backButton,
+ className,
+}: PageHeaderProps) {
+ return (
+ <div
+ className={cn(
+ 'mb-5 md:mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between',
+ className,
+ )}
+ >
+ <div className="flex items-start gap-3 min-w-0">
+ {backButton && <div className="shrink-0 pt-1">{backButton}</div>}
+ <div className="flex-1 min-w-0">
+ {kicker && <Kicker className="mb-1.5">{kicker}</Kicker>}
+ <DisplayHeading size="xl" className="md:text-[32px] text-[26px]">
+ {title}
+ </DisplayHeading>
+ {subtitle && <p className="text-[13px] text-muted-foreground mt-1">{subtitle}</p>}
+ </div>
+ </div>
+ {action && <div className="shrink-0">{action}</div>}
+ </div>
+ );
 }

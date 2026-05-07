@@ -112,7 +112,7 @@ export const api = {
     get: (id: string) => apiFetch<Student>(`/students/${id}`),
     enroll: (data: { familyId: string; firstName: string; lastName: string; enrollmentDate: string; level?: string; branchId?: string }) =>
       apiFetch<Student>('/students', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id: string, data: Partial<{ firstName: string; lastName: string; level: string; enrollmentDate: string }>) =>
+    update: (id: string, data: Partial<{ firstName: string; lastName: string; level: string; enrollmentDate: string; familyId: string; branchId: string }>) =>
       apiFetch<Student>(`/students/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     changeStatus: (id: string, data: { status: string; reason?: string }) =>
       apiFetch<Student>(`/students/${id}/status`, { method: 'PATCH', body: JSON.stringify(data) }),
