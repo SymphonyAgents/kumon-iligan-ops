@@ -7,16 +7,20 @@ const nextConfig: NextConfig = {
   // Add image domains and other config as needed
   transpilePackages: ['@react-pdf/renderer'],
 
-  // Proxy /api/backend/* → NestJS on localhost:3001.
-  // NEXT_PUBLIC_API_URL is set to /api/backend in .env.local so browser
-  // API calls go through this same-origin proxy instead of localhost:3001
-  // directly (which fails from outside the devserver container).
-  rewrites: async () => [
-    {
-      source: '/api/backend/:path*',
-      destination: 'http://localhost:3001/:path*',
-    },
-  ],
+  // Proxy /api/backend/* → NestJS backend.
+  // NEXT_PUBLIC_API_URL=/api/backend is baked into the image once and never
+  // changes. BACKEND_URL is a server-side env var injected at runtime
+  // (Cloud Run env or .env.local for dev) so the frontend image never
+  // needs to be rebuilt when the backend URL changes.
+  rewrites: async () => {
+    const backendUrl = process.env.BACKEND_URL ?? 'http://localhost:3001';
+    return [
+      {
+        source: '/api/backend/:path*',
+        destination: `${backendUrl}/:path*`,
+      },
+    ];
+  },
 
   // Prevent CDN (Google Frontend) from caching HTML pages.
   // Without this, s-maxage=31536000 causes stale HTML to be served

@@ -1,0 +1,53 @@
+steps:
+  # 1. Build frontend Docker image (NEXT_PUBLIC vars baked in at build time)
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-f'
+      - 'Dockerfile.frontend'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_API_URL=/api/backend'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_APP_URL=${_APP_URL}'
+      - '-t'
+      - 'asia-southeast1-docker.pkg.dev/kumon-iligan-ops/kumon-iligan/frontend:$SHORT_SHA'
+      - '-t'
+      - 'asia-southeast1-docker.pkg.dev/kumon-iligan-ops/kumon-iligan/frontend:latest'
+      - '.'
+
+  # 2. Push frontend image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - 'asia-southeast1-docker.pkg.dev/kumon-iligan-ops/kumon-iligan/frontend'
+
+  # 3. Deploy frontend to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'kumon-iligan-frontend'
+      - '--image=asia-southeast1-docker.pkg.dev/kumon-iligan-ops/kumon-iligan/frontend:$SHORT_SHA'
+      - '--region=asia-southeast1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--port=8080'
+      - '--memory=1Gi'
+      - '--cpu=1'
+      - '--min-instances=0'
+      - '--max-instances=10'
+      - '--set-secrets=AUTH_SECRET=NEXTAUTH_SECRET:latest,AUTH_GOOGLE_ID=GOOGLE_CLIENT_ID:latest,AUTH_GOOGLE_SECRET=GOOGLE_CLIENT_SECRET:latest'
+      - '--set-env-vars=NODE_ENV=production,NEXT_PUBLIC_API_URL=/api/backend,NEXT_PUBLIC_APP_URL=${_APP_URL},AUTH_TRUST_HOST=true,NEXTAUTH_URL=${_APP_URL},BACKEND_URL=${_BACKEND_URL}'
+
+substitutions:
+  _APP_URL: 'https://kumon-iligan-frontend-PLACEHOLDER.a.run.app'
+  _BACKEND_URL: 'https://kumon-iligan-backend-PLACEHOLDER.a.run.app'
+
+images:
+  - 'asia-southeast1-docker.pkg.dev/kumon-iligan-ops/kumon-iligan/frontend:$SHORT_SHA'
+  - 'asia-southeast1-docker.pkg.dev/kumon-iligan-ops/kumon-iligan/frontend:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
