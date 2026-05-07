@@ -3,9 +3,9 @@ import Google from 'next-auth/providers/google';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
-    // NextAuth v5 convention: reads AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET automatically.
-    // Cloud Run sets these via --set-secrets=AUTH_GOOGLE_ID=...,AUTH_GOOGLE_SECRET=...
-    Google(),
+    // NextAuth v5 reads AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET automatically.
+    // Cloud Run maps these via --set-secrets=AUTH_GOOGLE_ID=...,AUTH_GOOGLE_SECRET=...
+    Google({}),
   ],
   session: { strategy: 'jwt' },
   pages: { signIn: '/login' },
