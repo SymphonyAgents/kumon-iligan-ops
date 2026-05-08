@@ -2,6 +2,7 @@
 
 import { type ColumnDef } from '@tanstack/react-table';
 import { formatDatetime } from '@/lib/utils';
+import { toTitleCase } from '@/utils/text';
 import {
   AUDIT_TYPE_LABELS,
   AUDIT_TYPE_STYLES,
@@ -21,7 +22,7 @@ function getEventStyle(entry: AuditEntry): string {
   if (entry.auditType && AUDIT_TYPE_STYLES[entry.auditType]) {
     return AUDIT_TYPE_STYLES[entry.auditType];
   }
-  return 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300';
+  return 'bg-secondary text-muted-foreground';
 }
 
 export const auditColumns: ColumnDef<AuditEntry>[] = [
@@ -29,7 +30,7 @@ export const auditColumns: ColumnDef<AuditEntry>[] = [
     accessorKey: 'createdAt',
     header: 'When',
     cell: ({ row }) => (
-      <span className="font-mono text-xs text-zinc-400 whitespace-nowrap">
+      <span className="font-mono text-xs text-muted-foreground whitespace-nowrap">
         {formatDatetime(row.original.createdAt)}
       </span>
     ),
@@ -56,9 +57,9 @@ export const auditColumns: ColumnDef<AuditEntry>[] = [
       const label = ENTITY_LABELS[entityType] ?? entityType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
       return (
         <div>
-          <span className="text-sm text-zinc-700 dark:text-zinc-300">{label}</span>
+          <span className="text-sm text-foreground">{label}</span>
           {entityId && (
-            <span className="block font-mono text-xs text-zinc-400">#{entityId}</span>
+            <span className="block font-mono text-xs text-muted-foreground">#{entityId}</span>
           )}
         </div>
       );
@@ -71,13 +72,15 @@ export const auditColumns: ColumnDef<AuditEntry>[] = [
       const email = row.original.performedByEmail;
       const fullName = row.original.performedByFullName;
       if (!email) {
-        return <span className="text-xs text-zinc-400">System</span>;
+        return <span className="text-xs text-muted-foreground">System</span>;
       }
       const [user, domain] = email.split('@');
       return (
         <div>
-          <span className="text-sm text-zinc-700 dark:text-zinc-300">{fullName ? fullName : user}</span>
-          <span className="block text-xs text-zinc-400">@{domain ?? '\u2014'}</span>
+          <span className="text-sm text-foreground">
+            {fullName ? toTitleCase(fullName) : user}
+          </span>
+          <span className="block text-xs text-muted-foreground">@{domain ?? '—'}</span>
         </div>
       );
     },
@@ -87,9 +90,9 @@ export const auditColumns: ColumnDef<AuditEntry>[] = [
     header: 'Via',
     cell: ({ row }) => {
       const raw = row.original.source?.toLowerCase() ?? '';
-      const label = SOURCE_LABELS[raw] ?? (raw || '\u2014');
+      const label = SOURCE_LABELS[raw] ?? (raw || '—');
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-secondary text-muted-foreground">
           {label}
         </span>
       );

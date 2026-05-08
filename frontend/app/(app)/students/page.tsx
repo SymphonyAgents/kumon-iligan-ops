@@ -10,6 +10,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Combobox } from '@/components/ui/combobox';
 import { DatePicker } from '@/components/ui/date-picker';
+import { toTitleCase, fullName } from '@/utils/text';
 import { useStudentsQuery, useEnrollStudentMutation, useChangeStudentStatusMutation, useAssignTeacherMutation, useDeleteStudentMutation } from '@/hooks/useStudentsQuery';
 import { useFamiliesQuery } from '@/hooks/useFamiliesQuery';
 import { useAssignableUsersQuery } from '@/hooks/useUsersQuery';
@@ -48,9 +49,9 @@ function EnrollStudentDialog({ open, onClose }: { open: boolean; onClose: () => 
           <Combobox
             options={families.map((f) => ({
               value: f.id,
-              label: f.guardianName,
+              label: toTitleCase(f.guardianName),
               description: f.guardianPhone,
-              keywords: f.guardianPhone ?? '',
+              keywords: `${f.guardianName} ${f.guardianPhone ?? ''}`,
             }))}
             value={familyId}
             onChange={setFamilyId}
@@ -125,7 +126,7 @@ function AssignTeacherDialog({ open, student, onClose }: { open: boolean; studen
  <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
  <DialogContent className="max-w-sm">
  <DialogHeader>
- <DialogTitle>Assign Teacher — {student?.firstName} {student?.lastName}</DialogTitle>
+          <DialogTitle>Assign Teacher — {fullName(student?.firstName, student?.lastName)}</DialogTitle>
  </DialogHeader>
  <form onSubmit={handleSubmit}  className="flex flex-col gap-4 mt-2">
  <div className="flex flex-col gap-1.5">
@@ -135,9 +136,9 @@ function AssignTeacherDialog({ open, student, onClose }: { open: boolean; studen
               .filter((t) => t.userType === USER_TYPE.TEACHER)
               .map((t) => ({
                 value: t.id,
-                label: t.fullName ?? t.nickname ?? t.email,
+                label: toTitleCase(t.fullName ?? t.nickname ?? '') || t.email,
                 description: t.email,
-                keywords: t.email,
+                keywords: `${t.fullName ?? ''} ${t.nickname ?? ''} ${t.email}`,
               }))}
             value={teacherId}
             onChange={setTeacherId}
@@ -257,16 +258,16 @@ export default function StudentsPage() {
  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
  {filtered.map(s => (
  <tr key={s.id}  className="bg-card hover:bg-secondary/40 transition-colors">
- <td className="px-4 py-3">
- <p className="font-medium text-foreground">{s.firstName} {s.lastName}</p>
- <p className="text-xs text-muted-foreground">{s.guardianName}</p>
- </td>
- <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground text-xs">
- {s.level ?? <span className="text-muted-foreground/60">—</span>}
- </td>
- <td className="px-4 py-3 hidden md:table-cell text-muted-foreground text-xs">
- {s.teacherName ?? <span className="text-muted-foreground/60">Unassigned</span>}
- </td>
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-foreground">{fullName(s.firstName, s.lastName)}</p>
+                      <p className="text-xs text-muted-foreground">{toTitleCase(s.guardianName ?? '')}</p>
+                    </td>
+                    <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground text-xs">
+                      {s.level ?? <span className="text-muted-foreground/60">—</span>}
+                    </td>
+                    <td className="px-4 py-3 hidden md:table-cell text-muted-foreground text-xs">
+                      {s.teacherName ? toTitleCase(s.teacherName) : <span className="text-muted-foreground/60">Unassigned</span>}
+                    </td>
  <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
  {isAdmin && (
  <td className="px-4 py-3">
@@ -320,7 +321,7 @@ export default function StudentsPage() {
  <ConfirmDialog
  open={!!deleteTarget}
  title="Remove Student"
- description={`Remove ${deleteTarget?.firstName} ${deleteTarget?.lastName}? All associated payments and periods will be soft-deleted. This cannot be undone.`}
+ description={`Remove ${fullName(deleteTarget?.firstName, deleteTarget?.lastName)}? All associated payments and periods will be soft-deleted. This cannot be undone.`}
  confirmLabel="Remove"
  confirmVariant="danger"
  onConfirm={() => deleteTarget && deleteMut.mutate(deleteTarget.id)}

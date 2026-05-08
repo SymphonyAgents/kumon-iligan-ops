@@ -20,6 +20,7 @@ import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 import { useBranchesQuery } from '@/hooks/useBranchesQuery';
 import { USER_TYPE } from '@/lib/constants';
 import { api } from '@/lib/api';
+import { toTitleCase } from '@/utils/text';
 import { toast } from 'sonner';
 import type { Family } from '@/lib/types';
 import { PlusIcon, PencilSimpleIcon, TrashIcon, UsersIcon } from '@phosphor-icons/react';
@@ -81,7 +82,7 @@ function FamilyDialog({
         .filter((s) => !s.familyId || s.familyId === familyId)
         .map((s) => ({
           value: s.id,
-          label: `${s.firstName} ${s.lastName}`,
+          label: toTitleCase(`${s.firstName} ${s.lastName}`),
           description: s.level ?? undefined,
           keywords: `${s.firstName} ${s.lastName}`,
         })),
@@ -331,11 +332,11 @@ export default function FamiliesPage() {
                 {filtered.map((f) => (
                   <tr key={f.id} className="hover:bg-secondary/40 transition-colors">
                     <td className="px-4 py-3">
-                      <p className="font-medium text-foreground">{f.guardianName}</p>
+                      <p className="font-medium text-foreground">{toTitleCase(f.guardianName)}</p>
                     </td>
-                    <td className="px-4 py-3 hidden sm:table-cell text-foreground">{f.guardianPhone}</td>
+                    <td className="px-4 py-3 hidden sm:table-cell text-foreground font-mono text-xs">{f.guardianPhone}</td>
                     <td className="px-4 py-3 hidden md:table-cell text-muted-foreground text-xs">
-                      {[f.streetName, f.barangay, f.city].filter(Boolean).join(', ') || '—'}
+                      {toTitleCase([f.streetName, f.barangay, f.city].filter(Boolean).join(', ')) || '—'}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 text-muted-foreground">
@@ -383,7 +384,7 @@ export default function FamiliesPage() {
       <ConfirmDialog
         open={!!deleteTarget}
         title="Delete Family"
-        description={`Remove ${deleteTarget?.guardianName}? All associated students will also be removed. This cannot be undone.`}
+        description={`Remove ${toTitleCase(deleteTarget?.guardianName ?? '')}? All associated students will also be removed. This cannot be undone.`}
         confirmLabel="Delete"
         confirmVariant="danger"
         onConfirm={() => deleteTarget && deleteMut.mutate(deleteTarget.id)}

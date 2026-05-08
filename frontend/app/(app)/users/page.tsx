@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toTitleCase } from '@/utils/text';
 import { useUsersQuery, useApproveUserMutation, useRejectUserMutation, useUpdateUserRoleMutation, useUpdateUserBranchMutation, useDeleteUserMutation } from '@/hooks/useUsersQuery';
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 import { useBranchesQuery } from '@/hooks/useBranchesQuery';
@@ -50,10 +51,10 @@ function UsersContent() {
 
  const pendingCount = users.filter(u => u.status === USER_STATUS.PENDING).length;
 
- function getBranchName(branchId: string | null) {
- if (!branchId) return '—';
- return branches.find(b => b.id === branchId)?.name ?? '—';
- }
+  function getBranchName(branchId: string | null) {
+    if (!branchId) return '—';
+    return toTitleCase(branches.find((b) => b.id === branchId)?.name ?? '') || '—';
+  }
 
  return (
  <div>
@@ -103,10 +104,10 @@ function UsersContent() {
  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
  {filteredUsers.map(u => (
  <tr key={u.id}  className="bg-card hover:bg-secondary/40 transition-colors">
- <td className="px-4 py-3">
- <p className="font-medium text-foreground">{u.fullName ?? u.nickname ?? '—'}</p>
- <p className="text-xs text-muted-foreground">{u.email}</p>
- </td>
+                <td className="px-4 py-3">
+                  <p className="font-medium text-foreground">{toTitleCase(u.fullName ?? u.nickname ?? '') || '—'}</p>
+                  <p className="text-xs text-muted-foreground">{u.email}</p>
+                </td>
  <td className="px-4 py-3">
  {isSuperadmin && u.id !== currentUser?.id ? (
                   <Select
@@ -190,7 +191,7 @@ function UsersContent() {
  <ConfirmDialog
  open={!!approveTarget}
  title="Approve User"
- description={`Approve ${approveTarget?.fullName ?? approveTarget?.email} as ${USER_TYPE_LABELS[approveTarget?.userType ?? 'teacher']}?`}
+ description={`Approve ${toTitleCase(approveTarget?.fullName ?? '') || approveTarget?.email} as ${USER_TYPE_LABELS[approveTarget?.userType ?? 'teacher']}?`}
  confirmLabel="Approve"
  onConfirm={() => approveTarget && approveMut.mutate(approveTarget.id)}
  onCancel={() => setApproveTarget(null)}
@@ -199,7 +200,7 @@ function UsersContent() {
  <ConfirmDialog
  open={!!rejectTarget}
  title="Reject User"
- description={`Reject and remove ${rejectTarget?.fullName ?? rejectTarget?.email}? They will not be able to access the system.`}
+ description={`Reject and remove ${toTitleCase(rejectTarget?.fullName ?? '') || rejectTarget?.email}? They will not be able to access the system.`}
  confirmLabel="Reject"
  confirmVariant="danger"
  onConfirm={() => rejectTarget && rejectMut.mutate(rejectTarget.id)}
@@ -209,7 +210,7 @@ function UsersContent() {
  <ConfirmDialog
  open={!!deleteTarget}
  title="Delete User"
- description={`Permanently remove ${deleteTarget?.fullName ?? deleteTarget?.email}?`}
+ description={`Permanently remove ${toTitleCase(deleteTarget?.fullName ?? '') || deleteTarget?.email}?`}
  confirmLabel="Delete"
  confirmVariant="danger"
  onConfirm={() => deleteTarget && deleteMut.mutate(deleteTarget.id)}

@@ -14,6 +14,7 @@ import {
 import { Combobox } from '@/components/ui/combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
+import { toTitleCase, fullName } from '@/utils/text';
 import { usePaymentsQuery, useVerifyPaymentMutation, useFlagPaymentMutation, useRejectPaymentMutation, useDeletePaymentMutation, useRecordPaymentMutation } from '@/hooks/usePaymentsQuery';
 import { useStudentsQuery } from '@/hooks/useStudentsQuery';
 import { useStudentPeriodsQuery } from '@/hooks/usePaymentPeriodsQuery';
@@ -69,9 +70,9 @@ function RecordPaymentDialog({ open, onClose }: { open: boolean; onClose: () => 
           <Combobox
             options={students.map((s) => ({
               value: s.id,
-              label: `${s.firstName} ${s.lastName}`,
-              description: s.guardianName ?? undefined,
-              keywords: `${s.guardianName ?? ''}`,
+              label: fullName(s.firstName, s.lastName),
+              description: s.guardianName ? toTitleCase(s.guardianName) : undefined,
+              keywords: `${s.firstName} ${s.lastName} ${s.guardianName ?? ''}`,
             }))}
             value={studentId}
             onChange={(v) => { setStudentId(v); setPeriodId(''); setAmount(''); }}
@@ -320,10 +321,10 @@ export default function PaymentsPage() {
  {filtered.map(p => (
  <tr key={p.id}  className="bg-card hover:bg-secondary/40 transition-colors">
  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.number}</td>
- <td className="px-4 py-3">
- <p className="font-medium text-foreground">{p.studentFirstName} {p.studentLastName}</p>
- <p className="text-xs text-muted-foreground">{p.guardianName}</p>
- </td>
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-foreground">{fullName(p.studentFirstName, p.studentLastName)}</p>
+                    <p className="text-xs text-muted-foreground">{toTitleCase(p.guardianName ?? '')}</p>
+                  </td>
  <td className="px-4 py-3 hidden sm:table-cell text-foreground">
  {PAYMENT_METHOD_LABELS[p.paymentMethod] ?? p.paymentMethod}
  {p.referenceNumber && <p className="text-xs text-muted-foreground font-mono">{p.referenceNumber}</p>}

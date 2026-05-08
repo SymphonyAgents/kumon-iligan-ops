@@ -10,6 +10,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
+import { fullName } from '@/utils/text';
 import { usePaymentPeriodsQuery, useBulkGeneratePeriodsMutation, useDeletePeriodMutation } from '@/hooks/usePaymentPeriodsQuery';
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 import { useBranchesQuery } from '@/hooks/useBranchesQuery';
@@ -266,9 +267,9 @@ export default function PaymentPeriodsPage() {
  const isOverdue = p.status === PERIOD_STATUS.OVERDUE;
  return (
  <tr key={p.id}  className="bg-card hover:bg-secondary/40 transition-colors">
- <td className="px-4 py-3 font-medium text-foreground">
- {p.studentFirstName} {p.studentLastName}
- </td>
+                <td className="px-4 py-3 font-medium text-foreground">
+                  {fullName(p.studentFirstName, p.studentLastName)}
+                </td>
  <td className="px-4 py-3 text-muted-foreground">
  {MONTHS[p.periodMonth - 1]} {p.periodYear}
  </td>

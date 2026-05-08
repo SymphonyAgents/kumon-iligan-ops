@@ -3,6 +3,7 @@
 import { type ColumnDef } from '@tanstack/react-table';
 import { TrashIcon, ArrowCounterClockwiseIcon } from '@phosphor-icons/react';
 import { cn, formatAddress } from '@/lib/utils';
+import { toTitleCase } from '@/utils/text';
 import type { Branch } from '@/lib/types';
 
 interface BranchesColumnsOptions {
@@ -20,8 +21,13 @@ export const createBranchesColumns = ({
     cell: ({ row }) => {
       const b = row.original;
       return (
-        <span className={cn('font-medium text-sm capitalize', b.isActive ? 'text-zinc-950' : 'text-zinc-400 line-through')}>
-          {b.name}
+        <span
+          className={cn(
+            'font-medium text-sm',
+            b.isActive ? 'text-foreground' : 'text-muted-foreground line-through',
+          )}
+        >
+          {toTitleCase(b.name)}
         </span>
       );
     },
@@ -31,10 +37,15 @@ export const createBranchesColumns = ({
     header: 'Address',
     cell: ({ row }) => {
       const b = row.original;
-      const addr = formatAddress({ streetName: b.streetName, barangay: b.barangay, city: b.city, province: b.province });
+      const addr = formatAddress({
+        streetName: b.streetName,
+        barangay: b.barangay,
+        city: b.city,
+        province: b.province,
+      });
       return (
-        <span className="text-sm text-zinc-500">
-          {addr === '—' ? <span className="text-zinc-300">—</span> : addr}
+        <span className="text-sm text-muted-foreground">
+          {addr === '—' ? <span className="text-muted-foreground/60">—</span> : toTitleCase(addr)}
         </span>
       );
     },
@@ -43,7 +54,9 @@ export const createBranchesColumns = ({
     accessorKey: 'phone',
     header: 'Phone',
     cell: ({ row }) => (
-      <span className="text-sm font-mono text-zinc-500">{row.original.phone ?? <span className="text-zinc-300">—</span>}</span>
+      <span className="text-sm font-mono text-muted-foreground">
+        {row.original.phone ?? <span className="text-muted-foreground/60">—</span>}
+      </span>
     ),
   },
   {
@@ -52,10 +65,14 @@ export const createBranchesColumns = ({
     cell: ({ row }) => {
       const b = row.original;
       return (
-        <span className={cn(
-          'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
-          b.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-zinc-100 text-zinc-400',
-        )}>
+        <span
+          className={cn(
+            'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
+            b.isActive
+              ? 'bg-status-paid-bg text-status-paid-fg'
+              : 'bg-secondary text-muted-foreground',
+          )}
+        >
           {b.isActive ? 'Active' : 'Inactive'}
         </span>
       );
@@ -70,16 +87,22 @@ export const createBranchesColumns = ({
         <div className="flex items-center justify-end gap-1">
           {b.isActive ? (
             <button
-              onClick={(e) => { e.stopPropagation(); onDelete(b); }}
-              className="p-2 text-red-500 bg-red-50 hover:text-red-600 hover:bg-red-100 rounded transition-all"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(b);
+              }}
+              className="p-2 text-err bg-err-soft hover:bg-err/15 rounded transition-all"
               title="Deactivate branch"
             >
               <TrashIcon size={16} />
             </button>
           ) : (
             <button
-              onClick={(e) => { e.stopPropagation(); onActivate(b); }}
-              className="p-2 text-emerald-600 bg-emerald-50 hover:text-emerald-700 hover:bg-emerald-100 rounded transition-all"
+              onClick={(e) => {
+                e.stopPropagation();
+                onActivate(b);
+              }}
+              className="p-2 text-status-paid-fg bg-status-paid-bg hover:bg-status-paid-bg/80 rounded transition-all"
               title="Reactivate branch"
             >
               <ArrowCounterClockwiseIcon size={16} />
