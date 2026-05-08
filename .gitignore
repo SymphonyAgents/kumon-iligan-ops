@@ -13,3 +13,21 @@ node_modules/
 firebase-debug.log
 firestore-debug.log
 .DS_Store
+
+# Build outputs (Next.js cache, NestJS tsc emit, monorepo build artefacts)
+.next/
+**/.next/
+dist/
+**/dist/
+build/
+**/build/
+*.tsbuildinfo
+.turbo/
+
+# Misc local
+.vercel/
+coverage/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

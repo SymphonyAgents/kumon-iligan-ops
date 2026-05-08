@@ -5,7 +5,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     // NextAuth v5 reads AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET automatically.
     // Cloud Run maps these via --set-secrets=AUTH_GOOGLE_ID=...,AUTH_GOOGLE_SECRET=...
-    Google({}),
+    // `prompt: select_account` forces Google's account picker every time —
+    // without it, Google silently re-authenticates the previous account and
+    // signout feels like it didn't take effect.
+    Google({
+      authorization: { params: { prompt: 'select_account' } },
+    }),
   ],
   session: { strategy: 'jwt' },
   pages: { signIn: '/login' },

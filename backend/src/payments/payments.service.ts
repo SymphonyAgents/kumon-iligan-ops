@@ -39,6 +39,7 @@ import type { CreatePaymentDto } from './dto/create-payment.dto.js';
 import type { VerifyPaymentDto } from './dto/verify-payment.dto.js';
 import type { FlagPaymentDto } from './dto/flag-payment.dto.js';
 import type { RejectPaymentDto } from './dto/reject-payment.dto.js';
+import type { ReplyPaymentDto } from './dto/reply-payment.dto.js';
 import type { QueryPaymentsDto } from './dto/query-payments.dto.js';
 
 @Injectable()
@@ -471,6 +472,54 @@ export class PaymentsService {
       performedBy: requestingUserId,
       branchId: payment.branchId,
       details: { paymentNumber: payment.number, reason: dto.note, wasPreviouslyVerified },
+    });
+
+    return this.formatPayment(updated);
+  }
+
+  // -----------------------------------------------------------------------
+  // reply — teacher responds to a flag, re-queues the payment for review
+  // -----------------------------------------------------------------------
+  async reply(id: string, dto: ReplyPaymentDto, requestingUserId: string) {
+    const user = await this.usersService.findByIdFull(requestingUserId);
+    if (!user) throw new UnauthorizedException();
+
+    const [payment] = await this.drizzle.db
+      .select()
+      .from(payments)
+      .where(and(eq(payments.id, id), isNull(payments.deletedAt)));
+
+    if (!payment) throw new NotFoundException('Payment not found');
+
+    // Only the teacher who recorded the payment can reply.
+    if (payment.recordedBy !== requestingUserId) {
+      throw new ForbiddenException('Only the recording teacher can reply to a flag');
+    }
+
+    if (payment.status !== PAYMENT_STATUS.FLAGGED) {
+      throw new ForbiddenException('Only flagged payments can be replied to');
+    }
+
+    const [updated] = await this.drizzle.db
+      .update(payments)
+      .set({
+        teacherReply: dto.reply,
+        teacherRepliedAt: new Date(),
+        status: PAYMENT_STATUS.PENDING_REVIEW,
+        updatedAt: new Date(),
+      })
+      .where(eq(payments.id, id))
+      .returning();
+
+    await this.audit.log({
+      action: `Teacher replied on payment ${payment.number}`,
+      auditType: AUDIT_TYPE.PAYMENT_REPLIED,
+      entityType: 'payment',
+      entityId: id,
+      source: 'web',
+      performedBy: requestingUserId,
+      branchId: payment.branchId,
+      details: { paymentNumber: payment.number, reply: dto.reply },
     });
 
     return this.formatPayment(updated);

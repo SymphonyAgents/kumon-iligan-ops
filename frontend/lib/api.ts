@@ -152,6 +152,8 @@ export const api = {
       apiFetch<Payment>(`/payments/${id}/flag`, { method: 'PATCH', body: JSON.stringify(data) }),
     reject: (id: string, data: { note: string }) =>
       apiFetch<Payment>(`/payments/${id}/reject`, { method: 'PATCH', body: JSON.stringify(data) }),
+    reply: (id: string, data: { reply: string }) =>
+      apiFetch<Payment>(`/payments/${id}/reply`, { method: 'PATCH', body: JSON.stringify(data) }),
     delete: (id: string) => apiFetch<void>(`/payments/${id}`, { method: 'DELETE' }),
     // Receipt upload — get presigned URL then PUT the file
     getUploadUrl: (params: { fileName: string; fileType: string }) =>

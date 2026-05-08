@@ -17,6 +17,7 @@ import { CreatePaymentDto } from './dto/create-payment.dto.js';
 import { VerifyPaymentDto } from './dto/verify-payment.dto.js';
 import { FlagPaymentDto } from './dto/flag-payment.dto.js';
 import { RejectPaymentDto } from './dto/reject-payment.dto.js';
+import { ReplyPaymentDto } from './dto/reply-payment.dto.js';
 import { QueryPaymentsDto } from './dto/query-payments.dto.js';
 
 @Controller('payments')
@@ -64,6 +65,15 @@ export class PaymentsController {
     @Req() req: AuthedRequest,
   ) {
     return this.payments.reject(id, dto, req.user.id);
+  }
+
+  @Patch(':id/reply')
+  reply(
+    @Param('id') id: string,
+    @Body() dto: ReplyPaymentDto,
+    @Req() req: AuthedRequest,
+  ) {
+    return this.payments.reply(id, dto, req.user.id);
   }
 
   @Delete(':id')

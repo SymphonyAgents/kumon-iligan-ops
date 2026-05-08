@@ -155,6 +155,8 @@ export const payments = pgTable('payments', {
   recordedBy: uuid('recorded_by').references(() => users.id, { onDelete: 'restrict' }).notNull(), // teacher
   verifiedBy: uuid('verified_by').references(() => users.id, { onDelete: 'set null' }), // admin
   verifiedAt: timestamp('verified_at', { withTimezone: true }),
+  teacherReply: text('teacher_reply'), // teacher's response to a flag
+  teacherRepliedAt: timestamp('teacher_replied_at', { withTimezone: true }),
   branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'restrict' }).notNull(), // denormalized
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

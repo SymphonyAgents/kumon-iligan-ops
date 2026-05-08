@@ -76,6 +76,19 @@ export function useRejectPaymentMutation(onSuccess?: () => void) {
   });
 }
 
+export function useReplyPaymentMutation(onSuccess?: () => void) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reply }: { id: string; reply: string }) => api.payments.reply(id, { reply }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: PAYMENTS_KEY });
+      toast.success('Reply sent');
+      onSuccess?.();
+    },
+    onError: (err: Error) => toast.error('Failed to send reply', { description: err.message }),
+  });
+}
+
 export function useDeletePaymentMutation(onSuccess?: () => void) {
   const qc = useQueryClient();
   return useMutation({

@@ -99,6 +99,7 @@ export const AUDIT_TYPE = {
   PERIOD_BULK_GENERATED: 'period_bulk_generated',
   // Payment lifecycle (continued)
   PAYMENT_DELETED: 'payment_deleted',
+  PAYMENT_REPLIED: 'payment_replied',
   // Branch
   BRANCH_CREATED: 'branch_created',
   BRANCH_UPDATED: 'branch_updated',

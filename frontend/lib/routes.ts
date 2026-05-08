@@ -6,6 +6,7 @@ export const ROUTES = {
   // Core — Tuition Ops
   DASHBOARD: '/',
   SDC: '/sdc',
+  RECORDINGS: '/recordings',
   PAYMENTS: '/payments',
   PAYMENT_NEW: '/payments/new',
   PAYMENT_PERIODS: '/payment-periods',
@@ -22,6 +23,7 @@ export type Route = (typeof ROUTES)[keyof typeof ROUTES];
 
 export const PROTECTED_ROUTES: string[] = [
   ROUTES.SDC,
+  ROUTES.RECORDINGS,
   ROUTES.PAYMENTS,
   ROUTES.PAYMENT_PERIODS,
   ROUTES.FAMILIES,

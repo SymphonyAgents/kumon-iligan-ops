@@ -10,7 +10,9 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Combobox } from '@/components/ui/combobox';
 import { DatePicker } from '@/components/ui/date-picker';
+import { StudentImportDialog } from '@/components/students/StudentImportDialog';
 import { toTitleCase, fullName } from '@/utils/text';
+import { UploadSimpleIcon } from '@phosphor-icons/react';
 import { useStudentsQuery, useEnrollStudentMutation, useChangeStudentStatusMutation, useAssignTeacherMutation, useDeleteStudentMutation } from '@/hooks/useStudentsQuery';
 import { useFamiliesQuery } from '@/hooks/useFamiliesQuery';
 import { useAssignableUsersQuery } from '@/hooks/useUsersQuery';
@@ -163,6 +165,7 @@ export default function StudentsPage() {
  const [statusFilter, setStatusFilter] = useState('active');
  const [search, setSearch] = useState('');
  const [showEnroll, setShowEnroll] = useState(false);
+ const [showImport, setShowImport] = useState(false);
  const [assignTarget, setAssignTarget] = useState<Student | null>(null);
  const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
 
@@ -201,10 +204,16 @@ export default function StudentsPage() {
  subtitle="Enrolled students"
  action={
  isAdmin ? (
- <Button onClick={() => setShowEnroll(true)}>
- <PlusIcon weight="bold" size={14} />
- Enroll Student
- </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={() => setShowImport(true)}>
+                <UploadSimpleIcon weight="bold" size={14} />
+                Import CSV
+              </Button>
+              <Button onClick={() => setShowEnroll(true)}>
+                <PlusIcon weight="bold" size={14} />
+                Enroll Student
+              </Button>
+            </div>
  ) : undefined
  }
  />
@@ -317,6 +326,7 @@ export default function StudentsPage() {
  )}
 
  <EnrollStudentDialog open={showEnroll} onClose={() => setShowEnroll(false)} />
+      <StudentImportDialog open={showImport} onClose={() => setShowImport(false)} />
  <AssignTeacherDialog open={!!assignTarget} student={assignTarget} onClose={() => setAssignTarget(null)} />
  <ConfirmDialog
  open={!!deleteTarget}

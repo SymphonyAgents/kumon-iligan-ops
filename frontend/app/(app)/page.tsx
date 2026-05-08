@@ -3,6 +3,11 @@
 import { useMemo, useState, useEffect } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Kicker } from '@/components/ui/typography';
+import { MethodMix } from '@/components/dashboard/method-mix';
+import { PayerTrend } from '@/components/dashboard/payer-trend';
+import { RecentPayments } from '@/components/dashboard/recent-payments';
+import { TeacherActivity } from '@/components/dashboard/teacher-activity';
+import { Can, ROLE, useRole } from '@/components/auth/Can';
 import { useStudentsQuery } from '@/hooks/useStudentsQuery';
 import { usePaymentsQuery } from '@/hooks/usePaymentsQuery';
 import { usePaymentPeriodsQuery } from '@/hooks/usePaymentPeriodsQuery';
@@ -40,6 +45,7 @@ function StatCard({ label, value, sub, accent }: StatCardProps) {
 
 export default function DashboardPage() {
  const { data: currentUser } = useCurrentUserQuery();
+ const { isAdmin, isTeacher } = useRole();
 
  const [now, setNow] = useState<Date | null>(null);
  useEffect(() => {
@@ -87,58 +93,83 @@ export default function DashboardPage() {
  subtitle="Your operations snapshot for this month."
  />
 
- <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
- {isLoading ? (
- Array.from({ length: 4 }).map((_, i) => (
- <div key={i} className="rounded-2xl border border-border bg-card p-5" >
- <Skeleton className="h-3 w-24 mb-3" />
- <Skeleton className="h-7 w-16" />
- <Skeleton className="h-3 w-32 mt-3" />
- </div>
- ))
- ) : (
- <>
- <StatCard
- label="Active Students"
- value={stats.activeStudents}
- sub={`${students.length} total enrolled`}
- />
- <StatCard
- label="Pending Review"
- value={stats.pendingPayments}
- accent={stats.pendingPayments > 0 ? 'warn' : undefined}
- sub="payments awaiting action"
- />
- <StatCard
- label={`Collected (${MONTHS[month - 1]})`}
- value={`₱${stats.verifiedThisMonth.toLocaleString('en-PH')}`}
- sub="verified payments this month"
- />
- <StatCard
- label="Overdue Periods"
- value={stats.overduePeriods}
- accent={stats.overduePeriods > 0 ? 'err' : undefined}
- sub={`for ${MONTHS[month - 1]} ${year}`}
- />
- </>
- )}
- </div>
+      <div
+        className={cn(
+          'grid gap-3 lg:gap-4',
+          isAdmin ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 sm:grid-cols-2',
+        )}
+      >
+        {isLoading ? (
+          Array.from({ length: isAdmin ? 4 : 2 }).map((_, i) => (
+            <div key={i} className="rounded-2xl border border-border bg-card p-5">
+              <Skeleton className="h-3 w-24 mb-3" />
+              <Skeleton className="h-7 w-16" />
+              <Skeleton className="h-3 w-32 mt-3" />
+            </div>
+          ))
+        ) : (
+          <>
+            <StatCard
+              label={isTeacher ? 'My Students' : 'Active Students'}
+              value={stats.activeStudents}
+              sub={isTeacher ? 'assigned to you' : `${students.length} total enrolled`}
+            />
+            <Can role={ROLE.ADMIN}>
+              <StatCard
+                label="Pending Review"
+                value={stats.pendingPayments}
+                accent={stats.pendingPayments > 0 ? 'warn' : undefined}
+                sub="payments awaiting action"
+              />
+            </Can>
+            <StatCard
+              label={`Collected (${MONTHS[month - 1]})`}
+              value={`₱${stats.verifiedThisMonth.toLocaleString('en-PH')}`}
+              sub={isTeacher ? 'your verified payments' : 'verified payments this month'}
+            />
+            <Can role={ROLE.ADMIN}>
+              <StatCard
+                label="Overdue Periods"
+                value={stats.overduePeriods}
+                accent={stats.overduePeriods > 0 ? 'err' : undefined}
+                sub={`for ${MONTHS[month - 1]} ${year}`}
+              />
+            </Can>
+          </>
+        )}
+      </div>
 
- {!isLoading && stats.pendingPayments > 0 && (
- <div className="mt-6 rounded-2xl border border-warn/40 bg-warn-soft p-5">
- <Kicker className="text-warn mb-2">Action needed</Kicker>
- <p className="text-[15px] font-medium text-foreground tracking-[-0.1px]">
- {stats.pendingPayments} payment{stats.pendingPayments > 1 ? 's' : ''} waiting for review
- </p>
- <p className="text-[13px] text-muted-foreground mt-1">
- Go to{' '}
-          <a href="/payments" className="text-primary font-medium underline-offset-2 hover:underline">
-            Payments
-          </a>{' '}
-          to verify, flag, or reject.
-        </p>
- </div>
- )}
+      <Can role={ROLE.ADMIN}>
+        {!isLoading && stats.pendingPayments > 0 && (
+          <div className="mt-6 rounded-2xl border border-warn/40 bg-warn-soft p-5">
+            <Kicker className="text-warn mb-2">Action needed</Kicker>
+            <p className="text-[15px] font-medium text-foreground tracking-[-0.1px]">
+              {stats.pendingPayments} payment{stats.pendingPayments > 1 ? 's' : ''} waiting for review
+            </p>
+            <p className="text-[13px] text-muted-foreground mt-1">
+              Go to{' '}
+              <a href="/payments" className="text-primary font-medium underline-offset-2 hover:underline">
+                Payments
+              </a>{' '}
+              to verify, flag, or reject.
+            </p>
+          </div>
+        )}
+      </Can>
+
+      <Can role={ROLE.ADMIN}>
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5">
+          <MethodMix />
+          <PayerTrend />
+        </div>
+      </Can>
+
+      <div className="mt-4 lg:mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5">
+        <RecentPayments />
+        <Can role={ROLE.ADMIN}>
+          <TeacherActivity currentUserId={currentUser?.id} />
+        </Can>
+      </div>
  </div>
  );
 }

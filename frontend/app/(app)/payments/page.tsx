@@ -14,7 +14,10 @@ import {
 import { Combobox } from '@/components/ui/combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
+import { PaymentImportDialog } from '@/components/payments/PaymentImportDialog';
 import { toTitleCase, fullName } from '@/utils/text';
+import { rowsToCsv, downloadCsv } from '@/utils/csv';
+import { UploadSimpleIcon, DownloadSimpleIcon } from '@phosphor-icons/react';
 import { usePaymentsQuery, useVerifyPaymentMutation, useFlagPaymentMutation, useRejectPaymentMutation, useDeletePaymentMutation, useRecordPaymentMutation } from '@/hooks/usePaymentsQuery';
 import { useStudentsQuery } from '@/hooks/useStudentsQuery';
 import { useStudentPeriodsQuery } from '@/hooks/usePaymentPeriodsQuery';
@@ -226,6 +229,7 @@ export default function PaymentsPage() {
  const [statusFilter, setStatusFilter] = useState('');
  const [search, setSearch] = useState('');
  const [showRecord, setShowRecord] = useState(false);
+ const [showImport, setShowImport] = useState(false);
  const [flagTarget, setFlagTarget] = useState<Payment | null>(null);
  const [rejectTarget, setRejectTarget] = useState<Payment | null>(null);
  const [deleteTarget, setDeleteTarget] = useState<Payment | null>(null);
@@ -263,13 +267,49 @@ export default function PaymentsPage() {
  <PageHeader
  title="Payments"
  subtitle="Tuition payment records"
- action={
- <Button onClick={() => setShowRecord(true)}>
- <PlusIcon weight="bold" size={14} />
- Record Payment
- </Button>
- }
- />
+        action={
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  if (filtered.length === 0) return;
+                  const csv = rowsToCsv(
+                    filtered.map((p) => ({
+                      number: p.number,
+                      studentName: fullName(p.studentFirstName, p.studentLastName),
+                      guardianName: toTitleCase(p.guardianName ?? ''),
+                      amount: (p.amount / 100).toFixed(2),
+                      expectedAmount: (p.expectedAmountSnapshot / 100).toFixed(2),
+                      paymentMethod: p.paymentMethod,
+                      referenceNumber: p.referenceNumber ?? '',
+                      paymentDate: p.paymentDate,
+                      status: p.status,
+                      recordedAt: p.createdAt,
+                    })),
+                  );
+                  const stamp = new Date().toISOString().split('T')[0];
+                  downloadCsv(`kumon-payments-${stamp}.csv`, csv);
+                }}
+                disabled={filtered.length === 0}
+              >
+                <DownloadSimpleIcon weight="bold" size={14} />
+                Export CSV
+              </Button>
+            )}
+            {isAdmin && (
+              <Button variant="secondary" onClick={() => setShowImport(true)}>
+                <UploadSimpleIcon weight="bold" size={14} />
+                Import CSV
+              </Button>
+            )}
+            <Button onClick={() => setShowRecord(true)}>
+              <PlusIcon weight="bold" size={14} />
+              Record Payment
+            </Button>
+          </div>
+        }
+      />
 
  {/* Filters */}
  <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -388,7 +428,8 @@ export default function PaymentsPage() {
  </div>
  )}
 
- <RecordPaymentDialog open={showRecord} onClose={() => setShowRecord(false)} />
+      <RecordPaymentDialog open={showRecord} onClose={() => setShowRecord(false)} />
+      <PaymentImportDialog open={showImport} onClose={() => setShowImport(false)} />
 
  <NoteDialog
  open={!!flagTarget}

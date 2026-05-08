@@ -125,6 +125,8 @@ export interface Payment {
   recordedBy: string;
   verifiedBy: string | null;
   verifiedAt: string | null;
+  teacherReply: string | null;
+  teacherRepliedAt: string | null;
   branchId: string;
   deletedAt: string | null;
   createdAt: string;

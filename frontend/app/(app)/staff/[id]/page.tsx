@@ -10,7 +10,7 @@ import {
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { toTitleCase } from '@/utils/text';
-import { USER_TYPE_STYLES, USER_TYPE_LABELS } from '@/lib/constants';
+import { USER_TYPE, USER_TYPE_STYLES, USER_TYPE_LABELS } from '@/lib/constants';
 import { Input } from '@/components/ui/input';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Button } from '@/components/ui/button';
@@ -43,8 +43,8 @@ export default function StaffProfilePage() {
  const userId = params.id as string;
 
  const { data: currentUser } = useCurrentUserQuery();
- const isAdmin = currentUser?.userType === 'admin' || currentUser?.userType === 'superadmin';
- const isSuperadmin = currentUser?.userType === 'superadmin';
+  const isAdmin = currentUser?.userType === USER_TYPE.ADMIN || currentUser?.userType === USER_TYPE.SUPERADMIN;
+  const isSuperadmin = currentUser?.userType === USER_TYPE.SUPERADMIN;
 
  const { data: user, isLoading } = useUserQuery(userId);
 
