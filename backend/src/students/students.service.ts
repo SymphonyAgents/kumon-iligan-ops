@@ -83,6 +83,7 @@ export class StudentsService {
         .select({
           ...getTableColumns(students),
           guardianName: families.guardianName,
+          guardianPhone: families.guardianPhone,
           teacherId: studentTeacherAssignments.teacherId,
           teacherName: users.fullName,
         })
@@ -149,6 +150,7 @@ export class StudentsService {
       .select({
         ...getTableColumns(students),
         guardianName: families.guardianName,
+        guardianPhone: families.guardianPhone,
         teacherId: studentTeacherAssignments.teacherId,
         teacherName: users.fullName,
       })

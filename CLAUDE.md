@@ -1,7 +1,13 @@
 # Kumon Iligan Operations Platform — Project Context
 
-> Auto-maintained by Aria. Last updated: 2026-04-06 PHT.
+> Auto-maintained by Aria. Last updated: 2026-05-09 10:24 PHT.
 > See also: AGENTS.md for quick-start and schema overview.
+
+## Active Context
+
+- Student list payloads now include `guardianPhone` for both teacher and admin/superadmin queries so payment CSV import can disambiguate duplicate student names.
+- `PaymentImportDialog` validates `paymentMethod` through a typed guard aligned with `PAYMENT_METHOD` values, keeping CSV parsing type-safe.
+- Local workspace installs create `.pnpm-store/`, which is intentionally gitignored at the app root.
 
 ## Project Overview
 

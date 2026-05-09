@@ -25,7 +25,7 @@ import {
   XIcon,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
-import type { Student } from '@/lib/types';
+import type { PaymentMethod, Student } from '@/lib/types';
 
 interface PaymentImportDialogProps {
   open: boolean;
@@ -50,7 +50,11 @@ interface ImportResult {
 
 const REQUIRED = ['studentName', 'amount', 'paymentDate', 'paymentMethod', 'periodMonth', 'periodYear'] as const;
 const OPTIONAL = ['guardianPhone', 'referenceNumber'] as const;
-const VALID_METHODS = Object.values(PAYMENT_METHOD);
+const VALID_METHODS = Object.values(PAYMENT_METHOD) as PaymentMethod[];
+
+function isPaymentMethod(value: string): value is PaymentMethod {
+  return VALID_METHODS.includes(value as PaymentMethod);
+}
 
 const SAMPLE_CSV = `studentName,guardianPhone,amount,paymentDate,paymentMethod,referenceNumber,periodMonth,periodYear
 Quinn Pascual,+639171234567,2500,2026-04-05,gcash,GC-9120384,4,2026
@@ -89,7 +93,7 @@ function parseRow(raw: Record<string, string>): { ok: true; row: CsvRow } | { ok
   if (!paymentDate || !/^\d{4}-\d{2}-\d{2}$/.test(paymentDate)) {
     return { ok: false, reason: 'paymentDate must be YYYY-MM-DD' };
   }
-  if (!method || !VALID_METHODS.includes(method)) {
+  if (!method || !isPaymentMethod(method)) {
     return { ok: false, reason: `paymentMethod must be one of: ${VALID_METHODS.join(', ')}` };
   }
 

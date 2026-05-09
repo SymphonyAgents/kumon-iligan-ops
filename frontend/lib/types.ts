@@ -69,6 +69,7 @@ export interface Student {
   updatedAt: string;
   // joined fields
   guardianName?: string | null;
+  guardianPhone?: string | null;
   teacherId?: string | null;
   teacherName?: string | null;
   // from findOne
