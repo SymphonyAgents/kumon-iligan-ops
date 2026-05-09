@@ -9,6 +9,11 @@
     "lint": "pnpm --filter frontend lint"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["msw", "sharp", "unrs-resolver"]
+    "onlyBuiltDependencies": ["msw", "sharp", "unrs-resolver"],
+    "overrides": {
+      "minimatch@<3.1.4": ">=3.1.4",
+      "brace-expansion@<1.1.13": ">=1.1.13",
+      "postcss@<8.5.10": ">=8.5.10"
+    }
   }
 }
