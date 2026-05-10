@@ -16,7 +16,7 @@ substitutions:
   _FRONTEND_SERVICE: kumon-iligan-frontend
   _REGISTRY: asia-southeast1-docker.pkg.dev
   _BACKEND_URL: 'https://kumon-iligan-backend-eu7lzuq4wq-as.a.run.app'
-  _APP_URL: 'https://kumon-iligan-frontend-PLACEHOLDER.a.run.app'
+  _APP_URL: 'https://kumon-iligan.symph.co'
 
 steps:
   # ── 1a: Build backend image (starts immediately)
