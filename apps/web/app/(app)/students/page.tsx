@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Combobox } from '@/components/ui/combobox';
 import { DatePicker } from '@/components/ui/date-picker';
 import { StudentImportDialog } from '@/components/students/StudentImportDialog';
+import { DataCardList } from '@/components/ui/data-card-list';
 import { toTitleCase, fullName } from '@/utils/text';
 import { UploadSimpleIcon } from '@phosphor-icons/react';
 import { useStudentsQuery, useEnrollStudentMutation, useChangeStudentStatusMutation, useAssignTeacherMutation, useDeleteStudentMutation } from '@/hooks/useStudentsQuery';
@@ -205,12 +206,17 @@ export default function StudentsPage() {
  action={
  isAdmin ? (
             <div className="flex items-center gap-2">
-              <Button variant="secondary" onClick={() => setShowImport(true)}>
-                <UploadSimpleIcon weight="bold" size={14} />
-                Import CSV
+              <Button
+                variant="secondary"
+                aria-label="Import CSV"
+                className="px-3 sm:px-[18px]"
+                onClick={() => setShowImport(true)}
+              >
+                <UploadSimpleIcon weight="bold" size={16} />
+                <span className="hidden sm:inline">Import CSV</span>
               </Button>
               <Button onClick={() => setShowEnroll(true)}>
-                <PlusIcon weight="bold" size={14} />
+                <PlusIcon weight="bold" size={16} />
                 Enroll Student
               </Button>
             </div>
@@ -252,7 +258,62 @@ export default function StudentsPage() {
  action={isAdmin ? <Button onClick={() => setShowEnroll(true)}><PlusIcon size={14} weight="bold" />Enroll Student</Button> : undefined}
  />
  ) : (
- <div className="rounded-xl border border-border overflow-hidden">
+ <>
+ <DataCardList
+ items={filtered}
+ getKey={(s) => s.id}
+ renderCard={(s) => ({
+ title: fullName(s.firstName, s.lastName),
+ description: toTitleCase(s.guardianName ?? ''),
+ badge: <StatusBadge status={s.status} />,
+ meta: (
+ <>
+ <p>{s.level ?? '—'}</p>
+ <p className="truncate">
+ Teacher: {s.teacherName ? toTitleCase(s.teacherName) : 'Unassigned'}
+ </p>
+ </>
+ ),
+ actions: isAdmin ? (
+ <div className="flex items-center justify-end gap-2">
+ <button
+ onClick={() => setAssignTarget(s)}
+ title="Assign teacher"
+ aria-label="Assign teacher"
+ className="p-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-primary transition-colors"
+ >
+ <ArrowsClockwiseIcon size={18} />
+ </button>
+ {s.status === STUDENT_STATUS.ACTIVE && (
+ <button
+ onClick={() => changeStatusMut.mutate({ id: s.id, data: { status: STUDENT_STATUS.INACTIVE } })}
+ className="px-3 py-1.5 rounded-md text-xs font-medium text-warn hover:bg-warn-soft dark:hover:bg-amber-950 transition-colors"
+ >
+ Deactivate
+ </button>
+ )}
+ {s.status === STUDENT_STATUS.INACTIVE && (
+ <button
+ onClick={() => changeStatusMut.mutate({ id: s.id, data: { status: STUDENT_STATUS.ACTIVE } })}
+ className="px-3 py-1.5 rounded-md text-xs font-medium text-status-paid-fg hover:bg-emerald-50 dark:hover:bg-emerald-950 transition-colors"
+ >
+ Activate
+ </button>
+ )}
+ {isSuperadmin && (
+ <button
+ onClick={() => setDeleteTarget(s)}
+ aria-label="Remove student"
+ className="p-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-err transition-colors"
+ >
+ <TrashIcon size={18} />
+ </button>
+ )}
+ </div>
+ ) : undefined,
+ })}
+ />
+ <div className="hidden sm:block rounded-xl border border-border overflow-hidden">
  <div className="overflow-x-auto">
  <table className="w-full text-sm">
  <thead>
@@ -323,6 +384,7 @@ export default function StudentsPage() {
  </table>
  </div>
  </div>
+ </>
  )}
 
  <EnrollStudentDialog open={showEnroll} onClose={() => setShowEnroll(false)} />

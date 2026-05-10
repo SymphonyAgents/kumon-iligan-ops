@@ -12,7 +12,8 @@ import { useUsersQuery, useUpdateUserRoleMutation, useUpdateUserBranchMutation, 
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 import { useBranchesQuery } from '@/hooks/useBranchesQuery';
 import { toTitleCase } from '@/utils/text';
-import { USER_TYPE } from '@/lib/constants';
+import { USER_TYPE, USER_TYPE_LABELS, USER_TYPE_STYLES } from '@/lib/constants';
+import type { DataCardProps } from '@/components/ui/data-card-list';
 import { UserRoleConfirmDialog, type PendingRoleChange } from '@/components/users/UserRoleConfirmDialog';
 import { UserBranchConfirmDialog, type PendingBranchChange } from '@/components/users/UserBranchConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -41,6 +42,31 @@ export default function StaffPage() {
  const [rejectTarget, setRejectTarget] = useState<AppUser | null>(null);
 
  const isSuperadmin = currentUser?.userType === USER_TYPE.SUPERADMIN;
+
+ const branchNameById = useMemo(() => {
+ const m = new Map<string, string>();
+ for (const b of branches as Branch[]) m.set(b.id, b.name);
+ return m;
+ }, [branches]);
+
+ const renderUserCard = (u: AppUser): DataCardProps => {
+ const name = u.fullName ?? u.nickname ?? null;
+ const primary = name ? toTitleCase(name) : u.email;
+ const branchLabel = u.branchId ? toTitleCase(branchNameById.get(u.branchId) ?? '') : 'No branch';
+ return {
+ title: primary,
+ description: u.email,
+ badge: (
+ <span className={cn(
+ 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium uppercase tracking-wide',
+ USER_TYPE_STYLES[u.userType] ?? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300',
+ )}>
+ {USER_TYPE_LABELS[u.userType] ?? u.userType}
+ </span>
+ ),
+ meta: <p className="truncate">{branchLabel}</p>,
+ };
+ };
 
  const columns = useMemo(
  () => createUserColumns({
@@ -234,6 +260,8 @@ export default function StaffPage() {
  emptyTitle="No users"
  emptyDescription=""
  onRowClick={(user) => router.push(`/staff/${user.id}`)}
+ getRowKey={(u) => u.id}
+ renderMobileCard={renderUserCard}
  />
  </div>
  ))}
@@ -267,6 +295,8 @@ export default function StaffPage() {
  emptyTitle="No pending users"
  emptyDescription=""
  onRowClick={(user) => router.push(`/staff/${user.id}`)}
+ getRowKey={(u) => u.id}
+ renderMobileCard={renderUserCard}
  />
  )}
  </>

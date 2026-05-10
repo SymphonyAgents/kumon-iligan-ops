@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ import { Combobox } from '@/components/ui/combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
 import { PaymentImportDialog } from '@/components/payments/PaymentImportDialog';
+import { DataCardList } from '@/components/ui/data-card-list';
 import { toTitleCase, fullName } from '@/utils/text';
 import { rowsToCsv, downloadCsv } from '@/utils/csv';
 import { UploadSimpleIcon, DownloadSimpleIcon } from '@phosphor-icons/react';
@@ -222,7 +224,68 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
  other: 'Other',
 };
 
+function PaymentActions({
+ payment, isAdmin, isSuperadmin,
+ onVerify, onFlag, onReject, onDelete, verifyPending,
+}: {
+ payment: Payment;
+ isAdmin: boolean;
+ isSuperadmin: boolean;
+ onVerify: (p: Payment) => void;
+ onFlag: (p: Payment) => void;
+ onReject: (p: Payment) => void;
+ onDelete: (p: Payment) => void;
+ verifyPending: boolean;
+}) {
+ if (!isAdmin) return null;
+ const stop = (e: React.MouseEvent) => e.stopPropagation();
+ return (
+ <div className="flex items-center justify-end gap-2" onClick={stop}>
+ {payment.status === PAYMENT_STATUS.PENDING_REVIEW && (
+ <>
+ <button
+ onClick={(e) => { stop(e); onVerify(payment); }}
+ disabled={verifyPending}
+ title="Verify"
+ aria-label="Verify payment"
+ className="p-2 rounded-md text-status-paid-fg hover:bg-emerald-50 dark:hover:bg-emerald-950 transition-colors"
+ >
+ <CheckIcon size={18} weight="bold" />
+ </button>
+ <button
+ onClick={(e) => { stop(e); onFlag(payment); }}
+ title="Flag"
+ aria-label="Flag payment"
+ className="p-2 rounded-md text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950 transition-colors"
+ >
+ <FlagIcon size={18} weight="bold" />
+ </button>
+ <button
+ onClick={(e) => { stop(e); onReject(payment); }}
+ title="Reject"
+ aria-label="Reject payment"
+ className="p-2 rounded-md text-err hover:bg-err-soft dark:hover:bg-red-950 transition-colors"
+ >
+ <XIcon size={18} weight="bold" />
+ </button>
+ </>
+ )}
+ {isSuperadmin && (
+ <button
+ onClick={(e) => { stop(e); onDelete(payment); }}
+ title="Delete"
+ aria-label="Delete payment"
+ className="p-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-err transition-colors"
+ >
+ <TrashIcon size={18} />
+ </button>
+ )}
+ </div>
+ );
+}
+
 export default function PaymentsPage() {
+ const router = useRouter();
  const { data: currentUser } = useCurrentUserQuery();
  const isAdmin = currentUser?.userType === USER_TYPE.ADMIN || currentUser?.userType === USER_TYPE.SUPERADMIN;
 
@@ -230,6 +293,7 @@ export default function PaymentsPage() {
  const [search, setSearch] = useState('');
  const [showRecord, setShowRecord] = useState(false);
  const [showImport, setShowImport] = useState(false);
+ const [verifyTarget, setVerifyTarget] = useState<Payment | null>(null);
  const [flagTarget, setFlagTarget] = useState<Payment | null>(null);
  const [rejectTarget, setRejectTarget] = useState<Payment | null>(null);
  const [deleteTarget, setDeleteTarget] = useState<Payment | null>(null);
@@ -238,7 +302,7 @@ export default function PaymentsPage() {
  statusFilter ? { status: statusFilter } : undefined
  );
 
- const verifyMut = useVerifyPaymentMutation();
+ const verifyMut = useVerifyPaymentMutation(() => setVerifyTarget(null));
  const flagMut = useFlagPaymentMutation(() => setFlagTarget(null));
  const rejectMut = useRejectPaymentMutation(() => setRejectTarget(null));
  const deleteMut = useDeletePaymentMutation(() => setDeleteTarget(null));
@@ -272,6 +336,8 @@ export default function PaymentsPage() {
             {isAdmin && (
               <Button
                 variant="secondary"
+                aria-label="Export CSV"
+                className="px-3 sm:px-[18px]"
                 onClick={() => {
                   if (filtered.length === 0) return;
                   const csv = rowsToCsv(
@@ -293,20 +359,22 @@ export default function PaymentsPage() {
                 }}
                 disabled={filtered.length === 0}
               >
-                <DownloadSimpleIcon weight="bold" size={14} />
-                Export CSV
+                <DownloadSimpleIcon weight="bold" size={16} />
+                <span className="hidden sm:inline">Export CSV</span>
               </Button>
             )}
             {isAdmin && (
-              <Button variant="secondary" onClick={() => setShowImport(true)}>
-                <UploadSimpleIcon weight="bold" size={14} />
-                Import CSV
+              <Button variant="secondary" aria-label="Import CSV" className="px-3 sm:px-[18px]" onClick={() => setShowImport(true)}>
+                <UploadSimpleIcon weight="bold" size={16} />
+                <span className="hidden sm:inline">Import CSV</span>
               </Button>
             )}
-            <Button onClick={() => setShowRecord(true)}>
-              <PlusIcon weight="bold" size={14} />
-              Record Payment
-            </Button>
+            {!isAdmin && (
+              <Button onClick={() => setShowRecord(true)}>
+                <PlusIcon weight="bold" size={16} />
+                Record Payment
+              </Button>
+            )}
           </div>
         }
       />
@@ -337,13 +405,51 @@ export default function PaymentsPage() {
  />
  </div>
 
- {/* Table */}
+ {/* Table (sm+) and Mobile Card List (< sm) */}
  {isLoading ? (
  <TableSkeleton />
  ) : filtered.length === 0 ? (
  <EmptyState title="No payments found"description="Record the first payment using the button above." />
  ) : (
- <div className="rounded-xl border border-border overflow-hidden">
+ <>
+ <DataCardList
+ items={filtered}
+ getKey={(p) => p.id}
+ renderCard={(p) => ({
+ onClick: () => router.push(`/payments/${p.id}`),
+ title: fullName(p.studentFirstName, p.studentLastName),
+ description: toTitleCase(p.guardianName ?? ''),
+ badge: <StatusBadge status={p.status} />,
+ meta: (
+ <>
+ <p className="font-mono">{p.number}</p>
+ <p className="truncate">
+ {PAYMENT_METHOD_LABELS[p.paymentMethod] ?? p.paymentMethod}
+ {p.referenceNumber ? ` · ${p.referenceNumber}` : ''}
+ </p>
+ <p>{new Date(p.paymentDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+ </>
+ ),
+ trailing: `₱${(p.amount / 100).toLocaleString('en-PH')}`,
+ note: p.note ?? undefined,
+ actions:
+ isAdmin && (p.status === PAYMENT_STATUS.PENDING_REVIEW || currentUser?.userType === USER_TYPE.SUPERADMIN) ? (
+ <PaymentActions
+ payment={p}
+ isAdmin={isAdmin}
+ isSuperadmin={currentUser?.userType === USER_TYPE.SUPERADMIN}
+ onVerify={setVerifyTarget}
+ onFlag={setFlagTarget}
+ onReject={setRejectTarget}
+ onDelete={setDeleteTarget}
+ verifyPending={verifyMut.isPending}
+ />
+ ) : undefined,
+ })}
+ />
+
+ {/* Table (sm and up) */}
+ <div className="hidden sm:block rounded-xl border border-border overflow-hidden">
  <div className="overflow-x-auto">
  <table className="w-full text-sm">
  <thead>
@@ -359,7 +465,11 @@ export default function PaymentsPage() {
  </thead>
  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
  {filtered.map(p => (
- <tr key={p.id}  className="bg-card hover:bg-secondary/40 transition-colors">
+ <tr
+ key={p.id}
+ onClick={() => router.push(`/payments/${p.id}`)}
+ className="bg-card hover:bg-secondary/40 transition-colors cursor-pointer"
+ >
  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.number}</td>
                   <td className="px-4 py-3">
                     <p className="font-medium text-foreground">{fullName(p.studentFirstName, p.studentLastName)}</p>
@@ -381,43 +491,16 @@ export default function PaymentsPage() {
  </td>
  {isAdmin && (
  <td className="px-4 py-3">
- <div className="flex items-center justify-end gap-1">
- {p.status === PAYMENT_STATUS.PENDING_REVIEW && (
- <>
- <button
- onClick={() => verifyMut.mutate({ id: p.id })}
- disabled={verifyMut.isPending}
- title="Verify"
- className="p-1.5 rounded-md text-status-paid-fg hover:bg-emerald-50 dark:hover:bg-emerald-950 transition-colors"
- >
- <CheckIcon size={14} weight="bold" />
- </button>
- <button
- onClick={() => setFlagTarget(p)}
- title="Flag"
- className="p-1.5 rounded-md text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950 transition-colors"
- >
- <FlagIcon size={14} weight="bold" />
- </button>
- <button
- onClick={() => setRejectTarget(p)}
- title="Reject"
- className="p-1.5 rounded-md text-err hover:bg-err-soft dark:hover:bg-red-950 transition-colors"
- >
- <XIcon size={14} weight="bold" />
- </button>
- </>
- )}
- {currentUser?.userType === USER_TYPE.SUPERADMIN && (
- <button
- onClick={() => setDeleteTarget(p)}
- title="Delete"
- className="p-1.5 rounded-md text-muted-foreground hover:bg-secondary hover:text-err transition-colors"
- >
- <TrashIcon size={14} />
- </button>
- )}
- </div>
+ <PaymentActions
+ payment={p}
+ isAdmin={isAdmin}
+ isSuperadmin={currentUser?.userType === USER_TYPE.SUPERADMIN}
+ onVerify={setVerifyTarget}
+ onFlag={setFlagTarget}
+ onReject={setRejectTarget}
+ onDelete={setDeleteTarget}
+ verifyPending={verifyMut.isPending}
+ />
  </td>
  )}
  </tr>
@@ -426,11 +509,21 @@ export default function PaymentsPage() {
  </table>
  </div>
  </div>
+ </>
  )}
 
       <RecordPaymentDialog open={showRecord} onClose={() => setShowRecord(false)} />
       <PaymentImportDialog open={showImport} onClose={() => setShowImport(false)} />
 
+ <ConfirmDialog
+ open={!!verifyTarget}
+ title="Verify Payment"
+ description={`Mark ${verifyTarget?.number} as verified? This adds ₱${((verifyTarget?.amount ?? 0) / 100).toLocaleString('en-PH')} to the period total.`}
+ confirmLabel="Verify"
+ onConfirm={() => verifyTarget && verifyMut.mutate({ id: verifyTarget.id })}
+ onCancel={() => setVerifyTarget(null)}
+ loading={verifyMut.isPending}
+ />
  <NoteDialog
  open={!!flagTarget}
  title={`Flag Payment ${flagTarget?.number ?? ''}`}

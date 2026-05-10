@@ -1,89 +1,116 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
-import { Input, Textarea } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePicker } from '@/components/ui/date-picker';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { useStudentQuery } from '@/hooks/useStudentsQuery';
 import { useStudentPeriodsQuery } from '@/hooks/usePaymentPeriodsQuery';
-import { useRecordPaymentMutation } from '@/hooks/usePaymentsQuery';
-import { PAYMENT_METHOD, MONTHS } from '@/lib/constants';
+import { usePaymentsQuery, useRecordPaymentMutation } from '@/hooks/usePaymentsQuery';
+import { PAYMENT_METHOD, PAYMENT_STATUS, MONTHS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
+import { fullName, toTitleCase } from '@/utils/text';
 import {
  ArrowLeftIcon,
- UploadSimpleIcon,
  CheckCircleIcon,
  WarningIcon,
  UsersThreeIcon,
- XIcon,
  CameraIcon,
  ReceiptIcon,
+ UploadSimpleIcon,
 } from '@phosphor-icons/react';
 
-// ── Money helpers ──────────────────────────────────────────────────────────
-function fmt(amount: number) {
- return `₱${(amount / 100).toLocaleString('en-PH', { minimumFractionDigits: 0 })}`;
+const METHOD_OPTIONS: Array<[string, string]> = [
+ [PAYMENT_METHOD.GCASH, 'GCash'],
+ [PAYMENT_METHOD.BANK_TRANSFER, 'Bank Transfer'],
+ [PAYMENT_METHOD.CASH, 'Cash'],
+ [PAYMENT_METHOD.OTHER, 'Other'],
+];
+
+function fmtPeso(scaled: number) {
+ return `₱${(scaled / 100).toLocaleString('en-PH', { minimumFractionDigits: 0 })}`;
 }
 function toScaled(v: string) { return Math.round(parseFloat(v) * 100); }
 
-const METHOD_LABELS: Record<string, string> = {
- [PAYMENT_METHOD.GCASH]: 'GCash',
- [PAYMENT_METHOD.BANK_TRANSFER]: 'Bank Transfer',
- [PAYMENT_METHOD.CASH]: 'Cash',
- [PAYMENT_METHOD.OTHER]: 'Other',
-};
-
-// ── Field wrapper (label + required marker only, no error, that goes in Input) ──
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function BackLink({ href, label }: { href: string; label?: string }) {
  return (
- <div className="flex flex-col gap-1.5">
- <span className="text-xs font-medium text-muted-foreground">
- {label}{required && <span className="text-destructive ml-0.5">*</span>}
- </span>
+ <Link
+ href={href}
+ aria-label={label ?? 'Go back'}
+ className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors shrink-0"
+ >
+ <ArrowLeftIcon size={16} />
+ </Link>
+ );
+}
+
+function Kicker({ children }: { children: React.ReactNode }) {
+ return (
+ <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">
  {children}
+ </p>
+ );
+}
+
+function FieldLabel({ children, required }: { children: React.ReactNode; required?: boolean }) {
+ return (
+ <span className="text-[11.5px] font-semibold text-muted-foreground uppercase tracking-[0.08em]">
+ {children}{required && <span className="text-err ml-0.5">*</span>}
+ </span>
+ );
+}
+
+function Fact({ label, value, accent }: { label: string; value: React.ReactNode; accent?: boolean }) {
+ return (
+ <div>
+ <p className="text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">{label}</p>
+ <p className={cn(
+ 'text-[18px] font-semibold tracking-[-0.2px] mt-1',
+ accent ? 'text-status-unpaid-fg' : 'text-foreground',
+ )}>
+ {value}
+ </p>
  </div>
  );
 }
 
-// ── Receipt uploader ───────────────────────────────────────────────────────
-function ReceiptUpload({
-  file,
-  preview,
-  onFile,
-  error,
+function ReceiptSlot({
+ file, preview, onFile, error,
 }: {
-  file: File | null;
-  preview: string | null;
-  onFile: (f: File) => void;
-  error?: string;
+ file: File | null;
+ preview: string | null;
+ onFile: (f: File) => void;
+ error?: string;
 }) {
  const ref = useRef<HTMLInputElement>(null);
-
  return (
- <div>
+ <div className="flex flex-col gap-2">
+ <FieldLabel required>Receipt screenshot</FieldLabel>
  <input
  ref={ref}
  type="file"
  accept="image/*"
  capture="environment"
  className="hidden"
- onChange={e => { if (e.target.files?.[0]) onFile(e.target.files[0]); }}
+ onChange={(e) => { if (e.target.files?.[0]) onFile(e.target.files[0]); }}
  />
  {preview ? (
- <div className="relative rounded-xl overflow-hidden border border-border bg-secondary/40">
+ <div className="flex items-center gap-3 px-3 py-3 rounded-xl border border-border bg-sunken">
  {/* eslint-disable-next-line @next/next/no-img-element */}
- <img src={preview} alt="Receipt" className="w-full max-h-48 object-contain" />
+ <img src={preview} alt="Receipt" className="w-14 h-14 rounded-lg object-cover border border-border bg-card" />
+ <div className="flex-1 min-w-0">
+ <p className="text-sm font-medium truncate">{file?.name ?? 'receipt'}</p>
+ <p className="text-xs text-muted-foreground">
+ {file ? `${(file.size / (1024 * 1024)).toFixed(1)} MB · ` : ''}drag a new file or tap to replace
+ </p>
+ </div>
  <button
  type="button"
  onClick={() => ref.current?.click()}
- className="absolute bottom-2 right-2 px-3 py-1.5 text-xs font-medium bg-white dark:bg-secondary border border-border rounded-lg shadow-sm hover:bg-secondary/40 dark:hover:bg-secondary transition-colors"
+ className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
  >
  Replace
  </button>
@@ -93,64 +120,53 @@ function ReceiptUpload({
  type="button"
  onClick={() => ref.current?.click()}
  className={cn(
- 'w-full border-2 border-dashed rounded-xl py-8 flex flex-col items-center gap-2 transition-colors',
- error
- ? 'border-red-300 dark:border-red-800 bg-err-soft dark:bg-red-950/20'
- : 'border-border hover:border-border dark:hover:border-border hover:bg-secondary/40',
+ 'w-full border border-dashed rounded-xl py-7 px-4 flex flex-col items-center gap-2 transition-colors',
+ error ? 'border-err/50 bg-err-soft' : 'border-border-strong/40 hover:border-accent hover:bg-accent-soft/40',
  )}
  >
  <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
  <CameraIcon size={20} className="text-muted-foreground" />
  </div>
- <div className="text-center">
- <p className="text-sm font-medium text-foreground">Tap to take photo or upload</p>
- <p className="text-xs text-muted-foreground mt-0.5">GCash / bank receipt screenshot · max 5MB</p>
- </div>
+ <p className="text-sm font-medium text-foreground">Take photo or upload</p>
+ <p className="text-xs text-muted-foreground">GCash / bank receipt · max 5MB</p>
  </button>
  )}
- {error && <p className="text-xs text-err mt-1">{error}</p>}
+ {error && <p className="text-xs text-err">{error}</p>}
  </div>
  );
 }
 
-// ── Success screen ─────────────────────────────────────────────────────────
 function SuccessScreen({ paymentNumber, onDone }: { paymentNumber: string; onDone: () => void }) {
  return (
- <div className="flex flex-col items-center justify-center py-16 gap-6 text-center">
+ <div className="flex flex-col items-center justify-center py-20 gap-6 text-center">
  <div className="w-20 h-20 rounded-full bg-status-paid-bg flex items-center justify-center">
  <CheckCircleIcon size={40} weight="fill" className="text-status-paid-dot" />
  </div>
  <div>
- <p className="text-xl font-semibold text-foreground">Payment recorded!</p>
- <p className="text-sm text-muted-foreground mt-1">
+ <p className="text-[24px] font-semibold tracking-[-0.4px]">Payment recorded</p>
+ <p className="text-sm text-muted-foreground mt-1.5">
  Reference: <span className="font-mono font-semibold text-foreground">{paymentNumber}</span>
  </p>
  <p className="text-xs text-muted-foreground mt-1">Pending admin review</p>
  </div>
- <div className="flex gap-3">
  <Button variant="secondary" onClick={onDone}>
- <ArrowLeftIcon size={14} />
- Back to students
+ <ArrowLeftIcon size={14} /> Back to students
  </Button>
- </div>
  </div>
  );
 }
 
-// ── Main ───────────────────────────────────────────────────────────────────
 export default function SDCFormPage() {
  const params = useParams<{ studentId: string }>();
  const router = useRouter();
 
  const { data: student, isLoading: studentLoading } = useStudentQuery(params.studentId);
  const { data: periods = [], isLoading: periodsLoading } = useStudentPeriodsQuery(params.studentId);
+ const { data: studentPayments = [] } = usePaymentsQuery({ studentId: params.studentId });
 
- // Current period = most recent non-paid or first available
- const currentPeriod = student?.currentPeriod
- ?? periods.find(p => p.status !== 'paid')
- ?? periods[0];
+ const currentPeriod =
+ student?.currentPeriod ?? periods.find((p) => p.status !== 'paid') ?? periods[0];
 
- // Form state
  const [referenceNumber, setRef] = useState('');
  const [amount, setAmount] = useState('');
  const [method, setMethod] = useState('');
@@ -159,12 +175,12 @@ export default function SDCFormPage() {
  const [receiptFile, setReceiptFile] = useState<File | null>(null);
  const [receiptPreview, setPreview] = useState<string | null>(null);
  const [uploading, setUploading] = useState(false);
+ const [includeSibling, setIncludeSibling] = useState(false);
  const [errors, setErrors] = useState<Record<string, string>>({});
  const [successPayNum, setSuccess] = useState<string | null>(null);
 
- const recordMut = useRecordPaymentMutation((/* data */) => {});
+ const recordMut = useRecordPaymentMutation(() => {});
 
- // Set preview when file changes
  useEffect(() => {
  if (!receiptFile) return;
  const url = URL.createObjectURL(receiptFile);
@@ -172,7 +188,6 @@ export default function SDCFormPage() {
  return () => URL.revokeObjectURL(url);
  }, [receiptFile]);
 
- // Auto-fill amount with expected
  useEffect(() => {
  if (currentPeriod && !amount) {
  const remaining = currentPeriod.expectedAmount - currentPeriod.paidAmount;
@@ -185,6 +200,19 @@ export default function SDCFormPage() {
  const enteredAmount = parseFloat(amount) * 100;
  const amountDiff = expectedAmount > 0 ? Math.abs(enteredAmount - expectedAmount) / expectedAmount : 0;
  const amountWarn = amount && !isNaN(enteredAmount) && amountDiff > 0.1;
+
+ const siblings = useMemo(
+ () => (student?.family?.students ?? []).filter((s) => s.id !== params.studentId && s.status === 'active'),
+ [student?.family?.students, params.studentId],
+ );
+
+ const recentPayments = useMemo(
+ () => [...studentPayments]
+ .filter((p) => p.status === PAYMENT_STATUS.VERIFIED)
+ .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime())
+ .slice(0, 3),
+ [studentPayments],
+ );
 
  function validate() {
  const e: Record<string, string> = {};
@@ -203,28 +231,28 @@ export default function SDCFormPage() {
  const errs = validate();
  if (Object.keys(errs).length > 0) { setErrors(errs); return; }
  setErrors({});
-
  if (!currentPeriod || !receiptFile) return;
 
  try {
  setUploading(true);
-
- // 1. Get presigned upload URL
  const { uploadUrl, fileUrl } = await api.payments.getUploadUrl({
- fileName: receiptFile.name, fileType: receiptFile.type, });
-
- // 2. Upload the file
+ fileName: receiptFile.name, fileType: receiptFile.type,
+ });
  await fetch(uploadUrl, {
  method: 'PUT',
- body: receiptFile, headers: { 'Content-Type': receiptFile.type },
+ body: receiptFile,
+ headers: { 'Content-Type': receiptFile.type },
  });
-
- // 3. Record the payment
  const payment = await api.payments.record({
- studentId: params.studentId, periodId: currentPeriod.id, amount: toScaled(amount), paymentMethod: method, referenceNumber: referenceNumber.trim(), receiptImageUrl: fileUrl, paymentDate,
+ studentId: params.studentId,
+ periodId: currentPeriod.id,
+ amount: toScaled(amount),
+ paymentMethod: method,
+ referenceNumber: referenceNumber.trim(),
+ receiptImageUrl: fileUrl,
+ paymentDate,
  note: note.trim() || undefined,
  });
-
  setSuccess(payment.number);
  } catch (err) {
  setErrors({ submit: (err as Error).message ?? 'Something went wrong' });
@@ -234,227 +262,294 @@ export default function SDCFormPage() {
  }
 
  const isLoading = studentLoading || periodsLoading;
+ const studentName = student ? fullName(student.firstName, student.lastName) : '';
 
  if (successPayNum) {
  return (
- <div>
- <PageHeader
- title="Payment Recorded"
- backButton={
- <Link href="/sdc" className="p-2 rounded-lg hover:bg-secondary transition-colors">
- <ArrowLeftIcon size={18} className="text-muted-foreground" />
- </Link>
- }
- />
+ <div className="flex flex-col gap-6">
+ <div className="flex items-center gap-3">
+ <BackLink href="/sdc" />
+ <Kicker>Payment recorded</Kicker>
+ </div>
  <SuccessScreen paymentNumber={successPayNum} onDone={() => router.push('/sdc')} />
  </div>
  );
  }
 
+ // ── LOADING ───────────────────────────────────────────────────────────
+ if (isLoading) {
  return (
- <div>
- <PageHeader
- title={isLoading ? 'Loading…' : `${student?.firstName} ${student?.lastName}`}
- subtitle={student?.level ?? undefined}
- backButton={
- <Link href="/sdc" className="p-2 rounded-lg hover:bg-secondary transition-colors">
- <ArrowLeftIcon size={18} className="text-muted-foreground" />
- </Link>
- }
- />
-
- {isLoading ? (
+ <div className="flex flex-col gap-6">
+ <div className="flex items-center gap-3">
+ <BackLink href="/sdc" />
+ <Kicker>Auto-filled from records</Kicker>
+ </div>
+ <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-6">
+ <Skeleton className="h-[480px] rounded-2xl" />
  <div className="flex flex-col gap-4">
- <Skeleton className="h-24 rounded-xl" />
- <Skeleton className="h-64 rounded-xl" />
+ <Skeleton className="h-[160px] rounded-2xl" />
+ <Skeleton className="h-[200px] rounded-2xl" />
  </div>
- ) : (
- <form onSubmit={handleSubmit} className="flex flex-col gap-6" >
+ </div>
+ </div>
+ );
+ }
 
- {/* ── Student info panel ─────────────────────────────────────── */}
- <div className="rounded-xl border border-border bg-secondary/40 px-4 py-3.5 flex flex-col gap-2.5">
- <div className="flex items-start justify-between gap-3">
- <div>
- <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Guardian</p>
- <p className="text-sm font-semibold text-foreground mt-0.5">
- {student?.family?.guardianName ?? student?.guardianName ?? '—'}
- </p>
- {student?.family?.guardianPhone && (
- <p className="text-xs text-muted-foreground">{student.family.guardianPhone}</p>
- )}
+ const initials = student
+ ? `${student.firstName?.[0] ?? ''}${student.lastName?.[0] ?? ''}`.toUpperCase()
+ : '';
+ const guardian = student?.family?.guardianName ?? student?.guardianName ?? null;
+ const guardianPhone = student?.family?.guardianPhone ?? null;
+
+ return (
+ <div className="flex flex-col gap-6">
+ {/* Header */}
+ <div className="flex items-start gap-3">
+ <BackLink href="/sdc" />
+ <div className="min-w-0 flex-1">
+ <Kicker>Auto-filled from records</Kicker>
+ <h1 className="text-[28px] sm:text-[32px] font-semibold tracking-[-0.5px] mt-1">
+ Record payment
+ </h1>
  </div>
- <div className="text-right shrink-0">
- <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Period</p>
- <p className="text-sm font-semibold text-foreground mt-0.5">
- {currentPeriod ? `${MONTHS[(currentPeriod.periodMonth ?? 1) - 1]} ${currentPeriod.periodYear}` : '—'}
+ </div>
+
+ <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-6 items-start">
+ {/* ── LEFT — form card ─────────────────────────────────────── */}
+ <div className="rounded-2xl border border-border bg-card p-5 sm:p-7 flex flex-col gap-5">
+ {/* Student header */}
+ <div className="flex items-center gap-3 sm:gap-4 pb-4 border-b border-border">
+ <div className="w-12 h-12 rounded-xl bg-accent-soft text-accent-ink flex items-center justify-center text-base font-semibold shrink-0">
+ {initials}
+ </div>
+ <div className="flex-1 min-w-0">
+ <p className="text-base sm:text-[18px] font-semibold tracking-[-0.2px] truncate">{studentName}</p>
+ <p className="text-xs sm:text-[13px] text-muted-foreground truncate">
+ {[student?.level && `Level ${student.level}`, guardian && toTitleCase(guardian), guardianPhone].filter(Boolean).join(' · ')}
  </p>
+ </div>
  {currentPeriod && <StatusBadge status={currentPeriod.status} />}
  </div>
- </div>
 
- {currentPeriod && (
- <div className="grid grid-cols-3 gap-2 pt-1 border-t border-border/50">
- {[
- { label: 'Expected', value: fmt(currentPeriod.expectedAmount) },
- { label: 'Paid', value: fmt(currentPeriod.paidAmount) },
- { label: 'Remaining', value: fmt(Math.max(0, currentPeriod.expectedAmount - currentPeriod.paidAmount)), bold: true },
- ].map(({ label, value, bold }) => (
- <div key={label} className="text-center">
- <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</p>
- <p className={cn('text-sm mt-0.5', bold ? 'font-bold text-foreground' : 'font-medium text-foreground ')}>
- {value}
- </p>
+ {/* Sibling banner */}
+ {siblings.length > 0 && (
+ <div className="flex items-center gap-3 px-3.5 py-3 rounded-xl bg-accent-soft border border-accent/25">
+ <div className="w-7 h-7 rounded-lg bg-card flex items-center justify-center shrink-0">
+ <UsersThreeIcon size={15} className="text-accent" weight="bold" />
  </div>
- ))}
+ <div className="flex-1 min-w-0 text-[13.5px] text-accent-ink">
+ <span className="font-semibold">
+ {siblings.length} sibling{siblings.length === 1 ? '' : 's'} enrolled
+ </span>
+ <span className="text-foreground/80"> — {siblings.map((s) => s.firstName).join(', ')}. Same guardian, same receipt?</span>
  </div>
- )}
- </div>
-
- {/* ── Sibling banner ─────────────────────────────────────────── */}
- {(student?.family?.students?.length ?? 0) > 1 && (
- <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-accent-soft/40 border border-primary/20" >
- <UsersThreeIcon size={18} weight="fill" className="text-primary shrink-0 mt-0.5" />
- <div>
- <p className="text-sm font-semibold text-primary" >
- {(student!.family!.students!.length - 1)} sibling{(student!.family!.students!.length - 1) > 1 ? 's' : ''} also enrolled
- </p>
- <p className="text-xs text-primary mt-0.5">
- If the parent paid for multiple children, record each one separately after this.
- </p>
- </div>
+ <label className="flex items-center gap-2 text-[13px] font-medium text-accent-ink cursor-pointer shrink-0">
+ <input
+ type="checkbox"
+ checked={includeSibling}
+ onChange={(e) => setIncludeSibling(e.target.checked)}
+ className="accent-accent"
+ />
+ Include
+ </label>
  </div>
  )}
 
- {/* ── Payment form fields ────────────────────────────────────── */}
- <div className="flex flex-col gap-4">
-
- <Input
- label="Reference number"
- required
+ {/* Form grid */}
+ <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div className="flex flex-col gap-2">
+ <FieldLabel required>Reference number</FieldLabel>
+ <input
  type="text"
  value={referenceNumber}
- onChange={e => { setRef(e.target.value); if (errors.ref) setErrors(p => ({ ...p, ref: '' })); }}
+ onChange={(e) => { setRef(e.target.value); if (errors.ref) setErrors((p) => ({ ...p, ref: '' })); }}
  placeholder="GCash or bank transaction reference"
- error={errors.ref}
+ className={cn(
+ 'w-full px-3.5 py-2.5 text-[14px] bg-card border rounded-xl text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/20',
+ errors.ref ? 'border-err' : 'border-border focus:border-primary',
+ )}
  />
+ {errors.ref && <p className="text-xs text-err">{errors.ref}</p>}
+ </div>
 
- <div className="flex flex-col gap-1.5">
- <span className="text-xs font-medium text-muted-foreground">
- Amount paid<span className="text-destructive ml-0.5">*</span>
- </span>
+ <div className="flex flex-col gap-2">
+ <FieldLabel required>Amount paid</FieldLabel>
  <div className="relative">
- <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium pointer-events-none">₱</span>
- <Input
+ <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">₱</span>
+ <input
  type="number"
  step="0.01"
  min="0"
  value={amount}
- onChange={e => { setAmount(e.target.value); if (errors.amount) setErrors(p => ({ ...p, amount: '' })); }}
+ onChange={(e) => { setAmount(e.target.value); if (errors.amount) setErrors((p) => ({ ...p, amount: '' })); }}
  placeholder={currentPeriod ? String(currentPeriod.expectedAmount / 100) : '0.00'}
- error={errors.amount}
- className="pl-8"
+ className={cn(
+ 'w-full pl-7 pr-3.5 py-2.5 text-[14px] bg-card border rounded-xl text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/20',
+ errors.amount ? 'border-err' : amountWarn ? 'border-warn' : 'border-border focus:border-primary',
+ )}
  />
  </div>
- {amountWarn && (
- <div className="flex items-center gap-1.5 text-[var(--color-warn)]">
- <WarningIcon size={14} weight="fill" />
- <p className="text-xs">
- Amount differs from expected ({fmt(expectedAmount)}) by more than 10%. Please verify.
- </p>
+ {errors.amount && <p className="text-xs text-err">{errors.amount}</p>}
+ {amountWarn && !errors.amount && (
+ <div className="flex items-center gap-1.5 text-warn">
+ <WarningIcon size={13} weight="fill" />
+ <p className="text-xs">Differs from expected ({fmtPeso(expectedAmount)}) by &gt;10%.</p>
  </div>
  )}
  </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-muted-foreground tracking-[0.01em]">
-              Payment method <span className="text-err">*</span>
-            </label>
-            <Select
-              value={method}
-              onValueChange={(v) => {
-                setMethod(v);
-                if (errors.method) setErrors((p) => ({ ...p, method: '' }));
-              }}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select method…" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(METHOD_LABELS).map(([val, label]) => (
-                  <SelectItem key={val} value={val}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.method && <p className="text-[12.5px] text-err">{errors.method}</p>}
-          </div>
+ <div className="flex flex-col gap-2 sm:col-span-1">
+ <FieldLabel required>Payment method</FieldLabel>
+ <div className="grid grid-cols-2 gap-2">
+ {METHOD_OPTIONS.map(([id, label]) => {
+ const active = method === id;
+ return (
+ <button
+ type="button"
+ key={id}
+ onClick={() => { setMethod(id); if (errors.method) setErrors((p) => ({ ...p, method: '' })); }}
+ className={cn(
+ 'px-3 py-2.5 rounded-xl text-[13.5px] text-left border transition-colors',
+ active
+ ? 'bg-accent-soft border-accent text-accent-ink font-medium'
+ : 'bg-card border-border text-foreground hover:bg-secondary/40',
+ )}
+ >
+ {label}
+ </button>
+ );
+ })}
+ </div>
+ {errors.method && <p className="text-xs text-err">{errors.method}</p>}
+ </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-muted-foreground tracking-[0.01em]">
-              Payment date <span className="text-err">*</span>
-            </label>
-            <DatePicker
-              value={paymentDate}
-              onChange={(v) => { setDate(v); if (errors.date) setErrors((p) => ({ ...p, date: '' })); }}
-              max={new Date().toISOString().split('T')[0]}
-            />
-            {errors.date && <p className="text-[12.5px] text-err">{errors.date}</p>}
-          </div>
+ <div className="flex flex-col gap-2 sm:col-span-1">
+ <FieldLabel required>Payment date</FieldLabel>
+ <input
+ type="date"
+ value={paymentDate}
+ max={new Date().toISOString().split('T')[0]}
+ onChange={(e) => { setDate(e.target.value); if (errors.date) setErrors((p) => ({ ...p, date: '' })); }}
+ className={cn(
+ 'w-full px-3.5 py-2.5 text-[14px] bg-card border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20',
+ errors.date ? 'border-err' : 'border-border focus:border-primary',
+ )}
+ />
+ {errors.date && <p className="text-xs text-err">{errors.date}</p>}
+ </div>
+ </div>
 
-          <Field label="Receipt screenshot" required>
- <ReceiptUpload
+ <ReceiptSlot
  file={receiptFile}
  preview={receiptPreview}
- onFile={f => { setReceiptFile(f); if (errors.receipt) setErrors(p => ({ ...p, receipt: '' })); }}
+ onFile={(f) => { setReceiptFile(f); if (errors.receipt) setErrors((p) => ({ ...p, receipt: '' })); }}
  error={errors.receipt}
  />
- </Field>
 
- <Textarea
- label="Notes"
+ <div className="flex flex-col gap-2">
+ <FieldLabel>Notes (optional)</FieldLabel>
+ <textarea
  value={note}
- onChange={e => setNote(e.target.value)}
- placeholder="Optional, e.g. 'parent will pay remaining next week'"
- rows={3}
+ onChange={(e) => setNote(e.target.value)}
+ rows={2}
+ placeholder="e.g. Parent says will pay remaining next week"
+ className="w-full px-3.5 py-2.5 text-[14px] bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground/70 resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
  />
  </div>
 
- {/* ── Submit error ───────────────────────────────────────────── */}
  {errors.submit && (
- <div className="px-4 py-3 rounded-xl bg-err-soft border border-err/40 text-sm text-red-700 dark:text-red-300">
+ <div className="px-4 py-3 rounded-xl bg-err-soft border border-err/40 text-sm text-err">
  {errors.submit}
  </div>
  )}
 
- {/* ── Submit ────────────────────────────────────────────────── */}
- <div className="pb-8">
+ <div className="flex justify-end gap-2 pt-1">
  <Button
  type="submit"
- className="w-full py-3 text-base"
  disabled={uploading || recordMut.isPending || !currentPeriod}
  >
  {uploading ? (
- <span className="flex items-center gap-2">
+ <>
  <UploadSimpleIcon size={16} className="animate-bounce" />
- Uploading receipt…
- </span>
+ Uploading…
+ </>
  ) : recordMut.isPending ? (
- 'Recording payment…'
+ 'Recording…'
  ) : (
- <span className="flex items-center gap-2">
+ <>
  <ReceiptIcon size={16} weight="fill" />
- Record Payment
- </span>
+ Review &amp; submit
+ </>
  )}
  </Button>
+ </div>
  {!currentPeriod && (
- <p className="text-xs text-muted-foreground text-center mt-2">
- No active period found for this student. Ask an admin to create one.
+ <p className="text-xs text-muted-foreground text-right">
+ No active period for this student. Ask an admin to create one.
  </p>
  )}
  </div>
 
- </form>
+ {/* ── RIGHT — context rail ─────────────────────────────────── */}
+ <div className="flex flex-col gap-4">
+ {/* Period at a glance */}
+ <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+ <Kicker>Period at a glance</Kicker>
+ <div className="grid grid-cols-2 gap-x-4 gap-y-4 mt-4">
+ <Fact
+ label="Period"
+ value={currentPeriod ? `${MONTHS[currentPeriod.periodMonth - 1]} ${currentPeriod.periodYear}` : '—'}
+ />
+ <Fact label="Expected" value={currentPeriod ? fmtPeso(currentPeriod.expectedAmount) : '—'} />
+ <Fact label="Paid so far" value={currentPeriod ? fmtPeso(currentPeriod.paidAmount) : '—'} />
+ <Fact
+ label="Outstanding"
+ value={currentPeriod ? fmtPeso(Math.max(0, currentPeriod.expectedAmount - currentPeriod.paidAmount)) : '—'}
+ accent={!!currentPeriod && currentPeriod.expectedAmount - currentPeriod.paidAmount > 0}
+ />
+ </div>
+ </div>
+
+ {/* Recent payments */}
+ {recentPayments.length > 0 && (
+ <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+ <Kicker>Recent payments · {student?.firstName}</Kicker>
+ <div className="flex flex-col mt-3">
+ {recentPayments.map((r, i) => {
+ const periodLabel = r.paymentDate
+ ? new Date(r.paymentDate).toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })
+ : '—';
+ return (
+ <div
+ key={r.id}
+ className={cn(
+ 'flex items-center justify-between gap-3 py-2.5',
+ i > 0 && 'border-t border-border',
  )}
+ >
+ <div className="min-w-0">
+ <p className="text-sm font-medium text-foreground">{periodLabel}</p>
+ <p className="text-[11.5px] text-muted-foreground font-mono mt-0.5 truncate">
+ {r.referenceNumber ?? '—'}
+ </p>
+ </div>
+ <div className="flex items-center gap-2 shrink-0">
+ <span className="text-[14px] font-semibold tracking-[-0.2px]">{fmtPeso(r.amount)}</span>
+ <span className="w-2 h-2 rounded-full bg-status-paid-dot" />
+ </div>
+ </div>
+ );
+ })}
+ </div>
+ </div>
+ )}
+
+ {/* Tip */}
+ <div className="rounded-xl border border-warn/30 bg-warn-soft px-4 py-3 text-[13px] leading-relaxed text-foreground">
+ <span className="font-semibold">Tip</span> — submitting marks this as <em>pending review</em>. Nina will verify against the receipt before it lands on the period.
+ </div>
+ </div>
+ </form>
  </div>
  );
 }

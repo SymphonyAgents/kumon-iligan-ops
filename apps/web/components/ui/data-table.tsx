@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { TableSkeleton } from '@/components/ui/skeleton';
+import { DataCard, type DataCardProps } from '@/components/ui/data-card-list';
 import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
@@ -31,6 +32,8 @@ interface DataTableProps<TData, TValue> {
  onRowClick?: (row: TData) => void;
  pageSize?: number;
  hidePagination?: boolean;
+ renderMobileCard?: (row: TData) => DataCardProps;
+ getRowKey?: (row: TData, index: number) => string;
 }
 
 export function DataTable<TData, TValue>({
@@ -43,6 +46,8 @@ export function DataTable<TData, TValue>({
  onRowClick,
  pageSize = 20,
  hidePagination = false,
+ renderMobileCard,
+ getRowKey,
 }: DataTableProps<TData, TValue>) {
  const effectivePageSize = hidePagination ? 100_000 : pageSize;
  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: effectivePageSize });
@@ -64,9 +69,31 @@ export function DataTable<TData, TValue>({
    return <TableSkeleton />;
  }
 
+ const pageRows = table.getRowModel().rows;
+
  return (
  <div>
- <div className="bg-card border border-border rounded-2xl overflow-hidden overflow-x-auto">
+ {renderMobileCard && pageRows.length > 0 && (
+ <div className="sm:hidden rounded-2xl border border-border overflow-hidden divide-y divide-border bg-card">
+ {pageRows.map((row, idx) => {
+ const cardProps = renderMobileCard(row.original);
+ const key = getRowKey ? getRowKey(row.original, idx) : row.id;
+ const merged: DataCardProps = onRowClick
+ ? { ...cardProps, onClick: cardProps.onClick ?? (() => onRowClick(row.original)) }
+ : cardProps;
+ return <DataCard key={key} {...merged} />;
+ })}
+ </div>
+ )}
+ {renderMobileCard && pageRows.length === 0 && (
+ <div className="sm:hidden rounded-2xl border border-border overflow-hidden bg-card p-6">
+ <EmptyState title={emptyTitle} description={emptyDescription} />
+ </div>
+ )}
+ <div className={cn(
+ 'bg-card border border-border rounded-2xl overflow-hidden overflow-x-auto',
+ renderMobileCard && 'hidden sm:block',
+ )}>
  <Table>
  <TableHeader>
  {table.getHeaderGroups().map((hg) => (

@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { TableSkeleton } from '@/components/ui/skeleton';
+import { DataCardList } from '@/components/ui/data-card-list';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -314,9 +315,49 @@ export default function FamiliesPage() {
           }
         />
       ) : (
-        <div className="rounded-2xl border border-border bg-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+        <>
+          <DataCardList
+            items={filtered}
+            getKey={(f) => f.id}
+            renderCard={(f) => ({
+              title: toTitleCase(f.guardianName),
+              description: f.guardianPhone,
+              badge: (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/60 rounded-full px-2.5 py-1">
+                  <UsersIcon size={13} />
+                  <span>{f.students?.length ?? 0}</span>
+                </div>
+              ),
+              meta: (
+                <p className="truncate">
+                  {toTitleCase([f.streetName, f.barangay, f.city].filter(Boolean).join(', ')) || '—'}
+                </p>
+              ),
+              actions: isAdmin ? (
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => setEditTarget(f)}
+                    aria-label="Edit family"
+                    className="p-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                  >
+                    <PencilSimpleIcon size={18} />
+                  </button>
+                  {currentUser?.userType === USER_TYPE.SUPERADMIN && (
+                    <button
+                      onClick={() => setDeleteTarget(f)}
+                      aria-label="Delete family"
+                      className="p-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-err transition-colors"
+                    >
+                      <TrashIcon size={18} />
+                    </button>
+                  )}
+                </div>
+              ) : undefined,
+            })}
+          />
+          <div className="hidden sm:block rounded-2xl border border-border bg-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-secondary/40">
                   <th className="text-left px-4 py-2.5 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">Guardian</th>
@@ -368,8 +409,9 @@ export default function FamiliesPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {showCreate && <FamilyDialog open onClose={() => setShowCreate(false)} />}

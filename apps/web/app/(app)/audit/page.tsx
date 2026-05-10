@@ -13,7 +13,9 @@ import {
  SelectTrigger,
  SelectValue,
 } from '@/components/ui/select';
-import { MONTHS } from '@/lib/constants';
+import { MONTHS, AUDIT_TYPE_LABELS, AUDIT_TYPE_STYLES, ENTITY_LABELS, SOURCE_LABELS } from '@/lib/constants';
+import { formatDatetime } from '@/lib/utils';
+import { toTitleCase } from '@/utils/text';
 
 const now = new Date();
 const CURRENT_MONTH = now.getMonth() + 1;
@@ -92,6 +94,36 @@ export default function AuditPage() {
  loadingRows={8}
  emptyTitle="No audit entries"
  emptyDescription="Actions will appear here."
+ getRowKey={(e) => e.id}
+ renderMobileCard={(entry) => {
+ const eventLabel = entry.auditType && AUDIT_TYPE_LABELS[entry.auditType]
+ ? AUDIT_TYPE_LABELS[entry.auditType]
+ : entry.action.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+ const eventStyle = entry.auditType && AUDIT_TYPE_STYLES[entry.auditType]
+ ? AUDIT_TYPE_STYLES[entry.auditType]
+ : 'bg-secondary text-muted-foreground';
+ const entityLabel = ENTITY_LABELS[entry.entityType] ?? entry.entityType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+ const performer = entry.performedByFullName
+ ? toTitleCase(entry.performedByFullName)
+ : entry.performedByEmail ?? 'System';
+ const sourceRaw = entry.source?.toLowerCase() ?? '';
+ const sourceLabel = SOURCE_LABELS[sourceRaw] ?? (sourceRaw || '—');
+ return {
+ title: <span className="text-sm">{entityLabel}</span>,
+ description: entry.entityId ? <span className="font-mono">#{entry.entityId}</span> : undefined,
+ badge: (
+ <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${eventStyle}`}>
+ {eventLabel}
+ </span>
+ ),
+ meta: (
+ <>
+ <p className="font-mono">{formatDatetime(entry.createdAt)}</p>
+ <p>By {performer} · {sourceLabel}</p>
+ </>
+ ),
+ };
+ }}
  />
  </div>
  );

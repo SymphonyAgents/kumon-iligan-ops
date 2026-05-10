@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DataCardList } from '@/components/ui/data-card-list';
 import { toTitleCase } from '@/utils/text';
 import { useUsersQuery, useApproveUserMutation, useRejectUserMutation, useUpdateUserRoleMutation, useUpdateUserBranchMutation, useDeleteUserMutation } from '@/hooks/useUsersQuery';
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
@@ -89,7 +90,54 @@ function UsersContent() {
  description={tab === 'pending' ? 'New users will appear here awaiting approval.' : undefined}
  />
  ) : (
- <div className="rounded-xl border border-border overflow-hidden">
+ <>
+ <DataCardList
+ items={filteredUsers}
+ getKey={(u) => u.id}
+ renderCard={(u) => ({
+ title: toTitleCase(u.fullName ?? u.nickname ?? '') || '—',
+ description: u.email,
+ badge: <StatusBadge status={u.status} />,
+ meta: (
+ <>
+ <p>Role: {USER_TYPE_LABELS[u.userType]}</p>
+ <p className="truncate">Branch: {getBranchName(u.branchId)}</p>
+ </>
+ ),
+ actions: isSuperadmin ? (
+ <div className="flex items-center justify-end gap-2">
+ {u.status === USER_STATUS.PENDING && (
+ <>
+ <button
+ onClick={() => setApproveTarget(u)}
+ aria-label="Approve user"
+ className="p-2 rounded-md text-status-paid-fg hover:bg-emerald-50 dark:hover:bg-emerald-950 transition-colors"
+ >
+ <CheckIcon size={18} weight="bold" />
+ </button>
+ <button
+ onClick={() => setRejectTarget(u)}
+ aria-label="Reject user"
+ className="p-2 rounded-md text-err hover:bg-err-soft dark:hover:bg-red-950 transition-colors"
+ >
+ <XIcon size={18} weight="bold" />
+ </button>
+ </>
+ )}
+ {u.id !== currentUser?.id && (
+ <button
+ onClick={() => setDeleteTarget(u)}
+ aria-label="Delete user"
+ className="p-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-err transition-colors"
+ >
+ <TrashIcon size={18} />
+ </button>
+ )}
+ </div>
+ ) : undefined,
+ })}
+ />
+ <div className="hidden sm:block rounded-xl border border-border overflow-hidden">
  <div className="overflow-x-auto">
  <table className="w-full text-sm">
  <thead>
@@ -186,6 +234,7 @@ function UsersContent() {
  </table>
  </div>
  </div>
+ </>
  )}
 
  <ConfirmDialog

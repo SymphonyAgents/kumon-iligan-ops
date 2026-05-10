@@ -10,6 +10,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
+import { DataCardList } from '@/components/ui/data-card-list';
 import { fullName } from '@/utils/text';
 import { usePaymentPeriodsQuery, useBulkGeneratePeriodsMutation, useDeletePeriodMutation } from '@/hooks/usePaymentPeriodsQuery';
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
@@ -246,7 +247,46 @@ export default function PaymentPeriodsPage() {
  ) : filtered.length === 0 ? (
  <EmptyState title="No periods found"description="Use Bulk Generate to create periods for all active students." />
  ) : (
- <div className="rounded-xl border border-border overflow-hidden">
+ <>
+ <DataCardList
+ items={filtered}
+ getKey={(p) => p.id}
+ renderCard={(p) => {
+ const balance = p.expectedAmount - p.paidAmount;
+ const isOverdue = p.status === PERIOD_STATUS.OVERDUE;
+ return {
+ title: fullName(p.studentFirstName, p.studentLastName),
+ description: `${MONTHS[p.periodMonth - 1]} ${p.periodYear}`,
+ badge: <StatusBadge status={p.status} />,
+ meta: (
+ <>
+ <p>Expected: ₱{(p.expectedAmount / 100).toLocaleString('en-PH')}</p>
+ <p>Paid: ₱{(p.paidAmount / 100).toLocaleString('en-PH')}</p>
+ <p>Due: {new Date(p.dueDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+ </>
+ ),
+ trailing: balance > 0 ? (
+ <span className={isOverdue ? 'text-err' : 'text-warn'}>
+ ₱{(balance / 100).toLocaleString('en-PH')}
+ </span>
+ ) : (
+ <span className="text-status-paid-fg">Paid</span>
+ ),
+ actions: isAdmin && currentUser?.userType === USER_TYPE.SUPERADMIN ? (
+ <div className="flex items-center justify-end gap-2">
+ <button
+ onClick={() => setDeleteTarget(p)}
+ aria-label="Delete period"
+ className="p-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-err transition-colors"
+ >
+ <TrashIcon size={18} />
+ </button>
+ </div>
+ ) : undefined,
+ };
+ }}
+ />
+ <div className="hidden sm:block rounded-xl border border-border overflow-hidden">
  <div className="overflow-x-auto">
  <table className="w-full text-sm">
  <thead>
@@ -305,6 +345,7 @@ export default function PaymentPeriodsPage() {
  </table>
  </div>
  </div>
+ </>
  )}
 
  <BulkGenerateDialog open={showBulk} onClose={() => setShowBulk(false)} />

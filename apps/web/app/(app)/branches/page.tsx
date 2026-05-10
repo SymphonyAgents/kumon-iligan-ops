@@ -14,6 +14,9 @@ import {
  DialogTitle,
 } from '@/components/ui/dialog';
 import { createBranchesColumns } from '@/columns/branches-columns';
+import { TrashIcon, ArrowCounterClockwiseIcon } from '@phosphor-icons/react';
+import { formatAddress, cn } from '@/lib/utils';
+import { toTitleCase } from '@/utils/text';
 import {
  useBranchesQuery,
  useCreateBranchMutation,
@@ -105,6 +108,57 @@ export default function BranchesPage() {
  loadingRows={3}
  emptyTitle="No branches yet"
  emptyDescription="Create the first branch to get started."
+ getRowKey={(b) => b.id}
+ renderMobileCard={(b) => {
+ const addr = formatAddress({
+ streetName: b.streetName,
+ barangay: b.barangay,
+ city: b.city,
+ province: b.province,
+ });
+ return {
+ title: (
+ <span className={cn(b.isActive ? '' : 'text-muted-foreground line-through')}>
+ {toTitleCase(b.name)}
+ </span>
+ ),
+ description: b.phone ?? undefined,
+ badge: (
+ <span
+ className={cn(
+ 'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
+ b.isActive
+ ? 'bg-status-paid-bg text-status-paid-fg'
+ : 'bg-secondary text-muted-foreground',
+ )}
+ >
+ {b.isActive ? 'Active' : 'Inactive'}
+ </span>
+ ),
+ meta: <p className="truncate">{addr === '—' ? '—' : toTitleCase(addr)}</p>,
+ actions: (
+ <div className="flex items-center justify-end gap-2">
+ {b.isActive ? (
+ <button
+ onClick={() => setDeleteTarget(b)}
+ aria-label="Deactivate branch"
+ className="p-2 rounded-md text-err bg-err-soft hover:bg-err/15 transition-all"
+ >
+ <TrashIcon size={18} />
+ </button>
+ ) : (
+ <button
+ onClick={() => activateMut.mutate({ id: b.id, isActive: true })}
+ aria-label="Reactivate branch"
+ className="p-2 rounded-md text-status-paid-fg bg-status-paid-bg hover:bg-status-paid-bg/80 transition-all"
+ >
+ <ArrowCounterClockwiseIcon size={18} />
+ </button>
+ )}
+ </div>
+ ),
+ };
+ }}
  />
 
  <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open && !isBusy) closeDialog(); }}>
