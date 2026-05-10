@@ -5,7 +5,7 @@ steps:
     args:
       - '-c'
       - |
-        cd backend
+        cd apps/api
         npm install
         npm run build
     dir: '/workspace'
@@ -53,7 +53,7 @@ images:
   - 'asia-southeast1-docker.pkg.dev/kumon-iligan-ops/kumon-iligan/backend:latest'
 
 substitutions:
-  _CORS_ORIGIN: 'https://kumon-iligan-frontend-PLACEHOLDER.a.run.app'
+  _CORS_ORIGIN: 'https://kumon-iligan.symph.co'
 
 options:
   logging: CLOUD_LOGGING_ONLY

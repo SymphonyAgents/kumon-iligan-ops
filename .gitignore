@@ -1,4 +1,4 @@
-apps/
+apps/main/
 worktrees/
 .env
 .env.*
@@ -22,9 +22,12 @@ dist/
 *.tsbuildinfo
 
 # Exclude compiled build dirs but keep top-level build/ for pipeline artifacts
-frontend/build/
-backend/build/
-apps/**/build/
+apps/web/build/
+apps/api/build/
+apps/*/node_modules/
+apps/*/.next/
+apps/*/.turbo/
+apps/*/dist/
 .turbo/
 
 # Misc local

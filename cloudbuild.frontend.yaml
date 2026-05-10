@@ -42,8 +42,8 @@ steps:
       - '--set-env-vars=NODE_ENV=production,NEXT_PUBLIC_API_URL=/api/backend,NEXT_PUBLIC_APP_URL=${_APP_URL},AUTH_TRUST_HOST=true,NEXTAUTH_URL=${_APP_URL},BACKEND_URL=${_BACKEND_URL}'
 
 substitutions:
-  _APP_URL: 'https://kumon-iligan-frontend-PLACEHOLDER.a.run.app'
-  _BACKEND_URL: 'https://kumon-iligan-backend-PLACEHOLDER.a.run.app'
+  _APP_URL: 'https://kumon-iligan.symph.co'
+  _BACKEND_URL: 'https://kumon-iligan-backend-eu7lzuq4wq-as.a.run.app'
 
 images:
   - 'asia-southeast1-docker.pkg.dev/kumon-iligan-ops/kumon-iligan/frontend:$SHORT_SHA'

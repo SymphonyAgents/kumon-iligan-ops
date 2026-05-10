@@ -19,13 +19,13 @@ ENV BACKEND_URL=${BACKEND_URL}
 
 # Copy workspace manifests for layer caching
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-COPY frontend/package.json ./frontend/
+COPY apps/web/package.json ./apps/web/
 
 RUN pnpm install --no-frozen-lockfile
 
-COPY frontend ./frontend
+COPY apps/web ./apps/web
 
-WORKDIR /app/frontend
+WORKDIR /app/apps/web
 RUN pnpm build
 
 # ---- Production Stage ----
@@ -39,12 +39,12 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
 # Standalone output (output:'standalone' in next.config.ts):
-#   frontend/server.js       : entry point
-#   frontend/.next/static/   : built JS/CSS
-#   frontend/public/         : static assets
-COPY --from=builder --chown=nextjs:nodejs /app/frontend/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/frontend/.next/static ./frontend/.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/frontend/public ./frontend/public
+#   apps/web/server.js       : entry point
+#   apps/web/.next/static/   : built JS/CSS
+#   apps/web/public/         : static assets
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 
 USER nextjs
 
@@ -52,4 +52,4 @@ EXPOSE 8080
 ENV PORT=8080
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "frontend/server.js"]
+CMD ["node", "apps/web/server.js"]
