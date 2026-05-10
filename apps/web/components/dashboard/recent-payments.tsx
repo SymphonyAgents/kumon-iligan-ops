@@ -10,7 +10,7 @@ import { ArrowRightIcon } from '@phosphor-icons/react';
 import type { Payment } from '@/lib/types';
 
 function fmtPeso(amount: number) {
-  return `₱${(amount / 100).toLocaleString('en-PH', { minimumFractionDigits: 0 })}`;
+  return `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 0 })}`;
 }
 
 function timeAgo(iso: string): string {

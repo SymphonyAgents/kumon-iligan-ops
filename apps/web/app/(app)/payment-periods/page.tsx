@@ -260,14 +260,14 @@ export default function PaymentPeriodsPage() {
  badge: <StatusBadge status={p.status} />,
  meta: (
  <>
- <p>Expected: ₱{(p.expectedAmount / 100).toLocaleString('en-PH')}</p>
- <p>Paid: ₱{(p.paidAmount / 100).toLocaleString('en-PH')}</p>
+ <p>Expected: ₱{p.expectedAmount.toLocaleString('en-PH')}</p>
+ <p>Paid: ₱{p.paidAmount.toLocaleString('en-PH')}</p>
  <p>Due: {new Date(p.dueDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
  </>
  ),
  trailing: balance > 0 ? (
  <span className={isOverdue ? 'text-err' : 'text-warn'}>
- ₱{(balance / 100).toLocaleString('en-PH')}
+ ₱{balance.toLocaleString('en-PH')}
  </span>
  ) : (
  <span className="text-status-paid-fg">Paid</span>
@@ -314,13 +314,13 @@ export default function PaymentPeriodsPage() {
  {MONTHS[p.periodMonth - 1]} {p.periodYear}
  </td>
  <td className="px-4 py-3 text-right text-foreground">
- ₱{(p.expectedAmount / 100).toLocaleString('en-PH')}
+ ₱{p.expectedAmount.toLocaleString('en-PH')}
  </td>
  <td className="px-4 py-3 text-right hidden sm:table-cell text-foreground">
- ₱{(p.paidAmount / 100).toLocaleString('en-PH')}
+ ₱{p.paidAmount.toLocaleString('en-PH')}
  </td>
  <td className={`px-4 py-3 text-right font-medium hidden sm:table-cell ${balance > 0 ? (isOverdue ? 'text-err' : 'text-warn') : 'text-status-paid-fg'}`}>
- {balance > 0 ? `₱${(balance / 100).toLocaleString('en-PH')}` : '—'}
+ {balance > 0 ? `₱${balance.toLocaleString('en-PH')}` : '—'}
  </td>
  <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
  <td className="px-4 py-3 hidden md:table-cell text-muted-foreground text-xs">

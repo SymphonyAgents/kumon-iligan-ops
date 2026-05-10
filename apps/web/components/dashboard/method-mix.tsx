@@ -25,7 +25,7 @@ const METHOD_ORDER: { key: string; color: string }[] = [
 ];
 
 function fmtPeso(v: number) {
-  return `₱${(v / 100).toLocaleString('en-PH', { minimumFractionDigits: 0 })}`;
+  return `₱${v.toLocaleString('en-PH', { minimumFractionDigits: 0 })}`;
 }
 
 interface DonutProps {

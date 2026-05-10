@@ -26,7 +26,7 @@ import {
   users,
   paymentPeriods,
 } from '../db/schema.js';
-import { USER_TYPE, AUDIT_TYPE } from '../db/constants.js';
+import { USER_TYPE, AUDIT_TYPE, fromScaled } from '../db/constants.js';
 import type { CreateStudentDto } from './dto/create-student.dto.js';
 import type { UpdateStudentDto } from './dto/update-student.dto.js';
 import type { ChangeStudentStatusDto } from './dto/change-student-status.dto.js';
@@ -230,7 +230,13 @@ export class StudentsService {
       ...student,
       family: family ?? null,
       currentAssignment: activeAssignment ?? null,
-      currentPeriod: activePeriod ?? null,
+      currentPeriod: activePeriod
+        ? {
+            ...activePeriod,
+            expectedAmount: fromScaled(Number(activePeriod.expectedAmount)),
+            paidAmount: fromScaled(Number(activePeriod.paidAmount)),
+          }
+        : null,
     };
   }
 

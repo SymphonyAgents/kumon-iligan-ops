@@ -30,10 +30,9 @@ const METHOD_OPTIONS: Array<[string, string]> = [
  [PAYMENT_METHOD.OTHER, 'Other'],
 ];
 
-function fmtPeso(scaled: number) {
- return `₱${(scaled / 100).toLocaleString('en-PH', { minimumFractionDigits: 0 })}`;
+function fmtPeso(value: number) {
+ return `₱${value.toLocaleString('en-PH', { minimumFractionDigits: 0 })}`;
 }
-function toScaled(v: string) { return Math.round(parseFloat(v) * 100); }
 
 function BackLink({ href, label }: { href: string; label?: string }) {
  return (
@@ -191,13 +190,13 @@ export default function SDCFormPage() {
  useEffect(() => {
  if (currentPeriod && !amount) {
  const remaining = currentPeriod.expectedAmount - currentPeriod.paidAmount;
- if (remaining > 0) setAmount(String(remaining / 100));
+ if (remaining > 0) setAmount(String(remaining));
  }
  // eslint-disable-next-line react-hooks/exhaustive-deps
  }, [currentPeriod?.id]);
 
  const expectedAmount = currentPeriod?.expectedAmount ?? 0;
- const enteredAmount = parseFloat(amount) * 100;
+ const enteredAmount = parseFloat(amount);
  const amountDiff = expectedAmount > 0 ? Math.abs(enteredAmount - expectedAmount) / expectedAmount : 0;
  const amountWarn = amount && !isNaN(enteredAmount) && amountDiff > 0.1;
 
@@ -246,7 +245,7 @@ export default function SDCFormPage() {
  const payment = await api.payments.record({
  studentId: params.studentId,
  periodId: currentPeriod.id,
- amount: toScaled(amount),
+ amount: parseFloat(amount),
  paymentMethod: method,
  referenceNumber: referenceNumber.trim(),
  receiptImageUrl: fileUrl,
@@ -382,7 +381,7 @@ export default function SDCFormPage() {
  min="0"
  value={amount}
  onChange={(e) => { setAmount(e.target.value); if (errors.amount) setErrors((p) => ({ ...p, amount: '' })); }}
- placeholder={currentPeriod ? String(currentPeriod.expectedAmount / 100) : '0.00'}
+ placeholder={currentPeriod ? String(currentPeriod.expectedAmount) : '0.00'}
  className={cn(
  'w-full pl-7 pr-3.5 py-2.5 text-[14px] bg-card border rounded-xl text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/20',
  errors.amount ? 'border-err' : amountWarn ? 'border-warn' : 'border-border focus:border-primary',

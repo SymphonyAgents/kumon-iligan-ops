@@ -31,8 +31,8 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
  other: 'Other',
 };
 
-function fmtPeso(scaled: number) {
- return `₱${(scaled / 100).toLocaleString('en-PH', { minimumFractionDigits: 0 })}`;
+function fmtPeso(value: number) {
+ return `₱${value.toLocaleString('en-PH', { minimumFractionDigits: 0 })}`;
 }
 
 function fmtDate(value: string | null | undefined) {

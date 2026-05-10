@@ -22,7 +22,7 @@ const PERIOD_DOT: Record<string, string> = {
 };
 
 function fmt(amount: number) {
- return `₱${(amount / 100).toLocaleString('en-PH', { minimumFractionDigits: 0 })}`;
+ return `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 0 })}`;
 }
 
 function StudentCard({ student }: { student: Student }) {

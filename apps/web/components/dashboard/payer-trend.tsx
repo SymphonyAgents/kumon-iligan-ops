@@ -77,7 +77,7 @@ export function PayerTrend() {
           </p>
           {!isLoading && (
             <p className="text-[12px] text-muted-foreground mt-0.5">
-              avg {avgPayers.toFixed(1)} payers / month · {fmtPeso(totalAmount / 100)} collected
+              avg {avgPayers.toFixed(1)} payers / month · {fmtPeso(totalAmount)} collected
             </p>
           )}
         </div>

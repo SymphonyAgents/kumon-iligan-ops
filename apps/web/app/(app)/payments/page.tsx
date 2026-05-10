@@ -55,7 +55,7 @@ function RecordPaymentDialog({ open, onClose }: { open: boolean; onClose: () => 
  recordMut.mutate({
  studentId,
  periodId,
- amount: Math.round(parseFloat(amount) * 100),
+ amount: parseFloat(amount),
  paymentMethod: method, referenceNumber: referenceNumber || '',
  receiptImageUrl: '',
  paymentDate,
@@ -94,13 +94,13 @@ function RecordPaymentDialog({ open, onClose }: { open: boolean; onClose: () => 
             options={unpaidPeriods.map((p) => ({
               value: p.id,
               label: `${MONTHS[p.periodMonth - 1]} ${p.periodYear}`,
-              description: `Balance: ₱${((p.expectedAmount - p.paidAmount) / 100).toLocaleString('en-PH')}`,
+              description: `Balance: ₱${(p.expectedAmount - p.paidAmount).toLocaleString('en-PH')}`,
             }))}
             value={periodId}
             onChange={(v) => {
               setPeriodId(v);
               const p = periods.find((x) => x.id === v);
-              if (p) setAmount(((p.expectedAmount - p.paidAmount) / 100).toFixed(2));
+              if (p) setAmount((p.expectedAmount - p.paidAmount).toFixed(2));
             }}
             placeholder={periodsLoading ? 'Loading periods…' : 'Select period…'}
             searchPlaceholder="Search periods"
@@ -345,8 +345,8 @@ export default function PaymentsPage() {
                       number: p.number,
                       studentName: fullName(p.studentFirstName, p.studentLastName),
                       guardianName: toTitleCase(p.guardianName ?? ''),
-                      amount: (p.amount / 100).toFixed(2),
-                      expectedAmount: (p.expectedAmountSnapshot / 100).toFixed(2),
+                      amount: p.amount.toFixed(2),
+                      expectedAmount: p.expectedAmountSnapshot.toFixed(2),
                       paymentMethod: p.paymentMethod,
                       referenceNumber: p.referenceNumber ?? '',
                       paymentDate: p.paymentDate,
@@ -430,7 +430,7 @@ export default function PaymentsPage() {
  <p>{new Date(p.paymentDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
  </>
  ),
- trailing: `₱${(p.amount / 100).toLocaleString('en-PH')}`,
+ trailing: `₱${p.amount.toLocaleString('en-PH')}`,
  note: p.note ?? undefined,
  actions:
  isAdmin && (p.status === PAYMENT_STATUS.PENDING_REVIEW || currentUser?.userType === USER_TYPE.SUPERADMIN) ? (
@@ -480,7 +480,7 @@ export default function PaymentsPage() {
  {p.referenceNumber && <p className="text-xs text-muted-foreground font-mono">{p.referenceNumber}</p>}
  </td>
  <td className="px-4 py-3 text-right font-medium text-foreground">
- ₱{(p.amount / 100).toLocaleString('en-PH')}
+ ₱{p.amount.toLocaleString('en-PH')}
  </td>
  <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">
  {new Date(p.paymentDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -518,7 +518,7 @@ export default function PaymentsPage() {
  <ConfirmDialog
  open={!!verifyTarget}
  title="Verify Payment"
- description={`Mark ${verifyTarget?.number} as verified? This adds ₱${((verifyTarget?.amount ?? 0) / 100).toLocaleString('en-PH')} to the period total.`}
+ description={`Mark ${verifyTarget?.number} as verified? This adds ₱${(verifyTarget?.amount ?? 0).toLocaleString('en-PH')} to the period total.`}
  confirmLabel="Verify"
  onConfirm={() => verifyTarget && verifyMut.mutate({ id: verifyTarget.id })}
  onCancel={() => setVerifyTarget(null)}

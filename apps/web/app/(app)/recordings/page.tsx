@@ -30,7 +30,7 @@ const FILTERS: { key: FilterKey; label: string; urgent?: boolean }[] = [
 ];
 
 function fmt(amount: number) {
-  return `₱${(amount / 100).toLocaleString('en-PH', { minimumFractionDigits: 0 })}`;
+  return `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 0 })}`;
 }
 
 function fmtDate(d: string | null | undefined) {
