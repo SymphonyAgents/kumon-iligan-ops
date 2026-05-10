@@ -37,3 +37,11 @@ tech_stack:
   auth: NextAuth v5 (Google OAuth)
   package_manager: pnpm (monorepo)
   node_version: 22
+
+latest_deploy:
+  production_tag: v0.1.1
+  latest_revision: kumon-iligan-frontend-00011-brh
+  deployed_at: "2026-05-10 10:10 PHT"
+  deployed_by: Aria (on behalf of Vins)
+  build_method: cloudbuild
+  build_id: dbad48c1-6ee6-4851-ac09-ec38bb51dfa3

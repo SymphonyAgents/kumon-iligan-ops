@@ -19,9 +19,12 @@ firestore-debug.log
 **/.next/
 dist/
 **/dist/
-build/
-**/build/
 *.tsbuildinfo
+
+# Exclude compiled build dirs but keep top-level build/ for pipeline artifacts
+frontend/build/
+backend/build/
+apps/**/build/
 .turbo/
 
 # Misc local
