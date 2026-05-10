@@ -13,3 +13,7 @@
 [2026-05-10 10:16:00] 🏷️ Tagged release v0.1.2
 [2026-05-10 10:20:00] 🚀 Deployed v0.1.2, revision kumon-iligan-frontend-00012-fvq, build 3f5c627d
 [2026-05-10 10:20:00] ✅ Smoke test passed, login page intact after restructure, no regressions
+[2026-05-11 07:29:00] 🔒 Security gate passed: 0 vulnerabilities, secrets scan clean
+[2026-05-11 07:29:00] 🏷️ Tagged release v0.1.3, payment detail page, mobile data-card layout, fix money double-scaling
+[2026-05-11 07:30:00] 🚀 Deployed v0.1.3, revision kumon-iligan-frontend-00013-btp, build 780f456a
+[2026-05-11 07:30:00] ✅ Smoke test passed, login page loads correctly, no regressions
