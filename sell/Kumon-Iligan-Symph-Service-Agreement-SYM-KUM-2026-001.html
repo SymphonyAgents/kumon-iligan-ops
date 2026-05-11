@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kumon Iligan Operations Management System - Service Agreement</title>
+<style>
+  /* ============================================
+     PROPOSAL - REGULAR SUBSCRIPTION MODE
+     Client: Kumon Iligan / Nina Quijano
+     Platform: Kumon Iligan Operations Management System
+     Service Provider: Symph
+     Generated: May 2026
+  ============================================ */
+
+  /* Theme: kumon/education (brand override) | Primary: #3a7d5c | Font: Stack A */
+
+  :root {
+    --ink:    #111111;
+    --text:   #333333;
+    --muted:  #666666;
+    --faint:  #999999;
+    --line:   #e5e7eb;
+    --line-soft: #f0f1f3;
+    --soft:   #f5f5f5;
+    --softer: #fafafa;
+    --paper:  #ffffff;
+    --primary: #3a7d5c;
+    --accent: #1f4a36;
+    --cover-gradient: linear-gradient(150deg, #1f4a36 0%, #3a7d5c 100%);
+
+    --info:        #2563eb;
+    --info-soft:   #eff6ff;
+    --info-line:   #dbeafe;
+
+    --warn:        #d97706;
+    --warn-soft:   #fffbeb;
+    --warn-line:   #fde68a;
+
+    --danger:      #cc1a23;
+    --danger-soft: #fff5f5;
+    --danger-line: #fecaca;
+
+    --success:      #059669;
+    --success-soft: #ecfdf5;
+    --success-line: #a7f3d0;
+  }
+
+  @page { size: A4 portrait; margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 12px;
+    background: var(--soft);
+  }
+
+  .doc-wrap { max-width: 210mm; margin: 0 auto; }
+
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    background: var(--paper);
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.08);
+  }
+  .page:last-child { page-break-after: avoid; margin-bottom: 0; }
+
+  .chrome { padding: 28px 36px 48px; }
+
+  .page-hdr {
+    display: flex;
+    align-items: center;
+    padding-bottom: 8px;
+    margin-bottom: 22px;
+    border-bottom: 1px solid var(--line);
+    background: var(--paper);
+  }
+  .page-hdr-l {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .page-ftr {
+    position: absolute;
+    bottom: 18px;
+    left: 36px;
+    right: 36px;
+    display: flex;
+    justify-content: center;
+    font-size: 8px;
+    color: var(--faint);
+    border-top: 1px solid var(--line-soft);
+    padding-top: 7px;
+    background: var(--paper);
+    letter-spacing: 1px;
+  }
+
+  /* COVER */
+  .cover-page { background: var(--paper); }
+  .cover-inner {
+    padding: 60px 56px;
+    display: flex;
+    flex-direction: column;
+    min-height: 280mm;
+    background: var(--cover-gradient);
+  }
+  .cover-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .cover-brand { font-size: 10px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--paper); }
+  .cover-main { padding-top: 80px; }
+  .cover-product { font-size: 56px; font-weight: 800; color: var(--paper); letter-spacing: -2px; line-height: 1; margin-bottom: 14px; }
+  .cover-tag { font-size: 11px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,.7); margin-bottom: 40px; }
+  .cover-div { width: 48px; height: 3px; background: var(--paper); margin-bottom: 28px; }
+  .cover-doctitle { font-size: 20px; font-weight: 700; color: var(--paper); margin-bottom: 6px; }
+  .cover-docsub { font-size: 12px; color: rgba(255,255,255,.7); }
+  .cover-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; border-top: 1px solid rgba(255,255,255,.25); margin-top: 60px; padding-top: 24px; }
+  .cp-label { font-size: 8px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(255,255,255,.5); margin-bottom: 5px; }
+  .cp-name { font-size: 15px; font-weight: 700; color: var(--paper); margin-bottom: 2px; }
+  .cp-sub { font-size: 11px; color: rgba(255,255,255,.7); }
+  .cover-validity { margin-top: 20px; font-size: 10px; color: rgba(255,255,255,.5); }
+
+  /* SECTION HEADERS */
+  .sec-hdr { display: flex; align-items: baseline; gap: 14px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--primary); }
+  .sec-hdr .ref { font-size: 9px; font-weight: 700; letter-spacing: 2px; color: var(--primary); min-width: 28px; }
+  .sec-hdr h2 { font-size: 18px; font-weight: 700; color: var(--ink); line-height: 1.2; }
+  .sec-block { margin-bottom: 22px; }
+
+  p { color: var(--text); margin-bottom: 10px; font-size: 11.5px; }
+  p:last-child { margin-bottom: 0; }
+
+  /* AT A GLANCE */
+  .summary-band { background: var(--primary); padding: 22px 36px; color: var(--paper); }
+  .summary-band h2 { font-size: 18px; font-weight: 800; color: var(--paper); margin-bottom: 4px; }
+  .summary-band p { font-size: 11px; color: rgba(255,255,255,.7); }
+  .summary-body { padding: 22px 36px 48px; background: var(--paper); }
+  .sum-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+  .sum-card { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 18px; }
+  .sum-card h4 { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--ink); margin-bottom: 10px; }
+  .sum-bullet { display: flex; gap: 8px; font-size: 11px; color: var(--text); margin-bottom: 5px; }
+  .sum-bullet::before { content: "→"; color: var(--primary); font-weight: 700; flex-shrink: 0; }
+  .sum-pricing-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+  .sum-price-card { border-radius: 6px; padding: 16px; text-align: center; border: 1px solid var(--line); background: var(--paper); }
+  .sum-price-card.highlight { background: var(--primary); border-color: var(--primary); }
+  .sum-price-card .pc-label { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--faint); margin-bottom: 6px; }
+  .sum-price-card.highlight .pc-label { color: rgba(255,255,255,.6); }
+  .sum-price-card .pc-amount { font-size: 22px; font-weight: 800; color: var(--ink); line-height: 1; margin-bottom: 4px; }
+  .sum-price-card.highlight .pc-amount { color: var(--paper); }
+  .sum-price-card .pc-freq { font-size: 10px; color: var(--muted); }
+  .sum-price-card.highlight .pc-freq { color: rgba(255,255,255,.65); }
+
+  /* TOC */
+  .toc-grp { font-size: 8px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--faint); margin: 18px 0 4px; }
+  .toc-row { display: flex; justify-content: space-between; align-items: baseline; padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 11px; }
+  .toc-row:last-child { border-bottom: none; }
+  .toc-t { color: var(--text); }
+  .toc-ref { font-size: 9px; font-weight: 700; color: var(--faint); letter-spacing: 1px; }
+
+  /* PAIN GRID */
+  .pain-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+  .pain-card { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 13px; }
+  .pain-card h4 { font-size: 11px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+  .pain-card p { font-size: 10.5px; color: var(--muted); margin: 0; }
+
+  /* FEATURES */
+  .flist { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin: 10px 0; }
+  .fi { display: flex; align-items: flex-start; gap: 7px; font-size: 10.5px; color: var(--text); }
+  .fi::before { content: "✓"; color: var(--primary); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+
+  /* PIPELINE DIAGRAM */
+  .pipeline-wrap { margin: 18px 0; overflow-x: auto; }
+  .pipeline { display: flex; align-items: flex-start; gap: 0; min-width: 500px; }
+  .pl-stage { display: flex; flex-direction: column; align-items: center; flex: 1; }
+  .pl-node { width: 50px; height: 50px; border-radius: 50%; background: var(--primary); color: var(--paper); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 800; border: 3px solid var(--accent); flex-shrink: 0; position: relative; z-index: 2; }
+  .pl-node.done { background: var(--accent); }
+  .pl-label { font-size: 10px; font-weight: 700; color: var(--ink); text-align: center; margin-top: 8px; line-height: 1.3; max-width: 88px; }
+  .pl-sub { font-size: 9px; color: var(--muted); text-align: center; margin-top: 3px; max-width: 88px; line-height: 1.3; }
+  .pl-connector { flex: 0 0 24px; height: 50px; display: flex; align-items: center; justify-content: center; }
+  .pl-connector::after { content: "→"; color: var(--primary); font-size: 14px; font-weight: 700; }
+
+  /* MODULES */
+  .module-card { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin-bottom: 10px; }
+  .module-head { background: var(--primary); color: var(--paper); padding: 10px 16px; display: flex; align-items: center; gap: 12px; }
+  .module-num { width: 26px; height: 26px; border-radius: 50%; background: var(--paper); color: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0; }
+  .module-head h3 { font-size: 12px; font-weight: 700; }
+  .module-body { padding: 10px 16px; background: var(--paper); }
+
+  /* OUT OF SCOPE */
+  .oos { background: var(--danger-soft); border: 1px solid var(--danger); border-radius: 6px; padding: 12px 16px; margin: 12px 0; }
+  .oos h4 { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--danger); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--danger-line); }
+  .oos ul { list-style: none; font-size: 10.5px; color: var(--text); }
+  .oos ul li { display: flex; gap: 6px; padding: 3px 0; }
+  .oos ul li::before { content: "✗"; color: var(--danger); flex-shrink: 0; }
+
+  /* FEATURE REQUEST BOX */
+  .freq-box { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin: 14px 0; }
+  .freq-head { background: var(--primary); color: var(--paper); padding: 11px 18px; font-size: 12.5px; font-weight: 700; }
+  .freq-body { padding: 14px 18px; background: var(--paper); }
+  .freq-body > p { font-size: 11px; color: var(--text); margin-bottom: 10px; line-height: 1.6; }
+  .freq-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 12px 0 8px; }
+  .freq-col h5 { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+  .freq-col.yes h5 { color: var(--success); border-bottom-color: var(--success-line); }
+  .freq-col.no h5 { color: var(--danger); border-bottom-color: var(--danger-line); }
+  .freq-col ul { list-style: none; font-size: 10.5px; }
+  .freq-col ul li { padding: 3px 0; display: flex; gap: 8px; color: var(--text); line-height: 1.5; }
+  .freq-col.yes ul li::before { content: "•"; color: var(--success); font-weight: 800; flex-shrink: 0; }
+  .freq-col.no ul li::before { content: "•"; color: var(--danger); font-weight: 800; flex-shrink: 0; }
+  .freq-foot { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 10.5px; color: var(--muted); font-style: italic; }
+
+  /* CALLOUTS */
+  .callout { border: 1px solid var(--info); background: var(--info-soft); border-radius: 6px; padding: 12px 16px; margin: 14px 0; }
+  .callout-label { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--info); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--info-line); }
+  .callout p { color: var(--text); font-size: 11px; margin-bottom: 6px; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout strong { color: var(--ink); font-weight: 700; }
+  .callout.warn { border-color: var(--warn); background: var(--warn-soft); }
+  .callout.warn .callout-label { color: var(--warn); border-bottom-color: var(--warn-line); }
+  .callout.danger { border-color: var(--danger); background: var(--danger-soft); }
+  .callout.danger .callout-label { color: var(--danger); border-bottom-color: var(--danger-line); }
+
+  /* TIMELINE */
+  .tl { margin: 12px 0; }
+  .tl-row { display: flex; gap: 14px; }
+  .tl-track { display: flex; flex-direction: column; align-items: center; width: 38px; flex-shrink: 0; }
+  .tl-dot { width: 38px; height: 38px; border-radius: 50%; background: var(--primary); color: var(--paper); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+  .tl-line { width: 2px; flex: 1; min-height: 16px; background: var(--line); }
+  .tl-row:last-child .tl-line { display: none; }
+  .tl-cnt { padding: 5px 0 18px; flex: 1; }
+  .tl-cnt h4 { font-size: 12px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
+  .tl-cnt p { font-size: 10.5px; color: var(--muted); margin: 0; }
+  .tl-trigger { font-size: 10px; color: var(--accent); font-weight: 700; margin-top: 4px; }
+
+  /* PRICING */
+  .y1-box { background: var(--soft); border: 1px solid var(--primary); border-radius: 6px; padding: 16px 20px; margin: 14px 0; display: flex; justify-content: space-between; align-items: center; }
+  .y1-box h4 { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
+  .y1-box p { font-size: 10.5px; color: var(--muted); max-width: 380px; margin: 0; }
+  .y1-price { font-size: 26px; font-weight: 800; color: var(--ink); white-space: nowrap; }
+  .y1-price span { font-size: 11px; font-weight: 400; color: var(--muted); }
+
+  /* Y1 TABLE */
+  .y1-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10.5px; }
+  .y1-table thead th { background: var(--primary); color: var(--paper); padding: 8px 12px; text-align: left; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; }
+  .y1-table thead th:last-child { text-align: right; }
+  .y1-table tbody td { padding: 7px 12px; border-bottom: 1px solid var(--line); color: var(--text); }
+  .y1-table tbody td:last-child { text-align: right; font-weight: 600; color: var(--ink); }
+  .y1-total td { background: var(--primary); color: var(--paper) !important; font-weight: 700; font-size: 12px; }
+
+  /* PAYMENT TABLE */
+  .pay-table { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin: 12px 0; }
+  .pay-row { display: flex; align-items: center; padding: 13px 18px; border-bottom: 1px solid var(--line); background: var(--paper); }
+  .pay-row:last-child { border-bottom: none; }
+  .pay-info { flex: 1; }
+  .pay-info h4 { font-size: 12px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
+  .pay-info p { font-size: 10px; color: var(--muted); margin: 0; }
+  .pay-amt { font-size: 13px; font-weight: 700; color: var(--ink); min-width: 130px; text-align: right; }
+
+  /* T&C */
+  .tc-section { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .tc-section:last-child { border-bottom: none; }
+  .tc-section h3 { font-size: 12px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+  .tc-section h3 .num { font-weight: 700; color: var(--muted); margin-right: 8px; }
+  .tc-sub { margin: 8px 0; }
+  .tc-sub h4 { font-size: 11px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
+  .tc-sub h4 .num { color: var(--muted); margin-right: 6px; }
+  .tc-sub p { font-size: 11px; color: var(--text); }
+
+  /* MODULE AUTHORIZATION */
+  .auth-summary { border: 1.5px solid var(--primary); border-radius: 6px; overflow: hidden; margin: 14px 0 24px; }
+  .auth-summary h3 { font-size: 10px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--paper); background: var(--primary); padding: 10px 16px; }
+  .auth-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; }
+  .auth-cell { padding: 12px 14px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .auth-cell:nth-child(3n) { border-right: none; }
+  .auth-grid > .auth-cell:nth-last-child(-n+3) { border-bottom: none; }
+  .auth-label { font-size: 8px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .auth-value { font-size: 11px; font-weight: 700; color: var(--ink); line-height: 1.4; }
+  .auth-value .small { font-size: 10px; font-weight: 500; color: var(--muted); display: block; margin-top: 2px; }
+
+  /* SIGNATURE */
+  .binding-clause { background: var(--soft); padding: 14px 18px; border-radius: 6px; margin: 18px 0; font-size: 11.5px; color: var(--text); line-height: 1.6; }
+  .sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 20px; }
+  .sig-block h4 { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--ink); margin-bottom: 6px; }
+  .sig-party { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
+  .sig-role { font-size: 10px; color: var(--muted); margin-bottom: 32px; }
+  .sig-line { border-top: 1px solid var(--ink); margin-bottom: 6px; }
+  .sig-field { font-size: 9px; color: var(--faint); margin-bottom: 16px; letter-spacing: 1px; text-transform: uppercase; }
+  .sig-name { font-size: 11px; font-weight: 600; color: var(--ink); margin-bottom: 1px; }
+  .sig-title { font-size: 10px; color: var(--muted); }
+  .sig-footer { text-align: center; margin-top: 26px; font-size: 10px; color: var(--muted); font-style: italic; }
+
+  /* PDF BUTTON */
+  .pdf-btn { position: fixed; top: 16px; right: 16px; background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; z-index: 1000; font-family: system-ui, sans-serif; }
+
+  /* ============================================
+     PRINT / PDF EXPORT - CANONICAL BLOCK
+     MANDATORY in every proposal HTML file.
+     Do not modify. (proposal-builder v1.6.1)
+  ============================================ */
+  @media print {
+    @page { size: A4 portrait; margin: 0; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { background: white !important; margin: 0; padding: 0; }
+    .pdf-btn { display: none !important; }
+    .page {
+      width: 100% !important; min-height: unset !important; height: 297mm !important;
+      overflow: hidden !important; margin: 0 !important; padding: 0 !important;
+      box-shadow: none !important; display: block !important; position: relative !important;
+      page-break-after: always !important; page-break-inside: avoid !important;
+      break-after: page !important; break-inside: avoid !important;
+    }
+    .page:last-child { page-break-after: avoid !important; break-after: avoid !important; }
+    .page-header, .page-footer { position: absolute !important; }
+  }
+</style>
+</head>
+<body>
+
+<button class="pdf-btn" onclick="window.print()">Download as PDF</button>
+
+<div class="doc-wrap">
+
+<!-- PAGE 1 - COVER -->
+<div class="page cover-page">
+  <div class="cover-inner">
+    <div class="cover-top">
+      <div class="cover-brand">Symph</div>
+    </div>
+    <div class="cover-main">
+      <div class="cover-tag">Software as a Service Agreement</div>
+      <div class="cover-product">Kumon<br>Iligan<br>OMS</div>
+      <div class="cover-div"></div>
+      <div class="cover-doctitle">Operations Management System</div>
+      <div class="cover-docsub">Payment tracking, reporting, and operations management for Kumon Iligan</div>
+      <div class="cover-parties">
+        <div>
+          <div class="cp-label">Prepared For</div>
+          <div class="cp-name">Nina Quijano</div>
+          <div class="cp-sub">Kumon Iligan Franchise</div>
+        </div>
+        <div>
+          <div class="cp-label">Service Provider</div>
+          <div class="cp-name">Symph</div>
+          <div class="cp-sub">hello@symph.co · symph.co</div>
+        </div>
+      </div>
+      <div class="cover-validity">Prepared May 2026 · Valid for 30 days from date of issue</div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 2 - AT A GLANCE -->
+<div class="page">
+  <div class="summary-band">
+    <h2>Proposal Summary: At a Glance</h2>
+    <p>Everything you need to know about this engagement on one page before the full agreement.</p>
+  </div>
+  <div class="summary-body">
+    <div class="sum-row">
+      <div class="sum-card">
+        <h4>The Problem</h4>
+        <div class="sum-bullet">Parents send receipt photos to teachers, teachers forward by email to admin, admin manually transcribes every payment into a spreadsheet</div>
+        <div class="sum-bullet">No structured view of who has paid, who is overdue, or whether records are accurate across 15-20 teachers</div>
+        <div class="sum-bullet">No flag, reject, or follow-up workflow when payment submissions look wrong</div>
+        <div class="sum-bullet">No dashboards for payer trends, teacher activity, or monthly collection health</div>
+      </div>
+      <div class="sum-card">
+        <h4>The Solution</h4>
+        <div class="sum-bullet">Teachers submit payments directly through a mobile-first form with receipt photo attached</div>
+        <div class="sum-bullet">Admin reviews all submissions in a structured table with verify, flag, and reject controls</div>
+        <div class="sum-bullet">Live dashboards show payer trends, method mix, teacher activity, and overdue detection</div>
+        <div class="sum-bullet">Three-tier RBAC ensures teachers see only their own submissions, admins manage everything</div>
+      </div>
+    </div>
+    <div class="sum-pricing-row">
+      <div class="sum-price-card">
+        <div class="pc-label">Activation Fee</div>
+        <div class="pc-amount">None</div>
+        <div class="pc-freq">No upfront cost</div>
+      </div>
+      <div class="sum-price-card highlight">
+        <div class="pc-label">Monthly Subscription</div>
+        <div class="pc-amount">&#8369;20,000</div>
+        <div class="pc-freq">Per month, excl. 12% VAT</div>
+      </div>
+      <div class="sum-price-card">
+        <div class="pc-label">Year 1 Estimate</div>
+        <div class="pc-amount">&#8369;240,000</div>
+        <div class="pc-freq">Build + 12 months, excl. 12% VAT</div>
+      </div>
+    </div>
+    <div class="callout">
+      <div class="callout-label">Payment Trigger</div>
+      <p><strong>No activation fee.</strong> There is no upfront cost to formalize this agreement. Monthly subscription of <strong>&#8369;20,000/month</strong> begins after the 30-day fine-tune period. No payment is required on signing.</p>
+    </div>
+  </div>
+  <div class="page-ftr"><span>Page 2 · Confidential</span></div>
+</div>
+
+<!-- PAGE 3 - TABLE OF CONTENTS -->
+<div class="page">
+  <div class="chrome">
+    <div class="page-hdr"><div class="page-hdr-l">Contents</div></div>
+    <div class="toc-grp">Part A · Proposal</div>
+    <div class="toc-row"><span class="toc-t">§ 01 Executive Summary</span><span class="toc-ref">p. 4</span></div>
+    <div class="toc-row"><span class="toc-t">§ 02 Problem Statement</span><span class="toc-ref">p. 5</span></div>
+    <div class="toc-row"><span class="toc-t">§ 03 Proposed Solution</span><span class="toc-ref">p. 6</span></div>
+    <div class="toc-row"><span class="toc-t">§ 04 Scope of Work by Module</span><span class="toc-ref">p. 7</span></div>
+    <div class="toc-row"><span class="toc-t">§ 05 Project Timeline &amp; Milestones</span><span class="toc-ref">p. 9</span></div>
+    <div class="toc-grp">Part B · Investment</div>
+    <div class="toc-row"><span class="toc-t">§ 06 Subscription Pricing Model</span><span class="toc-ref">p. 10</span></div>
+    <div class="toc-row"><span class="toc-t">§ 07 Payment Schedule</span><span class="toc-ref">p. 11</span></div>
+    <div class="toc-row"><span class="toc-t">§ 08 Post-Launch Support &amp; Feature Requests</span><span class="toc-ref">p. 11</span></div>
+    <div class="toc-grp">Part C · Terms &amp; Conditions</div>
+    <div class="toc-row"><span class="toc-t">§ 09 Scope Boundaries &amp; Change Requests</span><span class="toc-ref">p. 12</span></div>
+    <div class="toc-row"><span class="toc-t">§ 10 Intellectual Property</span><span class="toc-ref">p. 12</span></div>
+    <div class="toc-row"><span class="toc-t">§ 11 Client Data Ownership</span><span class="toc-ref">p. 12</span></div>
+    <div class="toc-row"><span class="toc-t">§ 12 Confidentiality</span><span class="toc-ref">p. 12</span></div>
+    <div class="toc-row"><span class="toc-t">§ 13 Warranties</span><span class="toc-ref">p. 13</span></div>
+    <div class="toc-row"><span class="toc-t">§ 14 Payment Terms</span><span class="toc-ref">p. 13</span></div>
+    <div class="toc-row"><span class="toc-t">§ 15 Termination</span><span class="toc-ref">p. 13</span></div>
+    <div class="toc-row"><span class="toc-t">§ 16 Limitation of Liability</span><span class="toc-ref">p. 13</span></div>
+    <div class="toc-row"><span class="toc-t">§ 17 General Provisions</span><span class="toc-ref">p. 13</span></div>
+    <div class="toc-grp">Part D · Acceptance</div>
+    <div class="toc-row"><span class="toc-t">§ 18 Module Authorization Summary &amp; Signatures</span><span class="toc-ref">p. 14</span></div>
+  </div>
+  <div class="page-ftr"><span>Page 3 · Confidential</span></div>
+</div>
+
+<!-- PAGE 4 - EXECUTIVE SUMMARY -->
+<div class="page">
+  <div class="chrome">
+    <div class="page-hdr"><div class="page-hdr-l">Part A · Proposal</div></div>
+    <div class="sec-hdr"><span class="ref">§ 01</span><h2>Executive Summary</h2></div>
+    <div class="sec-block">
+      <p>Symph has built and deployed the <strong>Kumon Iligan Operations Management System (Kumon Iligan OMS)</strong> for Mrs. Nina Quijano's Kumon franchise in Iligan City. The platform is live in production at <strong>kumon-iligan.symph.co</strong> and covers the full payment verification workflow agreed during the April 3, 2026 discovery call: teacher payment submission, admin review and flagging, receipt management, role-based access control, visual dashboards, data import/export, student and family management, and a complete audit trail.</p>
+      <p>This service agreement formalizes the engagement, establishes the subscription terms for ongoing cloud hosting, maintenance, support, and feature development, and defines the rights and responsibilities of both parties going forward. The platform is production-grade: secured behind a Google-managed HTTPS load balancer with Cloud Armor WAF, Row Level Security on all database tables, and Google OAuth for authentication.</p>
+      <p>Key commercial terms: <strong>No build activation fee</strong>. <strong>Monthly subscription of &#8369;20,000</strong> covers cloud hosting, security maintenance, bug fixes, and 16 feature requests per year. <strong>Twelve (12) month initial term</strong> from fine-tune period completion. All amounts <strong>exclusive of 12% VAT</strong>.</p>
+      <p><em>Figures are based on the scope agreed during discovery and reflect the platform as delivered. This document becomes a binding agreement upon signature by authorized representatives of both parties.</em></p>
+    </div>
+  </div>
+  <div class="page-ftr"><span>Page 4 · Confidential</span></div>
+</div>
+
+<!-- PAGE 5 - PROBLEM STATEMENT -->
+<div class="page">
+  <div class="chrome">
+    <div class="page-hdr"><div class="page-hdr-l">Part A · Proposal</div></div>
+    <div class="sec-hdr"><span class="ref">§ 02</span><h2>Problem Statement</h2></div>
+    <div class="pain-grid">
+      <div class="pain-card">
+        <h4>Manual Transcription Bottleneck</h4>
+        <p>Parents photograph receipts and send them to teachers. Teachers forward by email to admin. Admin manually re-enters every payment into a spreadsheet. With 15-20 teachers and hundreds of students, admin availability determines whether payment records are current.</p>
+      </div>
+      <div class="pain-card">
+        <h4>No Structured Payment Visibility</h4>
+        <p>Spreadsheets cannot surface which students are overdue, which teachers have pending submissions, or whether a record is complete. Identifying irregularities requires manual row-by-row review, making month-end reconciliation a multi-hour effort.</p>
+      </div>
+      <div class="pain-card">
+        <h4>No Verification or Flag Workflow</h4>
+        <p>When a submitted payment looked wrong, there was no structured way to flag it, notify the teacher, and track resolution. Disputes lived in email or chat threads that were easy to lose and impossible to audit later.</p>
+      </div>
+      <div class="pain-card">
+        <h4>Multi-Sibling Payment Complexity</h4>
+        <p>Many Kumon families enroll multiple siblings with different payment amounts and periods. The spreadsheet treated each student in isolation, making it difficult to track whether a family's full monthly obligation had been settled.</p>
+      </div>
+      <div class="pain-card">
+        <h4>No Role Separation</h4>
+        <p>Teachers, admins, and the franchise owner accessed the same spreadsheet with no differentiated views or permission controls. No mechanism existed to restrict sensitive records or enforce accountability by role.</p>
+      </div>
+      <div class="pain-card">
+        <h4>Mobile-Unfriendly Process</h4>
+        <p>Teachers are typically on their phones when handling payment receipts during class. A spreadsheet-based workflow on mobile required screenshot, app-switch, manual entry, and attachment: a multi-step process prone to delays and errors.</p>
+      </div>
+    </div>
+  </div>
+  <div class="page-ftr"><span>Page 5 · Confidential</span></div>
+</div>
+
+<!-- PAGE 6 - PROPOSED SOLUTION -->
+<!-- Proposed Solution archetype: pipeline (sequential stages: teacher submits → admin reviews → verifies/flags → teacher replies → verified record → analytics) -->
+<div class="page">
+  <div class="chrome">
+    <div class="page-hdr"><div class="page-hdr-l">Part A · Proposal</div></div>
+    <div class="sec-hdr"><span class="ref">§ 03</span><h2>Proposed Solution</h2></div>
+    <div class="sec-block">
+      <p><strong>Kumon Iligan OMS</strong> is a mobile-first operations management platform that replaces the manual receipt-and-spreadsheet workflow with a structured digital system accessible to all roles from any device. The core design principle: <em>structured data at the point of capture, not after the fact.</em></p>
+    </div>
+    <div class="sec-block">
+      <h4 style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:14px;">Payment Flow: From Submission to Verified Record</h4>
+      <div class="pipeline-wrap">
+        <div class="pipeline">
+          <div class="pl-stage">
+            <div class="pl-node">1</div>
+            <div class="pl-label">Teacher</div>
+            <div class="pl-sub">Submits payment via SDC form on mobile with receipt photo</div>
+          </div>
+          <div class="pl-connector"></div>
+          <div class="pl-stage">
+            <div class="pl-node">2</div>
+            <div class="pl-label">Admin Review</div>
+            <div class="pl-sub">Reviews in Payments table, verifies or flags the submission</div>
+          </div>
+          <div class="pl-connector"></div>
+          <div class="pl-stage">
+            <div class="pl-node">3</div>
+            <div class="pl-label">Teacher Reply</div>
+            <div class="pl-sub">Responds to flag in Recordings view without admin reopening</div>
+          </div>
+          <div class="pl-connector"></div>
+          <div class="pl-stage">
+            <div class="pl-node">4</div>
+            <div class="pl-label">Verified Record</div>
+            <div class="pl-sub">Payment confirmed, audit log entry created</div>
+          </div>
+          <div class="pl-connector"></div>
+          <div class="pl-stage">
+            <div class="pl-node done">5</div>
+            <div class="pl-label">Analytics</div>
+            <div class="pl-sub">Dashboards updated: payer trends, overdue detection, teacher activity</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sec-block">
+      <h4 style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px;">Core Capabilities</h4>
+      <div class="flist">
+        <div class="fi">Mobile-first payment submission with receipt upload</div>
+        <div class="fi">Admin verify, flag, and reject workflow</div>
+        <div class="fi">Teacher reply flow for flagged submissions</div>
+        <div class="fi">Visual dashboards: payer trends, method mix, teacher activity</div>
+        <div class="fi">Family and student records with multi-sibling support</div>
+        <div class="fi">Payment period tracking with overdue detection</div>
+        <div class="fi">Three-tier RBAC: Teacher, Admin, Superadmin</div>
+        <div class="fi">Spreadsheet import/export for migration and backup</div>
+        <div class="fi">Full audit trail for every system action</div>
+        <div class="fi">Multi-branch architecture ready for franchise expansion</div>
+      </div>
+    </div>
+  </div>
+  <div class="page-ftr"><span>Page 6 · Confidential</span></div>
+</div>
+
+<!-- PAGE 7 - SCOPE PART 1 -->
+<div class="page">
+  <div class="chrome">
+    <div class="page-hdr"><div class="page-hdr-l">Part A · Proposal</div></div>
+    <div class="sec-hdr"><span class="ref">§ 04</span><h2>Scope of Work by Module</h2></div>
+    <div class="callout warn" style="margin-bottom:14px;">
+      <div class="callout-label">Data Accuracy Note</div>
+      <p>Kumon Iligan OMS captures what teachers and admins log. The system does not have independent payment sensors or bank integrations. If a payment is not submitted through the SDC form, it will not appear in the system. Data completeness depends on consistent use by teachers. This is a digitization tool, not a payment verification layer.</p>
+    </div>
+    <div class="module-card">
+      <div class="module-head"><div class="module-num">1</div><h3>Teacher Payment Recording (SDC Form)</h3></div>
+      <div class="module-body">
+        <p>Mobile-first form at /sdc/[studentId] for teachers to submit payment details per student. Designed for single-handed use on a phone.</p>
+        <div class="flist">
+          <div class="fi">Student lookup by ID or name</div>
+          <div class="fi">Payment amount and reference number input</div>
+          <div class="fi">Receipt photo attachment via Supabase storage</div>
+          <div class="fi">Teacher's own submission history</div>
+        </div>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-head"><div class="module-num">2</div><h3>Admin Payment Management</h3></div>
+      <div class="module-body">
+        <p>Spreadsheet-style admin view at /payments showing all submitted payments with status badges, quick filters, and receipt access.</p>
+        <div class="flist">
+          <div class="fi">Full payment table with mobile card fallback</div>
+          <div class="fi">Verify, flag, or reject any submission</div>
+          <div class="fi">View attached receipt photo per record</div>
+          <div class="fi">URL-synced filters, search, and month/year selector</div>
+        </div>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-head"><div class="module-num">3</div><h3>Teacher Reply Flow</h3></div>
+      <div class="module-body">
+        <p>Flagged payments surface in the teacher's Recordings view (/recordings) with a sidebar notification badge refreshing every 30 seconds.</p>
+        <div class="flist">
+          <div class="fi">Flagged payment triage view for teachers</div>
+          <div class="fi">Sidebar badge showing pending flags</div>
+          <div class="fi">Reply and clarification per flagged submission</div>
+          <div class="fi">Admin sees teacher responses in payment detail</div>
+        </div>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-head"><div class="module-num">4</div><h3>Visual Analytics &amp; Reports</h3></div>
+      <div class="module-body">
+        <p>Dashboard at /reports with four real-time charts powered by live payment data.</p>
+        <div class="flist">
+          <div class="fi">Payer trend chart: monthly collection volume</div>
+          <div class="fi">Payment method mix breakdown</div>
+          <div class="fi">Recent payments activity feed</div>
+          <div class="fi">Teacher activity: submissions per teacher per period</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="page-ftr"><span>Page 7 · Confidential</span></div>
+</div>
+
+<!-- PAGE 8 - SCOPE PART 2 -->
+<div class="page">
+  <div class="chrome">
+    <div class="page-hdr"><div class="page-hdr-l">Part A · Proposal</div></div>
+    <div class="module-card">
+      <div class="module-head"><div class="module-num">5</div><h3>Data Import &amp; Export</h3></div>
+      <div class="module-body">
+        <p>Spreadsheet import for transitioning existing records; CSV export for accounting and reconciliation.</p>
+        <div class="flist">
+          <div class="fi">Payment import via CSV with row-level validation</div>
+          <div class="fi">Student import via CSV</div>
+          <div class="fi">Export all payments to CSV from /payments</div>
+          <div class="fi">Error reporting per row on failed imports</div>
+        </div>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-head"><div class="module-num">6</div><h3>Role-Based Access Control</h3></div>
+      <div class="module-body">
+        <p>Three-tier permission model enforced at both API (NestJS guards) and database (Row Level Security) levels.</p>
+        <div class="flist">
+          <div class="fi">Teacher: submit and view own submissions only</div>
+          <div class="fi">Admin: manage all payments, students, periods, families</div>
+          <div class="fi">Superadmin: full access including user and branch management</div>
+          <div class="fi">Google OAuth sign-in (no password management required)</div>
+        </div>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-head"><div class="module-num">7</div><h3>Student, Family &amp; Period Management</h3></div>
+      <div class="module-body">
+        <p>Families and students managed as separate records with multi-sibling assignment. Payment periods track per-student billing cycles.</p>
+        <div class="flist">
+          <div class="fi">Family records with linked student rosters</div>
+          <div class="fi">Multi-sibling: one family, multiple student records</div>
+          <div class="fi">Payment period generation per student per month</div>
+          <div class="fi">Overdue detection via period vs. payment matching</div>
+        </div>
+      </div>
+    </div>
+    <div class="module-card">
+      <div class="module-head"><div class="module-num">8</div><h3>Audit Trail</h3></div>
+      <div class="module-body">
+        <p>Every create, update, and delete action writes an immutable audit log entry. Admin-accessible at /audit with full change history.</p>
+        <div class="flist">
+          <div class="fi">Full audit log for all system actions</div>
+          <div class="fi">User, timestamp, entity, and action per entry</div>
+          <div class="fi">Admin viewer with filtering</div>
+          <div class="fi">Soft deletes: records never hard-deleted from the database</div>
+        </div>
+      </div>
+    </div>
+    <div class="callout warn">
+      <div class="callout-label">Open Item 1: Notification Wiring</div>
+      <p>The platform includes email and SMS service modules that are fully scaffolded but not yet connected to any trigger. If Nina wants automatic email notifications to teachers when admin flags a submission, that is a 30-minute wire-up available as a feature request.</p>
+    </div>
+    <div class="callout warn">
+      <div class="callout-label">Open Item 2: Tuition Rate Configuration</div>
+      <p>Currently, expected payment amounts are set per-student per-period. If Nina wants a centralized rate-per-Kumon-level configuration (e.g., all Level 1 students auto-assigned the same monthly rate), this requires a new rate configuration module and is available as a feature request.</p>
+    </div>
+    <div class="oos">
+      <h4>Explicitly Out of Scope</h4>
+      <ul>
+        <li>Attendance tracking and teacher clock-in/out</li>
+        <li>Payroll processing or integration</li>
+        <li>Student progress tracking (Kumon level advancement and stagnation alerts)</li>
+        <li>Cross-branch or franchise-wide analytics (Iligan branch only for now)</li>
+        <li>Parent portal (explicitly excluded by client at discovery)</li>
+      </ul>
+    </div>
+  </div>
+  <div class="page-ftr"><span>Page 8 · Confidential</span></div>
+</div>
+
+<!-- PAGE 9 - TIMELINE -->
+<div class="page">
+  <div class="chrome">
+    <div class="page-hdr"><div class="page-hdr-l">Part A · Proposal</div></div>
+    <div class="sec-hdr"><span class="ref">§ 05</span><h2>Project Timeline &amp; Milestones</h2></div>
+    <p style="margin-bottom:18px;">Kumon Iligan OMS is <strong>already live at kumon-iligan.symph.co</strong> as of May 2026. This agreement formalizes the engagement and transitions to a subscription model. The phases below cover agreement signing through subscription activation.</p>
+    <div class="tl">
+      <div class="tl-row">
+        <div class="tl-track"><div class="tl-dot">01</div><div class="tl-line"></div></div>
+        <div class="tl-cnt">
+          <h4>Phase 1 - Agreement &amp; Activation</h4>
+          <p>Sign this service agreement. Symph confirms all production infrastructure is fully operational and documented. Build Activation Fee invoiced immediately.</p>
+          <p class="tl-trigger">No payment required on signing.</p>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-track"><div class="tl-dot">02</div><div class="tl-line"></div></div>
+        <div class="tl-cnt">
+          <h4>Phase 2 - Full Team Onboarding</h4>
+          <p>All teacher and admin accounts provisioned and activated. Onboarding walkthrough for all user roles. How-to documentation delivered to admin.</p>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-track"><div class="tl-dot">03</div><div class="tl-line"></div></div>
+        <div class="tl-cnt">
+          <h4>Phase 3 - Fine-Tune Period (30 days)</h4>
+          <p>Active monitoring of the live system. Any PRD non-conformances identified are resolved at no cost. Feature requests noted for the first monthly planning session.</p>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-track"><div class="tl-dot">04</div><div class="tl-line"></div></div>
+        <div class="tl-cnt">
+          <h4>Phase 4 - Steady-State Subscription</h4>
+          <p>Monthly subscription billing begins. Feature request backlog established. Monthly planning cadence with Nina's team. Platform monitoring, security patches, and hosting managed by Symph.</p>
+          <p class="tl-trigger">Payment Trigger: Monthly subscription of &#8369;20,000 begins after fine-tune period</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="page-ftr"><span>Page 9 · Confidential</span></div>
+</div>
+
+<!-- PAGE 10 - PRICING -->
+<div class="page">
+  <div class="chrome">
+    <div class="page-hdr"><div class="page-hdr-l">Part B · Investment</div></div>
+    <div class="sec-hdr"><span class="ref">§ 06</span><h2>Subscription Pricing Model</h2></div>
+    <p>There is no build activation fee. The <strong>monthly subscription of &#8369;20,000</strong> covers all ongoing operations. All prices exclusive of 12% VAT.</p>
+    <div class="sum-pricing-row" style="margin-top:14px;margin-bottom:14px;">
+      <div class="sum-price-card">
+        <div class="pc-label">Activation Fee</div>
+        <div class="pc-amount">None</div>
+        <div class="pc-freq">No upfront cost</div>
+      </div>
+      <div class="sum-price-card highlight">
+        <div class="pc-label">Monthly Subscription</div>
+        <div class="pc-amount">&#8369;20,000</div>
+        <div class="pc-freq">Per month, excl. 12% VAT</div>
+      </div>
+      <div class="sum-price-card">
+        <div class="pc-label">Initial Term</div>
+        <div class="pc-amount">12 mo</div>
+        <div class="pc-freq">From fine-tune completion</div>
+      </div>
+    </div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:16px;">Subscription includes: GCP Cloud Run hosting (asia-southeast1), Supabase database and file storage, HTTPS load balancer with Google-managed SSL, Cloud Armor WAF, security patches, bug fixes, ongoing maintenance, and <strong>16 feature requests per year</strong>. No hidden infrastructure fees.</p>
+    <div class="y1-box">
+      <div>
+        <h4>Year 1 Estimate</h4>
+        <p>12 months of subscription at &#8369;20,000/month.</p>
+      </div>
+      <div class="y1-price">&#8369;240,000 <span>excl. VAT</span></div>
+    </div>
+    <table class="y1-table">
+      <thead>
+        <tr>
+          <th>Period</th>
+          <th>Description</th>
+          <th>Amount</th>
+          <th>Running Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Month 1</td><td>Monthly Subscription</td><td>&#8369;20,000</td><td>&#8369;20,000</td></tr>
+        <tr><td>Month 2</td><td>Monthly Subscription</td><td>&#8369;20,000</td><td>&#8369;40,000</td></tr>
+        <tr><td>Month 3</td><td>Monthly Subscription</td><td>&#8369;20,000</td><td>&#8369;60,000</td></tr>
+        <tr><td>Month 4</td><td>Monthly Subscription</td><td>&#8369;20,000</td><td>&#8369;100,000</td></tr>
+        <tr><td>Month 5</td><td>Monthly Subscription</td><td>&#8369;20,000</td><td>&#8369;100,000</td></tr>
+        <tr><td>Month 6</td><td>Monthly Subscription</td><td>&#8369;20,000</td><td>&#8369;120,000</td></tr>
+        <tr><td>Month 7</td><td>Monthly Subscription</td><td>&#8369;20,000</td><td>&#8369;140,000</td></tr>
+        <tr><td>Month 8</td><td>Monthly Subscription</td><td>&#8369;20,000</td><td>&#8369;200,000</td></tr>
+        <tr><td>Month 9</td><td>Monthly Subscription</td><td>&#8369;20,000</td><td>&#8369;180,000</td></tr>
+        <tr><td>Month 10</td><td>Monthly Subscription</td><td>&#8369;20,000</td><td>&#8369;200,000</td></tr>
+        <tr><td>Month 11</td><td>Monthly Subscription</td><td>&#8369;20,000</td><td>&#8369;220,000</td></tr>
+        <tr><td>Month 12</td><td>Monthly Subscription</td><td>&#8369;20,000</td><td>&#8369;240,000</td></tr>
+        <tr class="y1-total"><td colspan="2"><strong>Year 1 Total</strong></td><td colspan="2" style="text-align:right;"><strong>&#8369;240,000</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-ftr"><span>Page 10 · Confidential</span></div>
+</div>
+
+<!-- PAGE 11 - PAYMENT SCHEDULE + SUPPORT -->
+<div class="page">
+  <div class="chrome">
+    <div class="page-hdr"><div class="page-hdr-l">Part B · Investment</div></div>
+    <div class="sec-hdr"><span class="ref">§ 07</span><h2>Payment Schedule</h2></div>
+    <p>Invoices are issued upon each milestone trigger below. Payment is due within fifteen (15) days of invoice date. All amounts exclusive of 12% VAT.</p>
+    <div class="pay-table">
+      <div class="pay-row">
+        <div class="pay-info">
+          <h4>Milestone 1 - Fine-Tune Period Complete</h4>
+          <p>Monthly subscription begins after the 30-day fine-tune period. First invoice issued at fine-tune completion.</p>
+        </div>
+        <div class="pay-amt">&#8369;20,000/mo</div>
+      </div>
+      <div class="pay-row">
+        <div class="pay-info">
+          <h4>Milestone 2 - Recurring Monthly Subscription</h4>
+          <p>Invoiced monthly in advance for each billing cycle thereafter.</p>
+        </div>
+        <div class="pay-amt">&#8369;20,000/mo</div>
+      </div>
+    </div>
+    <div class="callout">
+      <div class="callout-label">VAT</div>
+      <p>All amounts in this agreement are exclusive of 12% Value Added Tax (VAT). VAT is applied on top of each invoice as required under Philippine tax law.</p>
+    </div>
+    <div class="sec-hdr" style="margin-top:22px;"><span class="ref">§ 08</span><h2>Post-Launch Support &amp; Feature Requests</h2></div>
+    <p>Active subscription includes ongoing maintenance, security patches, cloud hosting, and email support with a 5-day SLA target. All subscription tiers also include <strong>16 feature requests per year</strong> on Kumon Iligan OMS.</p>
+    <div class="freq-box">
+      <div class="freq-head">What Counts as a Feature Request</div>
+      <div class="freq-body">
+        <p>Subscription includes <strong>16 feature requests per year</strong> on Kumon Iligan OMS: new screens, workflows, fields, roles, filters, or logic within existing modules. Unused requests do not carry over. <strong>One feature request equals one scoped deliverable. New modules and wholly separate systems are priced as separate engagements.</strong></p>
+        <div class="freq-cols">
+          <div class="freq-col yes">
+            <h5>Counts as a Feature Request</h5>
+            <ul>
+              <li>New screen or view inside an existing module</li>
+              <li>New workflow step or approval stage</li>
+              <li>New filter, sort, or export option</li>
+              <li>New user role or permission</li>
+              <li>New notification trigger or rule</li>
+              <li>UI/UX redesign of an existing screen</li>
+              <li>New field, form, or data capture point</li>
+            </ul>
+          </div>
+          <div class="freq-col no">
+            <h5>Does Not Count</h5>
+            <ul>
+              <li>Bug fixes: if it doesn't work as agreed in the PRD, Symph fixes it at no cost, unlimited</li>
+              <li>Security patches and performance improvements</li>
+              <li>Hosting, uptime, and infrastructure maintenance</li>
+              <li>PRD scope items: all items in the signed PRD are included regardless of volume</li>
+              <li>New modules (e.g., attendance, payroll): priced separately</li>
+              <li>A wholly new system: priced as a separate engagement</li>
+            </ul>
+          </div>
+        </div>
+        <div class="freq-foot">Feature requests are logged and prioritized in monthly planning sessions with Nina's team. The 16-per-year allowance resets at each contract anniversary. The two Open Items in § 04 (notification wiring and tuition rate config) are available as feature requests at any time.</div>
+      </div>
+    </div>
+  </div>
+  <div class="page-ftr"><span>Page 11 · Confidential</span></div>
+</div>
+
+<!-- PAGE 12 - T&C PART 1 -->
+<div class="page">
+  <div class="chrome">
+    <div class="page-hdr"><div class="page-hdr-l">Part C · Terms &amp; Conditions</div></div>
+    <h2 style="font-size:18px;font-weight:700;color:var(--ink);margin-bottom:16px;border-bottom:2px solid var(--primary);padding-bottom:8px;">Terms and Conditions</h2>
+    <div class="tc-section">
+      <h3><span class="num">§ 09</span>Scope Boundaries &amp; Change Requests</h3>
+      <div class="tc-sub"><h4><span class="num">9.1</span>Fixed Scope</h4><p>Deliverables in § 04 are the complete scope. Anything not listed is out of scope.</p></div>
+      <div class="tc-sub"><h4><span class="num">9.2</span>Change Requests</h4><p>Change Requests assessed within 5 business days. No work begins without written approval and any additional fee.</p></div>
+      <div class="tc-sub"><h4><span class="num">9.3</span>UAT Scope</h4><p>PRD non-conformances resolved at no cost. New requirements are treated as Change Requests or Feature Requests per § 08.</p></div>
+      <div class="tc-sub"><h4><span class="num">9.4</span>Third-Party Integrations</h4><p>Integrations not listed in § 04 (payment gateways, ERP, bank APIs) are out of scope.</p></div>
+      <div class="tc-sub"><h4><span class="num">9.5</span>Initial Term &amp; Renewal</h4><p>12-month initial term from fine-tune completion; non-cancellable except on material breach. Auto-renews monthly thereafter; either party may terminate with 60 days written notice, no penalty.</p></div>
+    </div>
+    <div class="tc-section">
+      <h3><span class="num">§ 10</span>Intellectual Property</h3>
+      <div class="tc-sub"><h4><span class="num">10.1</span>Symph Ownership</h4><p>Symph retains ownership of the platform. Nina Quijano / Kumon Iligan receives a non-exclusive license to use Kumon Iligan OMS while the subscription is active. Payment does not transfer IP.</p></div>
+      <div class="tc-sub"><h4><span class="num">10.2</span>No Third-Party Resale</h4><p>Custom configurations built for Kumon Iligan will not be resold or disclosed to third parties without prior written consent.</p></div>
+      <div class="tc-sub"><h4><span class="num">10.3</span>System Ownership Transfer (Optional)</h4><p>Available after 12 consecutive months of active subscription. Transfer fee equals 18&times; the then-current monthly subscription as a one-time amount. Includes source code, documentation, infrastructure handoff, and 30-day guided transition support.</p></div>
+    </div>
+    <div class="tc-section">
+      <h3><span class="num">§ 11</span>Client Data Ownership</h3>
+      <p>Nina Quijano / Kumon Iligan owns all data generated through the system absolutely. Symph acts as data processor only. On termination: full data export (CSV or JSON) delivered within 30 days; all data permanently deleted within 90 days with written confirmation.</p>
+    </div>
+    <div class="tc-section">
+      <h3><span class="num">§ 12</span>Confidentiality</h3>
+      <p>Both parties maintain confidentiality of proprietary information for three (3) years post-termination. Exceptions: publicly available information, independently developed information, or legally required disclosure. Obligations survive termination.</p>
+    </div>
+  </div>
+  <div class="page-ftr"><span>Page 12 · Confidential</span></div>
+</div>
+
+<!-- PAGE 13 - T&C PART 2 -->
+<div class="page">
+  <div class="chrome">
+    <div class="page-hdr"><div class="page-hdr-l">Part C · Terms &amp; Conditions (continued)</div></div>
+    <div class="tc-section">
+      <h3><span class="num">§ 13</span>Warranties</h3>
+      <p>Symph will perform all services in a professional and workmanlike manner. Bug fixes, security patches, and maintenance are included in the monthly subscription at no additional cost. No separate warranty period applies beyond the active subscription.</p>
+    </div>
+    <div class="tc-section">
+      <h3><span class="num">§ 14</span>Payment Terms</h3>
+      <p>Invoiced monthly in advance. Payable within 15 days. Late fee: 1% per month (12% per annum) on outstanding balances. Platform access suspended if unpaid at 30 days (notice at day 23); restored on receipt of payment.</p>
+    </div>
+    <div class="tc-section">
+      <h3><span class="num">§ 15</span>Termination</h3>
+      <div class="tc-sub"><h4><span class="num">15.1</span>Initial Term</h4><p>12-month initial term (from fine-tune completion) is non-cancellable except on material breach. After the initial term, either party may terminate with 60 days written notice, no penalty.</p></div>
+      <div class="tc-sub"><h4><span class="num">15.2</span>Termination for Cause</h4><p>Either party may terminate immediately on material breach if not remedied within 14 calendar days of written notice.</p></div>
+      <div class="tc-sub"><h4><span class="num">15.3</span>Effect of Termination</h4><p>Full data export delivered within 30 days. Subscription prorated to the termination date. All data permanently deleted within 90 days with written confirmation.</p></div>
+    </div>
+    <div class="tc-section">
+      <h3><span class="num">§ 16</span>Limitation of Liability</h3>
+      <div class="tc-sub"><h4><span class="num">16.1</span>Liability Cap</h4><p>Symph's total liability shall not exceed the total fees paid by Nina Quijano / Kumon Iligan in the twelve (12) months preceding the claim. Neither party shall be liable for indirect, incidental, or consequential damages, including loss of revenue or data.</p></div>
+      <div class="tc-sub"><h4><span class="num">16.2</span>Uptime</h4><p>Symph targets 99.9% monthly uptime, excluding scheduled maintenance (48 hours advance notice) and force majeure events.</p></div>
+    </div>
+    <div class="tc-section">
+      <h3><span class="num">§ 17</span>General Provisions</h3>
+      <div class="tc-sub"><h4><span class="num">17.1</span>Governing Law</h4><p>Governed by the laws of the Republic of the Philippines. Disputes resolved through good-faith negotiation for 30 days, and if unresolved, through binding arbitration in Manila.</p></div>
+      <div class="tc-sub"><h4><span class="num">17.2</span>Amendments &amp; Severability</h4><p>Amendments valid only in writing, signed by authorized representatives of both parties. Verbal or chat-based agreements do not constitute amendments. Unenforceable provisions do not affect remaining terms.</p></div>
+      <div class="tc-sub"><h4><span class="num">17.3</span>Entire Agreement</h4><p>This document supersedes all prior negotiations and understandings, whether oral or written.</p></div>
+      <div class="tc-sub"><h4><span class="num">17.4</span>Offer Validity</h4><p>Valid for 30 days from date of issue. Pricing and timelines subject to revision thereafter.</p></div>
+      <div class="tc-sub"><h4><span class="num">17.5</span>VAT</h4><p>All amounts exclusive of 12% VAT. VAT applied on each invoice as required under Philippine tax law.</p></div>
+      <div class="tc-sub"><h4><span class="num">17.6</span>Data Sharing</h4><p>If this agreement involves personal data processing, both parties shall execute a separate Data Sharing Agreement prior to any such processing.</p></div>
+    </div>
+  </div>
+  <div class="page-ftr"><span>Page 13 · Confidential</span></div>
+</div>
+
+<!-- PAGE 14 - ACCEPTANCE & SIGNATURES -->
+<div class="page">
+  <div class="chrome">
+    <div class="page-hdr"><div class="page-hdr-l">Part D · Acceptance</div></div>
+    <div class="sec-hdr"><span class="ref">§ 18</span><h2>Agreement &amp; Signatures</h2></div>
+    <div class="auth-summary">
+      <h3>Module Authorization Summary</h3>
+      <div class="auth-grid">
+        <div class="auth-cell">
+          <div class="auth-label">Platform</div>
+          <div class="auth-value">Kumon Iligan OMS</div>
+        </div>
+        <div class="auth-cell">
+          <div class="auth-label">Activation Fee</div>
+          <div class="auth-value">None<span class="small">no upfront cost</span></div>
+        </div>
+        <div class="auth-cell">
+          <div class="auth-label">VAT</div>
+          <div class="auth-value">12% excl.<span class="small">on all amounts</span></div>
+        </div>
+        <div class="auth-cell">
+          <div class="auth-label">Monthly Rate</div>
+          <div class="auth-value">&#8369;20,000/mo<span class="small">+ 12% VAT</span></div>
+        </div>
+        <div class="auth-cell">
+          <div class="auth-label">Initial Term</div>
+          <div class="auth-value">12 months<span class="small">from fine-tune completion</span></div>
+        </div>
+        <div class="auth-cell">
+          <div class="auth-label">Renewal Terms</div>
+          <div class="auth-value">Auto-renews monthly<span class="small">60-day notice after term</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="binding-clause">
+      By signing below, both parties confirm they have read, understood, and agreed to the terms of this Service Agreement, including the scope of work, pricing, payment schedule, and all terms and conditions set out in Part C. <strong>This agreement is governed by the laws of the Republic of the Philippines</strong> and becomes binding upon signature by authorized representatives of both parties.
+    </div>
+    <div class="sig-grid">
+      <div class="sig-block">
+        <h4>Service Provider</h4>
+        <div class="sig-party">Symph</div>
+        <div class="sig-role">Authorized Representative</div>
+        <div class="sig-line"></div>
+        <div class="sig-field">Signature</div>
+        <div class="sig-line"></div>
+        <div class="sig-field">Date</div>
+        <div class="sig-name">[Authorized Rep Name]</div>
+        <div class="sig-title">Symph Agency</div>
+      </div>
+      <div class="sig-block">
+        <h4>Client</h4>
+        <div class="sig-party">Nina Quijano</div>
+        <div class="sig-role">Owner, Kumon Iligan Franchise</div>
+        <div class="sig-line"></div>
+        <div class="sig-field">Signature</div>
+        <div class="sig-line"></div>
+        <div class="sig-field">Date</div>
+        <div class="sig-name">Nina Quijano</div>
+        <div class="sig-title">Owner / Authorized Signatory</div>
+      </div>
+    </div>
+    <div class="sig-footer">Please sign two copies. Return one signed copy to Symph to confirm engagement.</div>
+  </div>
+  <div class="page-ftr"><span>Page 14 · Confidential</span></div>
+</div>
+
+</div>
+</body>
+</html>
