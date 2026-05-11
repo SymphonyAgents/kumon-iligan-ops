@@ -23,3 +23,7 @@
 [2026-05-11 08:40:00] 🔧 Fixed: malformed imports corrected in recordings, sdc, staff pages
 [2026-05-11 08:42:00] 🚀 Deployed v0.1.4, revision kumon-iligan-frontend-00014-g97, build b0021f46
 [2026-05-11 08:42:00] ✅ Smoke test passed, login page loads correctly, no regressions
+[2026-05-11 11:40:00] 🔒 Security gate passed: 0 vulnerabilities, secrets scan clean
+[2026-05-11 11:40:00] 🏷️ Tagged release v0.1.5, family members, paid-by attribution, pending review tab, prettier config
+[2026-05-11 11:42:00] 🚀 Deployed v0.1.5, revision kumon-iligan-frontend-00015-b4d, build ff0fcbe2
+[2026-05-11 11:42:00] ✅ Smoke test passed, login page loads correctly, no regressions
