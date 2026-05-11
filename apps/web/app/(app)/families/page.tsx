@@ -8,8 +8,20 @@ import { TableSkeleton } from '@/components/ui/skeleton';
 import { DataCardList } from '@/components/ui/data-card-list';
 import { useUrlParam } from '@/hooks/useUrlParam';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { MultiCombobox } from '@/components/ui/multi-combobox';
 import {
   useFamiliesQuery,
@@ -24,8 +36,9 @@ import { USER_TYPE } from '@/lib/constants';
 import { api } from '@/lib/api';
 import { toTitleCase } from '@/utils/text';
 import { toast } from 'sonner';
+import { PencilSimpleIcon, TrashIcon, UsersIcon, PlusIcon } from '@phosphor-icons/react';
 import type { Family } from '@/lib/types';
-import { PlusIcon, PencilSimpleIcon, TrashIcon, UsersIcon } from '@phosphor-icons/react';
+import { MembersSection } from '@/components/families/members-section';
 
 type FamilyFormData = {
   guardianName: string;
@@ -68,10 +81,7 @@ function FamilyDialog({
       : BLANK_FORM,
   );
 
-  const initialChildIds = useMemo(
-    () => (initial?.students?.map((s) => s.id) ?? []),
-    [initial],
-  );
+  const initialChildIds = useMemo(() => initial?.students?.map((s) => s.id) ?? [], [initial]);
   const [childIds, setChildIds] = useState<string[]>(initialChildIds);
 
   const { data: currentUser } = useCurrentUserQuery();
@@ -160,7 +170,12 @@ function FamilyDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{familyId ? 'Edit Family' : 'Add Family'}</DialogTitle>
@@ -217,6 +232,8 @@ function FamilyDialog({
             </p>
           </div>
 
+          {familyId && <MembersSection familyId={familyId} />}
+
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-foreground">Notes</label>
             <textarea
@@ -243,7 +260,9 @@ function FamilyDialog({
                 <SelectContent>
                   <SelectItem value="__default__">Default branch</SelectItem>
                   {branches.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -251,7 +270,9 @@ function FamilyDialog({
           )}
 
           <DialogFooter>
-            <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
             <Button type="submit" disabled={isPending}>
               {isPending ? 'Saving…' : familyId ? 'Save Changes' : 'Add Family'}
             </Button>
@@ -335,7 +356,8 @@ function FamiliesContent() {
               ),
               meta: (
                 <p className="truncate">
-                  {toTitleCase([f.streetName, f.barangay, f.city].filter(Boolean).join(', ')) || '—'}
+                  {toTitleCase([f.streetName, f.barangay, f.city].filter(Boolean).join(', ')) ||
+                    '—'}
                 </p>
               ),
               actions: isAdmin ? (
@@ -363,63 +385,79 @@ function FamiliesContent() {
           <div className="hidden sm:block rounded-2xl border border-border bg-card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-secondary/40">
-                  <th className="text-left px-4 py-2.5 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.12em] w-12">#</th>
-                  <th className="text-left px-4 py-2.5 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">Guardian</th>
-                  <th className="text-left px-4 py-2.5 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.12em] hidden sm:table-cell">Contact</th>
-                  <th className="text-left px-4 py-2.5 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.12em] hidden md:table-cell">Address</th>
-                  <th className="text-left px-4 py-2.5 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">Students</th>
-                  {isAdmin && (
-                    <th className="text-right px-4 py-2.5 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">Actions</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filtered.map((f, i) => (
-                  <tr key={f.id} className="hover:bg-secondary/40 transition-colors">
-                    <td className="px-4 py-3 text-muted-foreground font-mono text-xs tabular-nums">
-                      {i + 1}
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-foreground">{toTitleCase(f.guardianName)}</p>
-                    </td>
-                    <td className="px-4 py-3 hidden sm:table-cell text-foreground font-mono text-xs">{f.guardianPhone}</td>
-                    <td className="px-4 py-3 hidden md:table-cell text-muted-foreground text-xs">
-                      {toTitleCase([f.streetName, f.barangay, f.city].filter(Boolean).join(', ')) || '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <UsersIcon size={13} />
-                        <span className="text-xs">{f.students?.length ?? 0}</span>
-                      </div>
-                    </td>
+                <thead>
+                  <tr className="border-b border-border bg-secondary/40">
+                    <th className="text-left px-4 py-2.5 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.12em] w-12">
+                      #
+                    </th>
+                    <th className="text-left px-4 py-2.5 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">
+                      Guardian
+                    </th>
+                    <th className="text-left px-4 py-2.5 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.12em] hidden sm:table-cell">
+                      Contact
+                    </th>
+                    <th className="text-left px-4 py-2.5 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.12em] hidden md:table-cell">
+                      Address
+                    </th>
+                    <th className="text-left px-4 py-2.5 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">
+                      Students
+                    </th>
                     {isAdmin && (
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => setEditTarget(f)}
-                            aria-label="Edit family"
-                            className="p-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                          >
-                            <PencilSimpleIcon size={18} />
-                          </button>
-                          {currentUser?.userType === USER_TYPE.SUPERADMIN && (
-                            <button
-                              onClick={() => setDeleteTarget(f)}
-                              aria-label="Delete family"
-                              className="p-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-err transition-colors"
-                            >
-                              <TrashIcon size={18} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
+                      <th className="text-right px-4 py-2.5 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">
+                        Actions
+                      </th>
                     )}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filtered.map((f, i) => (
+                    <tr key={f.id} className="hover:bg-secondary/40 transition-colors">
+                      <td className="px-4 py-3 text-muted-foreground font-mono text-xs tabular-nums">
+                        {i + 1}
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-foreground">{toTitleCase(f.guardianName)}</p>
+                      </td>
+                      <td className="px-4 py-3 hidden sm:table-cell text-foreground font-mono text-xs">
+                        {f.guardianPhone}
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell text-muted-foreground text-xs">
+                        {toTitleCase(
+                          [f.streetName, f.barangay, f.city].filter(Boolean).join(', '),
+                        ) || '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <UsersIcon size={13} />
+                          <span className="text-xs">{f.students?.length ?? 0}</span>
+                        </div>
+                      </td>
+                      {isAdmin && (
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => setEditTarget(f)}
+                              aria-label="Edit family"
+                              className="p-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                            >
+                              <PencilSimpleIcon size={18} />
+                            </button>
+                            {currentUser?.userType === USER_TYPE.SUPERADMIN && (
+                              <button
+                                onClick={() => setDeleteTarget(f)}
+                                aria-label="Delete family"
+                                className="p-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-err transition-colors"
+                              >
+                                <TrashIcon size={18} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </>

@@ -16,7 +16,15 @@ export function useBranchesQuery() {
 export function useCreateBranchMutation(onSuccess?: () => void) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { name: string; streetName?: string; barangay?: string; city?: string; province?: string; country?: string; phone?: string }) => api.branches.create(body),
+    mutationFn: (body: {
+      name: string;
+      streetName?: string;
+      barangay?: string;
+      city?: string;
+      province?: string;
+      country?: string;
+      phone?: string;
+    }) => api.branches.create(body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: BRANCHES_KEY });
       toast.success('Branch created');
@@ -30,7 +38,19 @@ export function useUpdateBranchMutation(onSuccess?: () => void) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...body }: { id: string } & Record<string, unknown>) =>
-      api.branches.update(id, body as Partial<{ name: string; streetName: string; barangay: string; city: string; province: string; country: string; phone: string; isActive: boolean }>),
+      api.branches.update(
+        id,
+        body as Partial<{
+          name: string;
+          streetName: string;
+          barangay: string;
+          city: string;
+          province: string;
+          country: string;
+          phone: string;
+          isActive: boolean;
+        }>,
+      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: BRANCHES_KEY });
       toast.success('Branch updated');

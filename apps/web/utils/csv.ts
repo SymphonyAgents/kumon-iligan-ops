@@ -9,7 +9,10 @@ function escapeCell(v: unknown): string {
   return s;
 }
 
-export function rowsToCsv<T extends Record<string, unknown>>(rows: T[], columns?: (keyof T)[]): string {
+export function rowsToCsv<T extends Record<string, unknown>>(
+  rows: T[],
+  columns?: (keyof T)[],
+): string {
   if (rows.length === 0) return '';
   const cols = columns ?? (Object.keys(rows[0]) as (keyof T)[]);
   const header = cols.map((c) => escapeCell(String(c))).join(',');

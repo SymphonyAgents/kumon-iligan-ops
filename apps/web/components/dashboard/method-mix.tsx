@@ -18,10 +18,10 @@ interface MethodSlice {
 }
 
 const METHOD_ORDER: { key: string; color: string }[] = [
-  { key: PAYMENT_METHOD.GCASH,         color: 'var(--color-primary)' },           // forest green
-  { key: PAYMENT_METHOD.BANK_TRANSFER, color: 'var(--color-warn)' },              // amber
-  { key: PAYMENT_METHOD.CASH,          color: 'var(--color-foreground)' },        // near-black
-  { key: PAYMENT_METHOD.OTHER,         color: 'var(--color-muted-foreground)' },  // grey
+  { key: PAYMENT_METHOD.GCASH, color: 'var(--color-primary)' }, // forest green
+  { key: PAYMENT_METHOD.BANK_TRANSFER, color: 'var(--color-warn)' }, // amber
+  { key: PAYMENT_METHOD.CASH, color: 'var(--color-foreground)' }, // near-black
+  { key: PAYMENT_METHOD.OTHER, color: 'var(--color-muted-foreground)' }, // grey
 ];
 
 function fmtPeso(v: number) {
@@ -172,8 +172,8 @@ export function MethodMix() {
         <div className="flex items-center gap-5">
           <Donut slices={[]} total={0} />
           <p className="text-[13px] text-muted-foreground flex-1">
-            No verified payments yet for {MONTHS[month - 1]}. The mix will appear here as
-            payments are verified.
+            No verified payments yet for {MONTHS[month - 1]}. The mix will appear here as payments
+            are verified.
           </p>
         </div>
       ) : (
@@ -188,9 +188,7 @@ export function MethodMix() {
                     className="w-2.5 h-2.5 rounded-full shrink-0"
                     style={{ backgroundColor: s.color }}
                   />
-                  <span className="text-[13px] text-foreground truncate flex-1">
-                    {s.label}
-                  </span>
+                  <span className="text-[13px] text-foreground truncate flex-1">{s.label}</span>
                   <span className="text-[12.5px] font-medium text-muted-foreground tabular-nums">
                     {pct}%
                   </span>

@@ -23,7 +23,9 @@ export function isValidImageType(file: File): boolean {
   return file.type.startsWith('image/');
 }
 
-export async function compressWithFallback(file: File): Promise<{ blob: File; sizeKB: number; compressed: boolean }> {
+export async function compressWithFallback(
+  file: File,
+): Promise<{ blob: File; sizeKB: number; compressed: boolean }> {
   // Always run through imageCompression — even small files — to guarantee
   // the output is real JPEG bytes. Without this, a small PNG/WebP would be
   // returned as-is but then uploaded with Content-Type: image/jpeg (wrong).
@@ -32,12 +34,18 @@ export async function compressWithFallback(file: File): Promise<{ blob: File; si
   try {
     const compressed = await imageCompression(file, COMPRESSION_OPTIONS);
     const compressedSizeKB = Math.round(compressed.size / 1024);
-    return { blob: compressed, sizeKB: compressedSizeKB, compressed: compressedSizeKB < originalSizeKB };
+    return {
+      blob: compressed,
+      sizeKB: compressedSizeKB,
+      compressed: compressedSizeKB < originalSizeKB,
+    };
   } catch {
     // Compression failed (OOM on low-end device, corrupted metadata, etc.)
     // Fall back to original file only if it fits within the raw limit.
     if (file.size > RAW_MAX_SIZE_MB * 1024 * 1024) {
-      throw new Error(`Image too large (${Math.round(file.size / 1024 / 1024)}MB). Try a lower quality camera setting.`);
+      throw new Error(
+        `Image too large (${Math.round(file.size / 1024 / 1024)}MB). Try a lower quality camera setting.`,
+      );
     }
     return { blob: file, sizeKB: originalSizeKB, compressed: false };
   }

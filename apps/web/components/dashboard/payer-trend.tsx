@@ -86,7 +86,11 @@ export function PayerTrend() {
       {isLoading ? (
         <div className="flex items-end gap-2 h-32">
           {Array.from({ length: MONTHS_TO_SHOW }).map((_, i) => (
-            <Skeleton key={i} className="flex-1 h-full rounded-md" style={{ height: `${30 + i * 10}%` }} />
+            <Skeleton
+              key={i}
+              className="flex-1 h-full rounded-md"
+              style={{ height: `${30 + i * 10}%` }}
+            />
           ))}
         </div>
       ) : (

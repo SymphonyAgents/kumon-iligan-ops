@@ -24,6 +24,7 @@ import {
   payments,
   students,
   families,
+  familyMembers,
   paymentPeriods,
   users,
 } from '../db/schema.js';
@@ -206,6 +207,15 @@ export class PaymentsService {
       verifiedByUserRow = vbu ?? null;
     }
 
+    let paidByMember: typeof familyMembers.$inferSelect | null = null;
+    if (payment.paidByMemberId) {
+      const [m] = await this.drizzle.db
+        .select()
+        .from(familyMembers)
+        .where(eq(familyMembers.id, payment.paidByMemberId));
+      paidByMember = m ?? null;
+    }
+
     return {
       ...this.formatPayment(payment),
       student: student ?? null,
@@ -219,6 +229,7 @@ export class PaymentsService {
         : null,
       recordedByUser: recordedByUserRow ?? null,
       verifiedByUser: verifiedByUserRow,
+      paidByMember,
     };
   }
 
@@ -293,6 +304,7 @@ export class PaymentsService {
         note: dto.note ?? null,
         recordedBy: requestingUserId,
         branchId: student.branchId,
+        paidByMemberId: dto.paidByMemberId ?? null,
       })
       .returning();
 

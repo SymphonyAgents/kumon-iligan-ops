@@ -5,10 +5,7 @@ import { Command as CommandPrimitive } from 'cmdk';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
-function Command({
-  className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive>) {
+function Command({ className, ...props }: React.ComponentProps<typeof CommandPrimitive>) {
   return (
     <CommandPrimitive
       data-slot="command"
@@ -26,7 +23,10 @@ function CommandInput({
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.Input>) {
   return (
-    <div data-slot="command-input-wrapper" className="flex items-center gap-2 border-b border-border px-3">
+    <div
+      data-slot="command-input-wrapper"
+      className="flex items-center gap-2 border-b border-border px-3"
+    >
       <MagnifyingGlassIcon size={14} className="text-muted-foreground shrink-0" />
       <CommandPrimitive.Input
         data-slot="command-input"
@@ -40,22 +40,20 @@ function CommandInput({
   );
 }
 
-function CommandList({
-  className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive.List>) {
+function CommandList({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.List>) {
   return (
     <CommandPrimitive.List
       data-slot="command-list"
-      className={cn('max-h-[280px] overflow-y-auto overflow-x-hidden overscroll-contain p-1', className)}
+      className={cn(
+        'max-h-[280px] overflow-y-auto overflow-x-hidden overscroll-contain p-1',
+        className,
+      )}
       {...props}
     />
   );
 }
 
-function CommandEmpty({
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive.Empty>) {
+function CommandEmpty({ ...props }: React.ComponentProps<typeof CommandPrimitive.Empty>) {
   return (
     <CommandPrimitive.Empty
       data-slot="command-empty"
@@ -94,10 +92,7 @@ function CommandSeparator({
   );
 }
 
-function CommandItem({
-  className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive.Item>) {
+function CommandItem({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.Item>) {
   return (
     <CommandPrimitive.Item
       data-slot="command-item"
@@ -110,10 +105,7 @@ function CommandItem({
   );
 }
 
-function CommandShortcut({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLSpanElement>) {
+function CommandShortcut({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) {
   return (
     <span
       data-slot="command-shortcut"

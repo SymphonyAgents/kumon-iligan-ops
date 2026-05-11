@@ -27,7 +27,9 @@ export function formatAddress(parts: {
 }): string {
   const { streetName, barangay, city, province } = parts;
   const localPart = [toTitleCase(streetName), toTitleCase(barangay)].filter(Boolean).join(' ');
-  return [localPart, toTitleCase(city), toTitleCase(province)].filter(Boolean).join(', ') || '\u2014';
+  return (
+    [localPart, toTitleCase(city), toTitleCase(province)].filter(Boolean).join(', ') || '\u2014'
+  );
 }
 
 export function formatDatetime(value?: string | null): string {

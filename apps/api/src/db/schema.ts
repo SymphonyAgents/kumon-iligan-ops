@@ -73,6 +73,24 @@ export const families = pgTable('families', {
 });
 
 // ---------------------------------------------------------------------------
+// family_members — people associated with a family (mother / father / grandparent / etc.)
+// Exactly one row per family is is_primary=true. The primary backs the legacy
+// families.guardian_name/guardian_phone/guardian_email columns (denormalized cache).
+// ---------------------------------------------------------------------------
+export const familyMembers = pgTable('family_members', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  familyId: uuid('family_id').references(() => families.id, { onDelete: 'cascade' }).notNull(),
+  fullName: varchar('full_name', { length: 255 }).notNull(),
+  phone: varchar('phone', { length: 20 }),
+  email: varchar('email', { length: 255 }),
+  relation: varchar('relation', { length: 30 }).default('guardian').notNull(),
+  isPrimary: boolean('is_primary').default(false).notNull(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ---------------------------------------------------------------------------
 // students — enrolled students
 // ---------------------------------------------------------------------------
 export const students = pgTable('students', {
@@ -143,6 +161,7 @@ export const payments = pgTable('payments', {
   number: varchar('number', { length: 10 }).unique().notNull(), // e.g. "PAY-0001"
   studentId: uuid('student_id').references(() => students.id, { onDelete: 'restrict' }).notNull(),
   familyId: uuid('family_id').references(() => families.id, { onDelete: 'restrict' }).notNull(), // denormalized
+  paidByMemberId: uuid('paid_by_member_id').references(() => familyMembers.id, { onDelete: 'set null' }), // which family member sent the receipt
   periodId: uuid('period_id').references(() => paymentPeriods.id, { onDelete: 'restrict' }).notNull(),
   amount: bigint('amount', { mode: 'number' }).notNull(), // actual amount paid, scaled integer
   expectedAmountSnapshot: bigint('expected_amount_snapshot', { mode: 'number' }).notNull(), // snapshot at time of recording
@@ -207,6 +226,14 @@ export const familiesRelations = relations(families, ({ one, many }) => ({
   }),
   students: many(students),
   payments: many(payments),
+  members: many(familyMembers),
+}));
+
+export const familyMembersRelations = relations(familyMembers, ({ one }) => ({
+  family: one(families, {
+    fields: [familyMembers.familyId],
+    references: [families.id],
+  }),
 }));
 
 export const studentsRelations = relations(students, ({ one, many }) => ({

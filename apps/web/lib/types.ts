@@ -1,4 +1,11 @@
-import type { UserType, UserStatus, StudentStatus, PaymentStatus, PaymentMethod, PeriodStatus } from './constants';
+import type {
+  UserType,
+  UserStatus,
+  StudentStatus,
+  PaymentStatus,
+  PaymentMethod,
+  PeriodStatus,
+} from './constants';
 export type { UserType, UserStatus, StudentStatus, PaymentStatus, PaymentMethod, PeriodStatus };
 
 // ---------------------------------------------------------------------------
@@ -37,6 +44,29 @@ export interface AppUser {
   createdAt: string;
 }
 
+export type FamilyMemberRelation =
+  | 'mother'
+  | 'father'
+  | 'grandmother'
+  | 'grandfather'
+  | 'aunt'
+  | 'uncle'
+  | 'guardian'
+  | 'other';
+
+export interface FamilyMember {
+  id: string;
+  familyId: string;
+  fullName: string;
+  phone: string | null;
+  email: string | null;
+  relation: FamilyMemberRelation;
+  isPrimary: boolean;
+  deletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Family {
   id: string;
   guardianName: string;
@@ -53,6 +83,7 @@ export interface Family {
   createdAt: string;
   updatedAt: string;
   students?: Student[];
+  members?: FamilyMember[];
 }
 
 export interface Student {
@@ -131,6 +162,7 @@ export interface Payment {
   teacherReply: string | null;
   teacherRepliedAt: string | null;
   branchId: string;
+  paidByMemberId: string | null;
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -139,6 +171,7 @@ export interface Payment {
   studentLastName?: string | null;
   guardianName?: string | null;
   recordedByName?: string | null;
+  paidByMember?: FamilyMember | null;
 }
 
 export interface AuditEntry {

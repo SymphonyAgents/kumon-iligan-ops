@@ -12,10 +12,7 @@ import { cn } from '@/lib/utils';
 
 type Tab = 'team' | 'mine';
 
-const TEACHER_AUDIT_TYPES = new Set([
-  'payment_recorded',
-  'payment_replied',
-]);
+const TEACHER_AUDIT_TYPES = new Set(['payment_recorded', 'payment_replied']);
 
 const ADMIN_AUDIT_TYPES = new Set([
   'payment_verified',
@@ -29,15 +26,15 @@ const ADMIN_AUDIT_TYPES = new Set([
 ]);
 
 const VERB: Record<string, { verb: string; tone: 'paid' | 'warn' | 'err' | 'neutral' }> = {
-  payment_recorded:    { verb: 'recorded payment',  tone: 'neutral' },
-  payment_verified:    { verb: 'verified',          tone: 'paid' },
-  payment_flagged:     { verb: 'flagged',           tone: 'warn' },
-  payment_rejected:    { verb: 'rejected',          tone: 'err' },
-  payment_replied:     { verb: 'replied on',        tone: 'neutral' },
-  student_enrolled:    { verb: 'enrolled',          tone: 'paid' },
+  payment_recorded: { verb: 'recorded payment', tone: 'neutral' },
+  payment_verified: { verb: 'verified', tone: 'paid' },
+  payment_flagged: { verb: 'flagged', tone: 'warn' },
+  payment_rejected: { verb: 'rejected', tone: 'err' },
+  payment_replied: { verb: 'replied on', tone: 'neutral' },
+  student_enrolled: { verb: 'enrolled', tone: 'paid' },
   student_status_changed: { verb: 'updated status of', tone: 'neutral' },
-  family_created:      { verb: 'added family',      tone: 'paid' },
-  family_updated:      { verb: 'updated family',    tone: 'neutral' },
+  family_created: { verb: 'added family', tone: 'paid' },
+  family_updated: { verb: 'updated family', tone: 'neutral' },
   period_bulk_generated: { verb: 'generated periods', tone: 'neutral' },
 };
 
@@ -58,7 +55,10 @@ function timeAgo(iso: string): string {
 function actorInitials(name: string | null, email: string | null): string {
   const source = name ?? email ?? '';
   if (!source) return '·';
-  const parts = source.trim().split(/[\s@]+/).filter(Boolean);
+  const parts = source
+    .trim()
+    .split(/[\s@]+/)
+    .filter(Boolean);
   if (parts.length === 0) return source.slice(0, 2).toUpperCase();
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -74,9 +74,10 @@ function ActivityRow({ entry }: { entry: AuditEntry }) {
   const meta = entry.auditType ? VERB[entry.auditType] : null;
   const verb = meta?.verb ?? entry.action.replace(/_/g, ' ');
   const tone = meta?.tone ?? 'neutral';
-  const target = (entry.details?.paymentNumber as string | undefined)
-    ?? (entry.details?.studentName as string | undefined)
-    ?? entry.entityType;
+  const target =
+    (entry.details?.paymentNumber as string | undefined) ??
+    (entry.details?.studentName as string | undefined) ??
+    entry.entityType;
 
   return (
     <div className="flex items-center gap-3 px-5 py-3">
@@ -107,7 +108,9 @@ function ActivityRow({ entry }: { entry: AuditEntry }) {
           </p>
         ) : null}
       </div>
-      <span className="text-[11px] text-muted-foreground/80 shrink-0">{timeAgo(entry.createdAt)}</span>
+      <span className="text-[11px] text-muted-foreground/80 shrink-0">
+        {timeAgo(entry.createdAt)}
+      </span>
     </div>
   );
 }
@@ -125,14 +128,13 @@ export function TeacherActivity({ currentUserId }: TeacherActivityProps) {
     limit: 50,
   });
 
-  const relevant = entries.filter((e) =>
-    e.auditType && (TEACHER_AUDIT_TYPES.has(e.auditType) || ADMIN_AUDIT_TYPES.has(e.auditType)),
+  const relevant = entries.filter(
+    (e) =>
+      e.auditType && (TEACHER_AUDIT_TYPES.has(e.auditType) || ADMIN_AUDIT_TYPES.has(e.auditType)),
   );
 
   const visible =
-    tab === 'mine'
-      ? relevant.filter((e) => e.performedBy === currentUserId)
-      : relevant;
+    tab === 'mine' ? relevant.filter((e) => e.performedBy === currentUserId) : relevant;
 
   const trimmed = visible.slice(0, 8);
 
@@ -186,7 +188,9 @@ export function TeacherActivity({ currentUserId }: TeacherActivityProps) {
       ) : trimmed.length === 0 ? (
         <div className="px-5 py-10 text-center">
           <p className="text-[13px] text-muted-foreground">
-            {tab === 'mine' ? 'You haven\'t done anything yet this month.' : 'No team activity this month yet.'}
+            {tab === 'mine'
+              ? "You haven't done anything yet this month."
+              : 'No team activity this month yet.'}
           </p>
         </div>
       ) : (

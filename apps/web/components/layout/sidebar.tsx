@@ -15,12 +15,12 @@ import { Spinner } from '@/components/ui/spinner';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { CounterPill } from '@/components/ui/counter-pill';
 import {
- Dialog,
- DialogContent,
- DialogHeader,
- DialogTitle,
- DialogDescription,
- DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
@@ -35,10 +35,10 @@ interface NavItem {
 }
 
 interface NavGroup {
- label?: string;
- adminOnly?: boolean;
- superadminOnly?: boolean;
- items: NavItem[];
+  label?: string;
+  adminOnly?: boolean;
+  superadminOnly?: boolean;
+  items: NavItem[];
 }
 
 const NAV_GROUPS: NavGroup[] = [
@@ -75,18 +75,18 @@ const NAV_GROUPS: NavGroup[] = [
 ];
 
 function initials(input?: string | null): string {
- if (!input) return '?';
- const parts = input.trim().split(/\s+/);
- if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
- return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  if (!input) return '?';
+  const parts = input.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 export function Sidebar() {
- const pathname = usePathname();
- const [mobileOpen, setMobileOpen] = useState(false);
- const [showSignOutDialog, setShowSignOutDialog] = useState(false);
- const [signingOut, setSigningOut] = useState(false);
- const { data: currentUser } = useCurrentUserQuery();
+  const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const { data: currentUser } = useCurrentUserQuery();
 
   const isAdmin =
     currentUser?.userType === USER_TYPE.ADMIN || currentUser?.userType === USER_TYPE.SUPERADMIN;
@@ -116,11 +116,11 @@ export function Sidebar() {
     return true;
   }
 
- async function handleSignOut() {
- setShowSignOutDialog(false);
- setSigningOut(true);
- await nextAuthSignOut({ callbackUrl: ROUTES.LOGIN });
- }
+  async function handleSignOut() {
+    setShowSignOutDialog(false);
+    setSigningOut(true);
+    await nextAuthSignOut({ callbackUrl: ROUTES.LOGIN });
+  }
 
   // Header (spec: 32x32 forest-green rounded square + stacked name/role)
   const header = (
@@ -133,7 +133,7 @@ export function Sidebar() {
           Kumon Iligan
         </p>
         <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
-          {currentUser ? USER_TYPE_LABELS[currentUser.userType] ?? 'Teacher' : 'Teacher'}
+          {currentUser ? (USER_TYPE_LABELS[currentUser.userType] ?? 'Teacher') : 'Teacher'}
         </p>
       </div>
     </div>
@@ -190,22 +190,22 @@ export function Sidebar() {
     </div>
   );
 
- // Footer user card (spec: 12px padding, radius 10, border, 28px circle accentSoft avatar)
- const userCard = currentUser ? (
- <div className="rounded-[10px] border border-border p-3 flex items-center gap-2.5">
- <div className="w-7 h-7 rounded-full bg-accent-soft text-accent-foreground flex items-center justify-center text-[11px] font-semibold shrink-0">
- {initials(currentUser.nickname ?? currentUser.fullName ?? currentUser.email)}
- </div>
- <div className="min-w-0 flex-1">
- <p className="text-[13px] font-medium text-foreground leading-tight truncate">
- {currentUser.nickname ?? currentUser.fullName ?? currentUser.email}
- </p>
- <p className="text-[11px] text-muted-foreground leading-tight mt-0.5 truncate">
- Iligan Branch
- </p>
- </div>
- </div>
- ) : null;
+  // Footer user card (spec: 12px padding, radius 10, border, 28px circle accentSoft avatar)
+  const userCard = currentUser ? (
+    <div className="rounded-[10px] border border-border p-3 flex items-center gap-2.5">
+      <div className="w-7 h-7 rounded-full bg-accent-soft text-accent-foreground flex items-center justify-center text-[11px] font-semibold shrink-0">
+        {initials(currentUser.nickname ?? currentUser.fullName ?? currentUser.email)}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-medium text-foreground leading-tight truncate">
+          {currentUser.nickname ?? currentUser.fullName ?? currentUser.email}
+        </p>
+        <p className="text-[11px] text-muted-foreground leading-tight mt-0.5 truncate">
+          Iligan Branch
+        </p>
+      </div>
+    </div>
+  ) : null;
 
   const footer = (
     <div className="flex flex-col gap-2 px-6 pt-3 pb-1">
@@ -233,78 +233,79 @@ export function Sidebar() {
     </div>
   );
 
- return (
- <>
- {/* Sign-out confirmation */}
- <Dialog open={showSignOutDialog} onOpenChange={setShowSignOutDialog}>
- <DialogContent showCloseButton={false} className="max-w-sm">
- <DialogHeader>
- <DialogTitle>Sign out?</DialogTitle>
- <DialogDescription>You will be returned to the login screen.</DialogDescription>
- </DialogHeader>
- <DialogFooter>
- <Button variant="ghost" onClick={() => setShowSignOutDialog(false)}>
- Cancel
- </Button>
- <Button variant="danger" onClick={handleSignOut}>
- Sign out
- </Button>
- </DialogFooter>
- </DialogContent>
- </Dialog>
+  return (
+    <>
+      {/* Sign-out confirmation */}
+      <Dialog open={showSignOutDialog} onOpenChange={setShowSignOutDialog}>
+        <DialogContent showCloseButton={false} className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Sign out?</DialogTitle>
+            <DialogDescription>You will be returned to the login screen.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowSignOutDialog(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={handleSignOut}>
+              Sign out
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
- {signingOut && (
- <div className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-sm bg-background/60">
- <div className="flex flex-col items-center gap-3">
- <Spinner size={24} className="text-muted-foreground" />
- <span className="text-sm text-muted-foreground font-medium">Signing out...</span>
- </div>
- </div>
- )}
+      {signingOut && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-sm bg-background/60">
+          <div className="flex flex-col items-center gap-3">
+            <Spinner size={24} className="text-muted-foreground" />
+            <span className="text-sm text-muted-foreground font-medium">Signing out...</span>
+          </div>
+        </div>
+      )}
 
- {/* Mobile top bar */}
- <div className="lg:hidden fixed top-0 left-0 right-0 z-20 h-14 bg-card border-b border-border flex items-center px-4 gap-3">
- <button
- onClick={() => setMobileOpen(true)}
- className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-colors"
- >
- <ListIcon size={20} />
- </button>
- <div className="w-7 h-7 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-semibold text-sm">
- K
- </div>
- <span className="text-sm font-medium text-foreground tracking-[-0.1px]">Kumon Iligan</span>
- </div>
+      {/* Mobile top bar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-20 h-14 bg-card border-b border-border flex items-center px-4 gap-3">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-colors"
+        >
+          <ListIcon size={20} />
+        </button>
+        <div className="w-7 h-7 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-semibold text-sm">
+          K
+        </div>
+        <span className="text-sm font-medium text-foreground tracking-[-0.1px]">Kumon Iligan</span>
+      </div>
 
- {/* Mobile overlay */}
- {mobileOpen && (
- <div className="lg:hidden fixed inset-0 z-30 bg-black/40"
- onClick={() => setMobileOpen(false)}
- />
- )}
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-30 bg-black/40"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
 
- {/* Mobile drawer */}
- <aside
- className={cn(
- 'lg:hidden fixed inset-y-0 left-0 z-40 w-[260px] bg-background border-r border-border flex flex-col transition-transform duration-200',
- mobileOpen ? 'translate-x-0' : '-translate-x-full',
- )}
- >
- <div className="flex items-center justify-end px-3 pt-3">
- <button
- onClick={() => setMobileOpen(false)}
- className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-colors"
- >
- <XIcon size={16} />
- </button>
- </div>
- {sidebarBody}
- </aside>
+      {/* Mobile drawer */}
+      <aside
+        className={cn(
+          'lg:hidden fixed inset-y-0 left-0 z-40 w-[260px] bg-background border-r border-border flex flex-col transition-transform duration-200',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full',
+        )}
+      >
+        <div className="flex items-center justify-end px-3 pt-3">
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-colors"
+          >
+            <XIcon size={16} />
+          </button>
+        </div>
+        {sidebarBody}
+      </aside>
 
- {/* Desktop sidebar (spec: 232px wide, bg = canvas, right border) */}
+      {/* Desktop sidebar (spec: 232px wide, bg = canvas, right border) */}
       <aside className="hidden lg:flex flex-col fixed inset-y-0 left-0 w-[232px] bg-background border-r border-border z-10">
- {sidebarBody}
- </aside>
- </>
- );
+        {sidebarBody}
+      </aside>
+    </>
+  );
 }

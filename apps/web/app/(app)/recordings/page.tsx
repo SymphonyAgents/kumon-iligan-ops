@@ -36,7 +36,11 @@ function fmt(amount: number) {
 
 function fmtDate(d: string | null | undefined) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+  return new Date(d).toLocaleDateString('en-PH', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }
 
 function statusToFamily(s: string): string {
@@ -58,12 +62,15 @@ function RecordingsContent() {
   const [reply, setReply] = useState('');
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
-  const counts = useMemo(() => ({
-    all: payments.length,
-    flagged: payments.filter((p) => p.status === PAYMENT_STATUS.FLAGGED).length,
-    pending_review: payments.filter((p) => p.status === PAYMENT_STATUS.PENDING_REVIEW).length,
-    verified: payments.filter((p) => p.status === PAYMENT_STATUS.VERIFIED).length,
-  }), [payments]);
+  const counts = useMemo(
+    () => ({
+      all: payments.length,
+      flagged: payments.filter((p) => p.status === PAYMENT_STATUS.FLAGGED).length,
+      pending_review: payments.filter((p) => p.status === PAYMENT_STATUS.PENDING_REVIEW).length,
+      verified: payments.filter((p) => p.status === PAYMENT_STATUS.VERIFIED).length,
+    }),
+    [payments],
+  );
 
   const filtered = useMemo(() => {
     if (filter === 'all') return payments;
@@ -92,10 +99,13 @@ function RecordingsContent() {
           <div className="mt-3 flex gap-1.5 flex-wrap">
             {FILTERS.map((f) => {
               const c =
-                f.key === 'all' ? counts.all :
-                f.key === 'flagged' ? counts.flagged :
-                f.key === 'pending_review' ? counts.pending_review :
-                counts.verified;
+                f.key === 'all'
+                  ? counts.all
+                  : f.key === 'flagged'
+                    ? counts.flagged
+                    : f.key === 'pending_review'
+                      ? counts.pending_review
+                      : counts.verified;
               return (
                 <FilterChip
                   key={f.key}
@@ -128,11 +138,7 @@ function RecordingsContent() {
                 const isSel = selected?.id === p.id;
                 const isShort = p.amount !== p.expectedAmountSnapshot;
                 return (
-                  <ListItemCard
-                    key={p.id}
-                    active={isSel}
-                    onClick={() => setSelectedId(p.id)}
-                  >
+                  <ListItemCard key={p.id} active={isSel} onClick={() => setSelectedId(p.id)}>
                     <div className="flex items-center justify-between gap-3 min-w-0">
                       <span className="font-medium text-[14px] text-foreground truncate">
                         {fullName(p.studentFirstName, p.studentLastName)}
@@ -207,10 +213,14 @@ function RecordingsContent() {
                   </div>
                   <div className="flex-1">
                     <p className="text-[13px] font-medium text-foreground">Admin flagged this</p>
-                    <p className="text-[11.5px] text-muted-foreground">{fmtDate(selected.verifiedAt)}</p>
+                    <p className="text-[11.5px] text-muted-foreground">
+                      {fmtDate(selected.verifiedAt)}
+                    </p>
                   </div>
                 </div>
-                <p className="text-[13.5px] leading-relaxed mb-3 text-foreground">{selected.note}</p>
+                <p className="text-[13.5px] leading-relaxed mb-3 text-foreground">
+                  {selected.note}
+                </p>
                 <Textarea
                   placeholder="Reply with context — was this a partial? Did the parent send the rest separately?"
                   rows={3}
@@ -229,7 +239,9 @@ function RecordingsContent() {
             {selected.teacherReply && (
               <div className="mb-6 rounded-2xl border border-border bg-card p-4">
                 <Kicker className="mb-1.5">Your reply</Kicker>
-                <p className="text-[13.5px] leading-relaxed text-foreground">{selected.teacherReply}</p>
+                <p className="text-[13.5px] leading-relaxed text-foreground">
+                  {selected.teacherReply}
+                </p>
                 <p className="text-[11.5px] text-muted-foreground mt-2">
                   Sent {fmtDate(selected.teacherRepliedAt)} · re-queued for admin review
                 </p>
@@ -259,14 +271,21 @@ function RecordingsContent() {
               </div>
               <div className="flex flex-col gap-2.5">
                 <DRow label="Amount" value={fmt(selected.amount)} variant="accent" />
-                <DRow label="Expected" value={fmt(selected.expectedAmountSnapshot)} variant="muted" />
+                <DRow
+                  label="Expected"
+                  value={fmt(selected.expectedAmountSnapshot)}
+                  variant="muted"
+                />
                 <DDivider />
                 <DRow
                   label="Reference"
                   value={selected.referenceNumber ?? '—'}
                   variant={selected.referenceNumber ? 'mono' : 'muted'}
                 />
-                <DRow label="Method" value={PAYMENT_METHOD_LABELS[selected.paymentMethod] ?? selected.paymentMethod} />
+                <DRow
+                  label="Method"
+                  value={PAYMENT_METHOD_LABELS[selected.paymentMethod] ?? selected.paymentMethod}
+                />
                 <DRow label="Date" value={fmtDate(selected.paymentDate)} />
                 {selected.guardianName && (
                   <DRow label="Guardian" value={toTitleCase(selected.guardianName)} />

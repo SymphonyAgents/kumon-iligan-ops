@@ -32,7 +32,8 @@ export function useStudentPeriodsQuery(studentId: string) {
 export function useCreatePeriodMutation(onSuccess?: () => void) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Parameters<typeof api.paymentPeriods.create>[0]) => api.paymentPeriods.create(data),
+    mutationFn: (data: Parameters<typeof api.paymentPeriods.create>[0]) =>
+      api.paymentPeriods.create(data),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: PERIODS_KEY });
       toast.success('Period created');
@@ -45,8 +46,13 @@ export function useCreatePeriodMutation(onSuccess?: () => void) {
 export function useUpdatePeriodMutation(onSuccess?: () => void) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof api.paymentPeriods.update>[1] }) =>
-      api.paymentPeriods.update(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Parameters<typeof api.paymentPeriods.update>[1];
+    }) => api.paymentPeriods.update(id, data),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: PERIODS_KEY });
       toast.success('Period updated');
@@ -59,13 +65,15 @@ export function useUpdatePeriodMutation(onSuccess?: () => void) {
 export function useBulkGeneratePeriodsMutation(onSuccess?: () => void) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Parameters<typeof api.paymentPeriods.bulkGenerate>[0]) => api.paymentPeriods.bulkGenerate(data),
+    mutationFn: (data: Parameters<typeof api.paymentPeriods.bulkGenerate>[0]) =>
+      api.paymentPeriods.bulkGenerate(data),
     onSuccess: (result) => {
       void qc.invalidateQueries({ queryKey: PERIODS_KEY });
       toast.success(`Periods generated: ${result.created} created, ${result.skipped} skipped`);
       onSuccess?.();
     },
-    onError: (err: Error) => toast.error('Failed to bulk generate periods', { description: err.message }),
+    onError: (err: Error) =>
+      toast.error('Failed to bulk generate periods', { description: err.message }),
   });
 }
 

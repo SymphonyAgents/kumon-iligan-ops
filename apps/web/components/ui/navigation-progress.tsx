@@ -44,7 +44,8 @@ export function NavigationProgress() {
       const anchor = (e.target as Element).closest('a');
       if (!anchor) return;
       const href = anchor.getAttribute('href');
-      if (!href || href.startsWith('#') || href.startsWith('http') || href.startsWith('mailto')) return;
+      if (!href || href.startsWith('#') || href.startsWith('http') || href.startsWith('mailto'))
+        return;
       if (anchor.getAttribute('target') === '_blank') return;
       start();
     }

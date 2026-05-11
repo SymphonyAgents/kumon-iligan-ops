@@ -52,8 +52,13 @@ export function useUpdateStudentMutation(onSuccess?: () => void) {
 export function useChangeStudentStatusMutation(onSuccess?: () => void) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof api.students.changeStatus>[1] }) =>
-      api.students.changeStatus(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Parameters<typeof api.students.changeStatus>[1];
+    }) => api.students.changeStatus(id, data),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: STUDENTS_KEY });
       toast.success('Student status updated');

@@ -206,6 +206,16 @@ export const SOURCE_LABELS: Record<string, string> = {
 // Calendar
 // ---------------------------------------------------------------------------
 export const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];

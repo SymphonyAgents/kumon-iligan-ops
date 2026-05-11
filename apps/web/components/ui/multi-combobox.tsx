@@ -101,9 +101,7 @@ export function MultiCombobox({
               </span>
             ))}
             {overflow > 0 && (
-              <span className="text-[12.5px] text-muted-foreground py-0.5">
-                +{overflow} more
-              </span>
+              <span className="text-[12.5px] text-muted-foreground py-0.5">+{overflow} more</span>
             )}
           </span>
           <CaretUpDownIcon size={14} className="shrink-0 text-muted-foreground" />
@@ -117,7 +115,8 @@ export function MultiCombobox({
           filter={(itemValue, search) => {
             const opt = options.find((o) => o.value === itemValue);
             if (!opt) return 0;
-            const haystack = `${opt.label} ${opt.description ?? ''} ${opt.keywords ?? ''}`.toLowerCase();
+            const haystack =
+              `${opt.label} ${opt.description ?? ''} ${opt.keywords ?? ''}`.toLowerCase();
             return haystack.includes(search.toLowerCase()) ? 1 : 0;
           }}
         >

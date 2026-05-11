@@ -91,7 +91,12 @@ export function RecentPayments() {
                 </p>
                 <p className="text-[11.5px] text-muted-foreground truncate">
                   {p.guardianName ? toTitleCase(p.guardianName) : '—'}
-                  {p.referenceNumber ? <> · <span className="font-mono">{p.referenceNumber}</span></> : null}
+                  {p.referenceNumber ? (
+                    <>
+                      {' '}
+                      · <span className="font-mono">{p.referenceNumber}</span>
+                    </>
+                  ) : null}
                 </p>
               </div>
               <div className="text-right shrink-0">
@@ -100,7 +105,9 @@ export function RecentPayments() {
                 </p>
                 <div className="flex items-center justify-end gap-2 mt-0.5">
                   <StatusBadge status={p.status} variant="dot" />
-                  <span className="text-[11px] text-muted-foreground/80">{timeAgo(p.createdAt)}</span>
+                  <span className="text-[11px] text-muted-foreground/80">
+                    {timeAgo(p.createdAt)}
+                  </span>
                 </div>
               </div>
             </Link>

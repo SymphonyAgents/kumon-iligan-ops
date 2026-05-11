@@ -1,12 +1,7 @@
 import { cn } from '@/lib/utils';
 
 export function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn('animate-pulse rounded-md bg-secondary', className)}
-      {...props}
-    />
-  );
+  return <div className={cn('animate-pulse rounded-md bg-secondary', className)} {...props} />;
 }
 
 interface TableSkeletonProps {
@@ -30,8 +25,6 @@ export function TableSkeleton({ className, withCard = true }: TableSkeletonProps
   if (!withCard) return <div className={className}>{bars}</div>;
 
   return (
-    <div className={cn('rounded-2xl border border-border bg-card p-6', className)}>
-      {bars}
-    </div>
+    <div className={cn('rounded-2xl border border-border bg-card p-6', className)}>{bars}</div>
   );
 }

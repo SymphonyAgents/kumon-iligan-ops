@@ -33,16 +33,9 @@ export function Lightbox({ open, src, alt = 'Photo', onClose }: LightboxProps) {
       >
         <XIcon size={22} />
       </button>
-      <div
-        className="w-full px-4 max-w-3xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="w-full px-4 max-w-3xl" onClick={(e) => e.stopPropagation()}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={src}
-          alt={alt}
-          className="w-full object-contain rounded-lg max-h-[85vh]"
-        />
+        <img src={src} alt={alt} className="w-full object-contain rounded-lg max-h-[85vh]" />
       </div>
     </div>
   );

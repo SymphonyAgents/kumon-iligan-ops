@@ -87,7 +87,8 @@ export function Combobox({
             // itemValue here is the option.value; we want to match against label + keywords.
             const opt = options.find((o) => o.value === itemValue);
             if (!opt) return 0;
-            const haystack = `${opt.label} ${opt.description ?? ''} ${opt.keywords ?? ''}`.toLowerCase();
+            const haystack =
+              `${opt.label} ${opt.description ?? ''} ${opt.keywords ?? ''}`.toLowerCase();
             return haystack.includes(search.toLowerCase()) ? 1 : 0;
           }}
         >
@@ -119,9 +120,7 @@ export function Combobox({
                       {opt.trailing}
                     </span>
                   )}
-                  {value === opt.value && (
-                    <CheckIcon size={14} className="text-primary shrink-0" />
-                  )}
+                  {value === opt.value && <CheckIcon size={14} className="text-primary shrink-0" />}
                 </CommandItem>
               ))}
             </CommandGroup>

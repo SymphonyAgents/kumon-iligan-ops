@@ -9,6 +9,7 @@ import { UsersModule } from './users/users.module';
 import { BranchesModule } from './branches/branches.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { FamiliesModule } from './families/families.module';
+import { FamilyMembersModule } from './family-members/family-members.module';
 import { StudentsModule } from './students/students.module';
 import { PaymentPeriodsModule } from './payment-periods/payment-periods.module';
 import { PaymentsModule } from './payments/payments.module';
@@ -25,6 +26,7 @@ import { PaymentsModule } from './payments/payments.module';
     BranchesModule,
     UploadsModule,
     FamiliesModule,
+    FamilyMembersModule,
     StudentsModule,
     PaymentPeriodsModule,
     PaymentsModule,

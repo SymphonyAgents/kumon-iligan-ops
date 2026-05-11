@@ -48,7 +48,14 @@ interface ImportResult {
   failed: { row: number; reason: string }[];
 }
 
-const REQUIRED = ['studentName', 'amount', 'paymentDate', 'paymentMethod', 'periodMonth', 'periodYear'] as const;
+const REQUIRED = [
+  'studentName',
+  'amount',
+  'paymentDate',
+  'paymentMethod',
+  'periodMonth',
+  'periodYear',
+] as const;
 const OPTIONAL = ['guardianPhone', 'referenceNumber'] as const;
 const VALID_METHODS = Object.values(PAYMENT_METHOD) as PaymentMethod[];
 
@@ -73,10 +80,15 @@ function pick(row: Record<string, string>, candidates: string[]): string | undef
   return undefined;
 }
 
-function parseRow(raw: Record<string, string>): { ok: true; row: CsvRow } | { ok: false; reason: string } {
+function parseRow(
+  raw: Record<string, string>,
+): { ok: true; row: CsvRow } | { ok: false; reason: string } {
   const studentName =
     pick(raw, ['studentname', 'name', 'student'])?.trim() ||
-    [pick(raw, ['firstname', 'first']), pick(raw, ['lastname', 'last'])].filter(Boolean).join(' ').trim();
+    [pick(raw, ['firstname', 'first']), pick(raw, ['lastname', 'last'])]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
   const guardianPhone = pick(raw, ['guardianphone', 'phone'])?.trim() || undefined;
   const amountStr = pick(raw, ['amount', 'paid', 'paymentamount']);
   const paymentDate = pick(raw, ['paymentdate', 'date', 'paidon'])?.trim();
@@ -88,7 +100,8 @@ function parseRow(raw: Record<string, string>): { ok: true; row: CsvRow } | { ok
   if (!studentName) return { ok: false, reason: 'studentName is required' };
   if (!amountStr) return { ok: false, reason: 'amount is required' };
   const amount = parseFloat(amountStr);
-  if (Number.isNaN(amount) || amount <= 0) return { ok: false, reason: 'amount must be a positive number' };
+  if (Number.isNaN(amount) || amount <= 0)
+    return { ok: false, reason: 'amount must be a positive number' };
 
   if (!paymentDate || !/^\d{4}-\d{2}-\d{2}$/.test(paymentDate)) {
     return { ok: false, reason: 'paymentDate must be YYYY-MM-DD' };
@@ -108,7 +121,16 @@ function parseRow(raw: Record<string, string>): { ok: true; row: CsvRow } | { ok
 
   return {
     ok: true,
-    row: { studentName, guardianPhone, amount, paymentDate, paymentMethod: method, referenceNumber, periodMonth, periodYear },
+    row: {
+      studentName,
+      guardianPhone,
+      amount,
+      paymentDate,
+      paymentMethod: method,
+      referenceNumber,
+      periodMonth,
+      periodYear,
+    },
   };
 }
 
@@ -135,14 +157,20 @@ function resolveStudent(
     const phoneMatch = matches.find((s) => s.guardianPhone?.replace(/\s+/g, '') === phoneNorm);
     if (phoneMatch) return { ok: true, student: phoneMatch };
   }
-  return { ok: false, reason: `${matches.length} students match "${row.studentName}" — add guardianPhone to disambiguate` };
+  return {
+    ok: false,
+    reason: `${matches.length} students match "${row.studentName}" — add guardianPhone to disambiguate`,
+  };
 }
 
 export function PaymentImportDialog({ open, onClose }: PaymentImportDialogProps) {
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<{ rows: CsvRow[]; errors: { row: number; reason: string }[] } | null>(null);
+  const [preview, setPreview] = useState<{
+    rows: CsvRow[];
+    errors: { row: number; reason: string }[];
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -240,7 +268,10 @@ export function PaymentImportDialog({ open, onClose }: PaymentImportDialogProps)
         });
         out.ok += 1;
       } catch (err) {
-        out.failed.push({ row: csvRowNum, reason: err instanceof Error ? err.message : 'Unknown error' });
+        out.failed.push({
+          row: csvRowNum,
+          reason: err instanceof Error ? err.message : 'Unknown error',
+        });
       }
     }
 
@@ -250,13 +281,21 @@ export function PaymentImportDialog({ open, onClose }: PaymentImportDialogProps)
     setBusy(false);
     if (out.ok > 0) {
       toast.success(`Imported ${out.ok} payment${out.ok > 1 ? 's' : ''}`, {
-        description: out.failed.length > 0 ? `${out.failed.length} row${out.failed.length > 1 ? 's' : ''} failed` : undefined,
+        description:
+          out.failed.length > 0
+            ? `${out.failed.length} row${out.failed.length > 1 ? 's' : ''} failed`
+            : undefined,
       });
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) handleClose();
+      }}
+    >
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Import Payments</DialogTitle>
@@ -273,18 +312,26 @@ export function PaymentImportDialog({ open, onClose }: PaymentImportDialogProps)
               </p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[12px]">
                 <div>
-                  <p className="text-muted-foreground/80 uppercase tracking-[0.1em] text-[10.5px] font-semibold mb-1">Required</p>
+                  <p className="text-muted-foreground/80 uppercase tracking-[0.1em] text-[10.5px] font-semibold mb-1">
+                    Required
+                  </p>
                   <ul className="space-y-0.5">
                     {REQUIRED.map((c) => (
-                      <li key={c} className="font-mono text-foreground">{c}</li>
+                      <li key={c} className="font-mono text-foreground">
+                        {c}
+                      </li>
                     ))}
                   </ul>
                 </div>
                 <div>
-                  <p className="text-muted-foreground/80 uppercase tracking-[0.1em] text-[10.5px] font-semibold mb-1">Optional</p>
+                  <p className="text-muted-foreground/80 uppercase tracking-[0.1em] text-[10.5px] font-semibold mb-1">
+                    Optional
+                  </p>
                   <ul className="space-y-0.5">
                     {OPTIONAL.map((c) => (
-                      <li key={c} className="font-mono text-muted-foreground">{c}</li>
+                      <li key={c} className="font-mono text-muted-foreground">
+                        {c}
+                      </li>
                     ))}
                   </ul>
                 </div>
@@ -308,7 +355,10 @@ export function PaymentImportDialog({ open, onClose }: PaymentImportDialogProps)
 
           {!result && (
             <div
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
               onDragLeave={() => setDragOver(false)}
               onDrop={(e) => {
                 e.preventDefault();
@@ -341,13 +391,17 @@ export function PaymentImportDialog({ open, onClose }: PaymentImportDialogProps)
                     {preview && (
                       <p className="text-[12px] text-muted-foreground mt-0.5">
                         {preview.rows.length} valid row{preview.rows.length !== 1 ? 's' : ''}
-                        {preview.errors.length > 0 && ` · ${preview.errors.length} error${preview.errors.length > 1 ? 's' : ''}`}
+                        {preview.errors.length > 0 &&
+                          ` · ${preview.errors.length} error${preview.errors.length > 1 ? 's' : ''}`}
                       </p>
                     )}
                   </div>
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); reset(); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      reset();
+                    }}
                     className="ml-2 p-1 rounded text-muted-foreground hover:text-err"
                     aria-label="Remove file"
                   >
@@ -356,7 +410,11 @@ export function PaymentImportDialog({ open, onClose }: PaymentImportDialogProps)
                 </div>
               ) : (
                 <>
-                  <CloudArrowUpIcon size={32} weight="duotone" className="text-muted-foreground mb-2" />
+                  <CloudArrowUpIcon
+                    size={32}
+                    weight="duotone"
+                    className="text-muted-foreground mb-2"
+                  />
                   <p className="text-[14px] font-medium text-foreground">Drop a .csv file here</p>
                   <p className="text-[12px] text-muted-foreground mt-1">or click to browse</p>
                 </>

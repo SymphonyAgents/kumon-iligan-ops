@@ -1,18 +1,34 @@
 // Particles in Filipino / Spanish / Dutch / German names that stay lowercase
 // unless they're the very first word.
 const LOWERCASE_PARTICLES = new Set([
-  'de', 'del', 'dela', 'della', 'des', 'di', 'da', 'do', 'dos', 'das',
-  'la', 'le', 'lo', 'las', 'los', 'el', 'al',
-  'van', 'von', 'der', 'den',
-  'y', 'e',
+  'de',
+  'del',
+  'dela',
+  'della',
+  'des',
+  'di',
+  'da',
+  'do',
+  'dos',
+  'das',
+  'la',
+  'le',
+  'lo',
+  'las',
+  'los',
+  'el',
+  'al',
+  'van',
+  'von',
+  'der',
+  'den',
+  'y',
+  'e',
   'st',
 ]);
 
 // Suffixes / Roman numerals that stay UPPER (case-insensitive match).
-const UPPER_TOKENS = new Set([
-  'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x',
-  'jr', 'sr',
-]);
+const UPPER_TOKENS = new Set(['ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x', 'jr', 'sr']);
 
 function capFirst(s: string): string {
   if (!s) return s;

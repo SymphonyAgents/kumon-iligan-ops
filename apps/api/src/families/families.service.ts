@@ -8,7 +8,7 @@ import { eq, and, or, ilike, getTableColumns, asc, isNull, inArray } from 'drizz
 import { DrizzleService } from '../db/drizzle.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { UsersService } from '../users/users.service.js';
-import { families, students } from '../db/schema.js';
+import { families, students, familyMembers } from '../db/schema.js';
 import { USER_TYPE, AUDIT_TYPE } from '../db/constants.js';
 import type { CreateFamilyDto } from './dto/create-family.dto.js';
 import type { UpdateFamilyDto } from './dto/update-family.dto.js';
@@ -68,14 +68,30 @@ export class FamiliesService {
       .where(and(inArray(students.familyId, familyIds), isNull(students.deletedAt)))
       .orderBy(asc(students.firstName));
 
+    const memberRows = await this.drizzle.db
+      .select()
+      .from(familyMembers)
+      .where(and(inArray(familyMembers.familyId, familyIds), isNull(familyMembers.deletedAt)))
+      .orderBy(asc(familyMembers.fullName));
+
     const studentsByFamily = new Map<string, typeof studentRows>();
     for (const s of studentRows) {
       const list = studentsByFamily.get(s.familyId) ?? [];
       list.push(s);
       studentsByFamily.set(s.familyId, list);
     }
+    const membersByFamily = new Map<string, typeof memberRows>();
+    for (const m of memberRows) {
+      const list = membersByFamily.get(m.familyId) ?? [];
+      list.push(m);
+      membersByFamily.set(m.familyId, list);
+    }
 
-    return familyRows.map((f) => ({ ...f, students: studentsByFamily.get(f.id) ?? [] }));
+    return familyRows.map((f) => ({
+      ...f,
+      students: studentsByFamily.get(f.id) ?? [],
+      members: membersByFamily.get(f.id) ?? [],
+    }));
   }
 
   async findOne(id: string, requestingUserId: string) {
@@ -96,14 +112,19 @@ export class FamiliesService {
       }
     }
 
-    // Include students (filter out soft-deleted)
+    // Include students + members (filter out soft-deleted)
     const familyStudents = await this.drizzle.db
       .select()
       .from(students)
       .where(and(eq(students.familyId, id), isNull(students.deletedAt)))
       .orderBy(asc(students.firstName));
+    const familyMemberRows = await this.drizzle.db
+      .select()
+      .from(familyMembers)
+      .where(and(eq(familyMembers.familyId, id), isNull(familyMembers.deletedAt)))
+      .orderBy(asc(familyMembers.fullName));
 
-    return { ...family, students: familyStudents };
+    return { ...family, students: familyStudents, members: familyMemberRows };
   }
 
   async create(dto: CreateFamilyDto, requestingUserId: string) {
