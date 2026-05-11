@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { Suspense, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
@@ -285,7 +285,7 @@ function PaymentActions({
  );
 }
 
-export default function PaymentsPage() {
+function PaymentsContent() {
  const router = useRouter();
  const { data: currentUser } = useCurrentUserQuery();
  const isAdmin = currentUser?.userType === USER_TYPE.ADMIN || currentUser?.userType === USER_TYPE.SUPERADMIN;
@@ -551,4 +551,12 @@ export default function PaymentsPage() {
  />
  </div>
  );
+}
+
+export default function PaymentsPage() {
+  return (
+    <Suspense>
+      <PaymentsContent />
+    </Suspense>
+  );
 }

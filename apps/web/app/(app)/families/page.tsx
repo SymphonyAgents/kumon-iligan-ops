@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { Suspense, useState, useMemo } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -262,7 +262,7 @@ function FamilyDialog({
   );
 }
 
-export default function FamiliesPage() {
+function FamiliesContent() {
   const [search, setSearch] = useUrlParam('q', { history: 'replace' });
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState<Family | null>(null);
@@ -445,5 +445,13 @@ export default function FamiliesPage() {
         loading={deleteMut.isPending}
       />
     </div>
+  );
+}
+
+export default function FamiliesPage() {
+  return (
+    <Suspense>
+      <FamiliesContent />
+    </Suspense>
   );
 }

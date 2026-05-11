@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState }, Suspense } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Kicker, DisplayHeading } from '@/components/ui/typography';
 import { Button } from '@/components/ui/button';
@@ -45,7 +45,7 @@ function statusToFamily(s: string): string {
   return 'pending';
 }
 
-export default function RecordingsPage() {
+function RecordingsContent() {
   const { data: currentUser } = useCurrentUserQuery();
   const { data: payments = [], isLoading } = usePaymentsQuery(
     currentUser?.id ? { teacherId: currentUser.id } : undefined,
@@ -284,5 +284,13 @@ export default function RecordingsPage() {
         onClose={() => setLightboxSrc(null)}
       />
     </div>
+  );
+}
+
+export default function RecordingsPage() {
+  return (
+    <Suspense>
+      <RecordingsContent />
+    </Suspense>
   );
 }

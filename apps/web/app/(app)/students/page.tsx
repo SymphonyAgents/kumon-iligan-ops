@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { Suspense, useState, useMemo, useEffect } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -184,7 +184,7 @@ function AssignTeacherDialog({ open, student, onClose }: { open: boolean; studen
  );
 }
 
-export default function StudentsPage() {
+function StudentsContent() {
  const [statusFilter, setStatusFilter] = useUrlParam('status', { defaultValue: 'active' });
  const [search, setSearch] = useUrlParam('q', { history: 'replace' });
  const [showEnroll, setShowEnroll] = useState(false);
@@ -430,4 +430,12 @@ export default function StudentsPage() {
  />
  </div>
  );
+}
+
+export default function StudentsPage() {
+  return (
+    <Suspense>
+      <StudentsContent />
+    </Suspense>
+  );
 }

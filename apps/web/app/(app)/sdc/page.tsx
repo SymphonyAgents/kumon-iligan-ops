@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState }, Suspense } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Kicker } from '@/components/ui/typography';
@@ -127,7 +127,7 @@ const FILTER_TABS = [
  { label: 'Paid', value: PERIOD_STATUS.PAID },
 ];
 
-export default function SDCPage() {
+function SDCContent() {
  const [search, setSearch] = useUrlParam('q', { history: 'replace' });
  const [statusFilter, setFilter] = useUrlParam('status');
 
@@ -250,4 +250,12 @@ export default function SDCPage() {
  )}
  </div>
  );
+}
+
+export default function SDCPage() {
+  return (
+    <Suspense>
+      <SDCContent />
+    </Suspense>
+  );
 }

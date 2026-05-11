@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { DataTable } from '@/components/ui/data-table';
 import { auditColumns } from '@/columns/audit-columns';
@@ -23,7 +23,7 @@ const CURRENT_MONTH = now.getMonth() + 1;
 const CURRENT_YEAR = now.getFullYear();
 const YEARS = Array.from({ length: 3 }, (_, i) => CURRENT_YEAR - i);
 
-export default function AuditPage() {
+function AuditContent() {
  const [monthStr, setMonthStr] = useUrlParam('month', { defaultValue: String(CURRENT_MONTH) });
  const [yearStr, setYearStr] = useUrlParam('year', { defaultValue: String(CURRENT_YEAR) });
  const [performedByStr, setPerformedByStr] = useUrlParam('by');
@@ -131,4 +131,12 @@ export default function AuditPage() {
  />
  </div>
  );
+}
+
+export default function AuditPage() {
+  return (
+    <Suspense>
+      <AuditContent />
+    </Suspense>
+  );
 }

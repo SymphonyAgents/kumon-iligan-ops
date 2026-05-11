@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState }, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { LockSimpleIcon } from '@phosphor-icons/react';
 import { toast } from 'sonner';
@@ -22,7 +22,7 @@ import type { AppUser, Branch } from '@/lib/types';
 
 type Tab = 'approved' | 'pending';
 
-export default function StaffPage() {
+function StaffContent() {
  const router = useRouter();
  const { data: currentUser, isSuccess: userLoaded } = useCurrentUserQuery();
  const isAdmin = currentUser?.userType === USER_TYPE.ADMIN || currentUser?.userType === USER_TYPE.SUPERADMIN;
@@ -307,4 +307,12 @@ export default function StaffPage() {
  </div>
  </>
  );
+}
+
+export default function StaffPage() {
+  return (
+    <Suspense>
+      <StaffContent />
+    </Suspense>
+  );
 }

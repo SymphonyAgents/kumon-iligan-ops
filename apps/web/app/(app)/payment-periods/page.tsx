@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { Suspense, useState, useMemo } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -140,7 +140,7 @@ function BulkGenerateDialog({ open, onClose }: { open: boolean; onClose: () => v
 }
 
 // ---- Main Page ----
-export default function PaymentPeriodsPage() {
+function PaymentPeriodsContent() {
  const now = new Date();
  const [filterMonth, setFilterMonth] = useUrlParam('month', { defaultValue: String(now.getMonth() + 1) });
  const [filterYear, setFilterYear] = useUrlParam('year', { defaultValue: String(now.getFullYear()) });
@@ -424,4 +424,12 @@ export default function PaymentPeriodsPage() {
  />
  </div>
  );
+}
+
+export default function PaymentPeriodsPage() {
+  return (
+    <Suspense>
+      <PaymentPeriodsContent />
+    </Suspense>
+  );
 }
