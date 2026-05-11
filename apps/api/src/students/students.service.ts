@@ -41,6 +41,40 @@ export class StudentsService {
     private readonly usersService: UsersService,
   ) {}
 
+  private async attachCurrentPeriods<T extends { id: string }>(rows: T[]): Promise<Array<T & { currentPeriod: any }>> {
+    if (rows.length === 0) return rows.map((r) => ({ ...r, currentPeriod: null }));
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const year = now.getFullYear();
+    const ids = rows.map((r) => r.id);
+    const periodRows = await this.drizzle.db
+      .select()
+      .from(paymentPeriods)
+      .where(
+        and(
+          inArray(paymentPeriods.studentId, ids),
+          eq(paymentPeriods.periodMonth, month),
+          eq(paymentPeriods.periodYear, year),
+          isNull(paymentPeriods.deletedAt),
+        ),
+      );
+    const byStudent = new Map<string, (typeof periodRows)[number]>();
+    for (const p of periodRows) byStudent.set(p.studentId, p);
+    return rows.map((r) => {
+      const p = byStudent.get(r.id) ?? null;
+      return {
+        ...r,
+        currentPeriod: p
+          ? {
+              ...p,
+              expectedAmount: fromScaled(Number(p.expectedAmount)),
+              paidAmount: fromScaled(Number(p.paidAmount)),
+            }
+          : null,
+      };
+    });
+  }
+
   async findAll(query: QueryStudentsDto, requestingUserId: string) {
     const user = await this.usersService.findByIdFull(requestingUserId);
     if (!user) throw new UnauthorizedException();
@@ -79,7 +113,7 @@ export class StudentsService {
         );
       }
 
-      return this.drizzle.db
+      const teacherRows = await this.drizzle.db
         .select({
           ...getTableColumns(students),
           guardianName: families.guardianName,
@@ -99,6 +133,7 @@ export class StudentsService {
         .leftJoin(users, eq(studentTeacherAssignments.teacherId, users.id))
         .where(and(...conditions))
         .orderBy(asc(students.firstName));
+      return this.attachCurrentPeriods(teacherRows);
     }
 
     // Admin / Superadmin
@@ -146,7 +181,7 @@ export class StudentsService {
       );
     }
 
-    return this.drizzle.db
+    const adminRows = await this.drizzle.db
       .select({
         ...getTableColumns(students),
         guardianName: families.guardianName,
@@ -166,6 +201,7 @@ export class StudentsService {
       .leftJoin(users, eq(studentTeacherAssignments.teacherId, users.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(asc(students.firstName));
+    return this.attachCurrentPeriods(adminRows);
   }
 
   async findOne(id: string, requestingUserId: string) {

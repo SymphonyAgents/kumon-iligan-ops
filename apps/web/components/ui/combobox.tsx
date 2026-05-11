@@ -21,6 +21,8 @@ export interface ComboboxOption {
   keywords?: string;
   // Optional left-side adornment (avatar, icon, dot)
   leading?: ReactNode;
+  // Optional right-side adornment (count, badge, status). Right-aligned next to the check.
+  trailing?: ReactNode;
   disabled?: boolean;
 }
 
@@ -104,7 +106,7 @@ export function Combobox({
                   }}
                 >
                   {opt.leading}
-                  <span className="flex-1 truncate">
+                  <span className="flex-1 min-w-0 truncate">
                     <span className="block truncate">{opt.label}</span>
                     {opt.description && (
                       <span className="block truncate text-[12px] text-muted-foreground">
@@ -112,6 +114,11 @@ export function Combobox({
                       </span>
                     )}
                   </span>
+                  {opt.trailing && (
+                    <span className="ml-auto shrink-0 text-[12px] text-muted-foreground">
+                      {opt.trailing}
+                    </span>
+                  )}
                   {value === opt.value && (
                     <CheckIcon size={14} className="text-primary shrink-0" />
                   )}

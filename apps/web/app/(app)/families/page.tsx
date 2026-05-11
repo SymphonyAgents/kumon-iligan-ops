@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { TableSkeleton } from '@/components/ui/skeleton';
 import { DataCardList } from '@/components/ui/data-card-list';
+import { useUrlParam } from '@/hooks/useUrlParam';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -75,18 +76,23 @@ function FamilyDialog({
 
   const { data: currentUser } = useCurrentUserQuery();
   const { data: branches = [] } = useBranchesQuery();
-  // Pull all active students; show those that are unassigned OR already in this family.
+  // Show all active students. Picking a student that belongs to another family
+  // re-parents them via api.students.update(... { familyId }).
   const { data: allStudents = [] } = useStudentsQuery({ status: 'active' });
   const studentOptions = useMemo(
     () =>
-      allStudents
-        .filter((s) => !s.familyId || s.familyId === familyId)
-        .map((s) => ({
+      allStudents.map((s) => {
+        const inThisFamily = s.familyId === familyId;
+        const inOtherFamily = s.familyId && !inThisFamily;
+        return {
           value: s.id,
           label: toTitleCase(`${s.firstName} ${s.lastName}`),
-          description: s.level ?? undefined,
-          keywords: `${s.firstName} ${s.lastName}`,
-        })),
+          description: inOtherFamily
+            ? `${s.level ? s.level + ' · ' : ''}currently with ${toTitleCase(s.guardianName ?? 'another family')}`
+            : (s.level ?? undefined),
+          keywords: `${s.firstName} ${s.lastName} ${s.guardianName ?? ''}`,
+        };
+      }),
     [allStudents, familyId],
   );
 
@@ -204,11 +210,10 @@ function FamilyDialog({
               onChange={setChildIds}
               placeholder="Assign children…"
               searchPlaceholder="Search students"
-              emptyMessage="No unassigned students."
+              emptyMessage="No active students."
             />
             <p className="text-[11px] text-muted-foreground">
-              Only active, unassigned students appear here. To move a child between families, edit
-              them from the Students page.
+              Picking a student already assigned to another family will move them into this one.
             </p>
           </div>
 
@@ -258,7 +263,7 @@ function FamilyDialog({
 }
 
 export default function FamiliesPage() {
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useUrlParam('q', { history: 'replace' });
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState<Family | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Family | null>(null);
@@ -360,6 +365,7 @@ export default function FamiliesPage() {
               <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-secondary/40">
+                  <th className="text-left px-4 py-2.5 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.12em] w-12">#</th>
                   <th className="text-left px-4 py-2.5 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">Guardian</th>
                   <th className="text-left px-4 py-2.5 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.12em] hidden sm:table-cell">Contact</th>
                   <th className="text-left px-4 py-2.5 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-[0.12em] hidden md:table-cell">Address</th>
@@ -370,8 +376,11 @@ export default function FamiliesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filtered.map((f) => (
+                {filtered.map((f, i) => (
                   <tr key={f.id} className="hover:bg-secondary/40 transition-colors">
+                    <td className="px-4 py-3 text-muted-foreground font-mono text-xs tabular-nums">
+                      {i + 1}
+                    </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-foreground">{toTitleCase(f.guardianName)}</p>
                     </td>
@@ -387,19 +396,21 @@ export default function FamiliesPage() {
                     </td>
                     {isAdmin && (
                       <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => setEditTarget(f)}
-                            className="p-1.5 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                            aria-label="Edit family"
+                            className="p-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
                           >
-                            <PencilSimpleIcon size={14} />
+                            <PencilSimpleIcon size={18} />
                           </button>
                           {currentUser?.userType === USER_TYPE.SUPERADMIN && (
                             <button
                               onClick={() => setDeleteTarget(f)}
-                              className="p-1.5 rounded-md text-muted-foreground hover:bg-secondary hover:text-err transition-colors"
+                              aria-label="Delete family"
+                              className="p-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-err transition-colors"
                             >
-                              <TrashIcon size={14} />
+                              <TrashIcon size={18} />
                             </button>
                           )}
                         </div>

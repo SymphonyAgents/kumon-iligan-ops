@@ -8,6 +8,7 @@ import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DataCardList } from '@/components/ui/data-card-list';
+import { useUrlParam } from '@/hooks/useUrlParam';
 import { toTitleCase } from '@/utils/text';
 import { useUsersQuery, useApproveUserMutation, useRejectUserMutation, useUpdateUserRoleMutation, useUpdateUserBranchMutation, useDeleteUserMutation } from '@/hooks/useUsersQuery';
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
@@ -28,7 +29,9 @@ export default function UsersPage() {
 }
 
 function UsersContent() {
- const [tab, setTab] = useState<Tab>('active');
+ const [tabRaw, setTabRaw] = useUrlParam('tab', { defaultValue: 'active' });
+ const tab = tabRaw as Tab;
+ const setTab = (v: Tab) => setTabRaw(v);
  const [deleteTarget, setDeleteTarget] = useState<AppUser | null>(null);
  const [approveTarget, setApproveTarget] = useState<AppUser | null>(null);
  const [rejectTarget, setRejectTarget] = useState<AppUser | null>(null);

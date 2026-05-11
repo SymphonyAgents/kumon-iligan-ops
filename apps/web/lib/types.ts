@@ -106,6 +106,8 @@ export interface PaymentPeriod {
   // joined fields
   studentFirstName?: string | null;
   studentLastName?: string | null;
+  teacherId?: string | null;
+  teacherName?: string | null;
   payments?: Payment[];
 }
 

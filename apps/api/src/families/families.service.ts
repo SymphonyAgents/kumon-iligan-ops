@@ -4,7 +4,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { eq, and, or, ilike, getTableColumns, asc, isNull } from 'drizzle-orm';
+import { eq, and, or, ilike, getTableColumns, asc, isNull, inArray } from 'drizzle-orm';
 import { DrizzleService } from '../db/drizzle.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { UsersService } from '../users/users.service.js';
@@ -53,11 +53,29 @@ export class FamiliesService {
       );
     }
 
-    return this.drizzle.db
+    const familyRows = await this.drizzle.db
       .select()
       .from(families)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(asc(families.guardianName));
+
+    if (familyRows.length === 0) return [];
+
+    const familyIds = familyRows.map((f) => f.id);
+    const studentRows = await this.drizzle.db
+      .select()
+      .from(students)
+      .where(and(inArray(students.familyId, familyIds), isNull(students.deletedAt)))
+      .orderBy(asc(students.firstName));
+
+    const studentsByFamily = new Map<string, typeof studentRows>();
+    for (const s of studentRows) {
+      const list = studentsByFamily.get(s.familyId) ?? [];
+      list.push(s);
+      studentsByFamily.set(s.familyId, list);
+    }
+
+    return familyRows.map((f) => ({ ...f, students: studentsByFamily.get(f.id) ?? [] }));
   }
 
   async findOne(id: string, requestingUserId: string) {

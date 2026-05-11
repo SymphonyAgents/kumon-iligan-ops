@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DatePicker } from '@/components/ui/date-picker';
 import { PaymentImportDialog } from '@/components/payments/PaymentImportDialog';
 import { DataCardList } from '@/components/ui/data-card-list';
+import { useUrlParam } from '@/hooks/useUrlParam';
 import { toTitleCase, fullName } from '@/utils/text';
 import { rowsToCsv, downloadCsv } from '@/utils/csv';
 import { UploadSimpleIcon, DownloadSimpleIcon } from '@phosphor-icons/react';
@@ -289,8 +290,8 @@ export default function PaymentsPage() {
  const { data: currentUser } = useCurrentUserQuery();
  const isAdmin = currentUser?.userType === USER_TYPE.ADMIN || currentUser?.userType === USER_TYPE.SUPERADMIN;
 
- const [statusFilter, setStatusFilter] = useState('');
- const [search, setSearch] = useState('');
+ const [statusFilter, setStatusFilter] = useUrlParam('status');
+ const [search, setSearch] = useUrlParam('q', { history: 'replace' });
  const [showRecord, setShowRecord] = useState(false);
  const [showImport, setShowImport] = useState(false);
  const [verifyTarget, setVerifyTarget] = useState<Payment | null>(null);

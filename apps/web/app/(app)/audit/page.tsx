@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { MONTHS, AUDIT_TYPE_LABELS, AUDIT_TYPE_STYLES, ENTITY_LABELS, SOURCE_LABELS } from '@/lib/constants';
 import { formatDatetime } from '@/lib/utils';
+import { useUrlParam } from '@/hooks/useUrlParam';
 import { toTitleCase } from '@/utils/text';
 
 const now = new Date();
@@ -23,16 +24,19 @@ const CURRENT_YEAR = now.getFullYear();
 const YEARS = Array.from({ length: 3 }, (_, i) => CURRENT_YEAR - i);
 
 export default function AuditPage() {
- const [month, setMonth] = useState(CURRENT_MONTH);
- const [year, setYear] = useState(CURRENT_YEAR);
- const [performedBy, setPerformedBy] = useState<string | undefined>();
+ const [monthStr, setMonthStr] = useUrlParam('month', { defaultValue: String(CURRENT_MONTH) });
+ const [yearStr, setYearStr] = useUrlParam('year', { defaultValue: String(CURRENT_YEAR) });
+ const [performedByStr, setPerformedByStr] = useUrlParam('by');
+ const month = parseInt(monthStr, 10) || CURRENT_MONTH;
+ const year = parseInt(yearStr, 10) || CURRENT_YEAR;
+ const performedBy = performedByStr || undefined;
 
  const hasActiveFilter = month !== CURRENT_MONTH || year !== CURRENT_YEAR || !!performedBy;
 
  function clearAll() {
- setMonth(CURRENT_MONTH);
- setYear(CURRENT_YEAR);
- setPerformedBy(undefined);
+ setMonthStr(String(CURRENT_MONTH));
+ setYearStr(String(CURRENT_YEAR));
+ setPerformedByStr('');
  }
 
  const { data: entries = [], isLoading } = useAuditQuery({ month, year, performedBy });
@@ -43,7 +47,7 @@ export default function AuditPage() {
  <PageHeader title="Audit Log"subtitle="All system actions" />
 
  <div className="flex flex-wrap items-center gap-2 mb-4">
- <Select value={String(month)} onValueChange={(v) => setMonth(parseInt(v, 10))}>
+ <Select value={String(month)} onValueChange={(v) => setMonthStr(v)}>
  <SelectTrigger className="h-9 text-sm w-36 border-border">
  <SelectValue />
  </SelectTrigger>
@@ -54,7 +58,7 @@ export default function AuditPage() {
  </SelectContent>
  </Select>
 
- <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v, 10))}>
+ <Select value={String(year)} onValueChange={(v) => setYearStr(v)}>
  <SelectTrigger className="h-9 text-sm w-24 border-border">
  <SelectValue />
  </SelectTrigger>
@@ -65,7 +69,7 @@ export default function AuditPage() {
  </SelectContent>
  </Select>
 
- <Select value={performedBy ?? 'all'} onValueChange={(v) => setPerformedBy(v === 'all' ? undefined : v)}>
+ <Select value={performedBy ?? 'all'} onValueChange={(v) => setPerformedByStr(v === 'all' ? '' : v)}>
  <SelectTrigger className="h-9 text-sm w-44 border-border">
  <SelectValue placeholder="All users" />
  </SelectTrigger>

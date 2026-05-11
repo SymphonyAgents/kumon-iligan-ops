@@ -11,13 +11,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
 import { DataCardList } from '@/components/ui/data-card-list';
-import { fullName } from '@/utils/text';
+import { useUrlParam } from '@/hooks/useUrlParam';
+import { fullName, toTitleCase } from '@/utils/text';
+import { cn } from '@/lib/utils';
 import { usePaymentPeriodsQuery, useBulkGeneratePeriodsMutation, useDeletePeriodMutation } from '@/hooks/usePaymentPeriodsQuery';
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 import { useBranchesQuery } from '@/hooks/useBranchesQuery';
 import { PERIOD_STATUS, MONTHS, USER_TYPE } from '@/lib/constants';
 import type { PaymentPeriod } from '@/lib/types';
-import { SparkleIcon, TrashIcon } from '@phosphor-icons/react';
+import { SparkleIcon, TrashIcon, CaretDownIcon } from '@phosphor-icons/react';
 
 // ---- Bulk Generate Dialog ----
 function BulkGenerateDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -140,12 +142,13 @@ function BulkGenerateDialog({ open, onClose }: { open: boolean; onClose: () => v
 // ---- Main Page ----
 export default function PaymentPeriodsPage() {
  const now = new Date();
- const [filterMonth, setFilterMonth] = useState(String(now.getMonth() + 1));
- const [filterYear, setFilterYear] = useState(String(now.getFullYear()));
- const [filterStatus, setFilterStatus] = useState('');
- const [search, setSearch] = useState('');
+ const [filterMonth, setFilterMonth] = useUrlParam('month', { defaultValue: String(now.getMonth() + 1) });
+ const [filterYear, setFilterYear] = useUrlParam('year', { defaultValue: String(now.getFullYear()) });
+ const [filterStatus, setFilterStatus] = useUrlParam('status');
+ const [search, setSearch] = useUrlParam('q', { history: 'replace' });
  const [showBulk, setShowBulk] = useState(false);
  const [deleteTarget, setDeleteTarget] = useState<PaymentPeriod | null>(null);
+ const [collapsedTeachers, setCollapsedTeachers] = useState<Set<string>>(new Set());
 
  const { data: currentUser } = useCurrentUserQuery();
  const isAdmin = currentUser?.userType === USER_TYPE.ADMIN || currentUser?.userType === USER_TYPE.SUPERADMIN;
@@ -165,6 +168,29 @@ export default function PaymentPeriodsPage() {
  `${p.studentFirstName ?? ''} ${p.studentLastName ?? ''}`.toLowerCase().includes(q)
  );
  }, [periods, search]);
+
+ const groupedByTeacher = useMemo(() => {
+ const groups = new Map<string, { key: string; label: string; periods: PaymentPeriod[] }>();
+ for (const p of filtered) {
+ const key = p.teacherId ?? '__unassigned__';
+ const label = p.teacherName ? toTitleCase(p.teacherName) : 'Unassigned';
+ if (!groups.has(key)) groups.set(key, { key, label, periods: [] });
+ groups.get(key)!.periods.push(p);
+ }
+ return [...groups.values()].sort((a, b) => {
+ if (a.key === '__unassigned__') return 1;
+ if (b.key === '__unassigned__') return -1;
+ return a.label.localeCompare(b.label);
+ });
+ }, [filtered]);
+
+ function toggleTeacher(key: string) {
+ setCollapsedTeachers((prev) => {
+ const next = new Set(prev);
+ if (next.has(key)) next.delete(key); else next.add(key);
+ return next;
+ });
+ }
 
  const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i);
  const statuses = [
@@ -247,9 +273,36 @@ export default function PaymentPeriodsPage() {
  ) : filtered.length === 0 ? (
  <EmptyState title="No periods found"description="Use Bulk Generate to create periods for all active students." />
  ) : (
+ <div className="flex flex-col gap-5">
+ {groupedByTeacher.map((group) => {
+ const collapsed = collapsedTeachers.has(group.key);
+ return (
+ <section key={group.key} className="flex flex-col gap-3">
+ <button
+ type="button"
+ onClick={() => toggleTeacher(group.key)}
+ className="flex items-center gap-2 text-left group"
+ aria-expanded={!collapsed}
+ >
+ <CaretDownIcon
+ size={16}
+ className={cn(
+ 'text-muted-foreground transition-transform shrink-0',
+ collapsed && '-rotate-90',
+ )}
+ />
+ <h2 className="text-[18px] font-semibold tracking-[-0.2px] text-foreground">
+ {group.label}
+ </h2>
+ <span className="text-xs text-muted-foreground">
+ {group.periods.length} period{group.periods.length === 1 ? '' : 's'}
+ </span>
+ </button>
+
+ {!collapsed && (
  <>
  <DataCardList
- items={filtered}
+ items={group.periods}
  getKey={(p) => p.id}
  renderCard={(p) => {
  const balance = p.expectedAmount - p.paidAmount;
@@ -291,6 +344,7 @@ export default function PaymentPeriodsPage() {
  <table className="w-full text-sm">
  <thead>
  <tr className="border-b border-border bg-secondary/40">
+ <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground w-12">#</th>
  <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Student</th>
  <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Period</th>
  <th className="text-right px-4 py-2.5 text-xs font-medium text-muted-foreground">Expected</th>
@@ -302,14 +356,17 @@ export default function PaymentPeriodsPage() {
  </tr>
  </thead>
  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
- {filtered.map(p => {
+ {group.periods.map((p, i) => {
  const balance = p.expectedAmount - p.paidAmount;
  const isOverdue = p.status === PERIOD_STATUS.OVERDUE;
  return (
- <tr key={p.id}  className="bg-card hover:bg-secondary/40 transition-colors">
-                <td className="px-4 py-3 font-medium text-foreground">
-                  {fullName(p.studentFirstName, p.studentLastName)}
-                </td>
+ <tr key={p.id} className="bg-card hover:bg-secondary/40 transition-colors">
+ <td className="px-4 py-3 text-muted-foreground font-mono text-xs tabular-nums">
+ {i + 1}
+ </td>
+ <td className="px-4 py-3 font-medium text-foreground">
+ {fullName(p.studentFirstName, p.studentLastName)}
+ </td>
  <td className="px-4 py-3 text-muted-foreground">
  {MONTHS[p.periodMonth - 1]} {p.periodYear}
  </td>
@@ -331,9 +388,10 @@ export default function PaymentPeriodsPage() {
  {currentUser?.userType === USER_TYPE.SUPERADMIN && (
  <button
  onClick={() => setDeleteTarget(p)}
- className="p-1.5 rounded-md text-muted-foreground hover:bg-secondary hover:text-err transition-colors"
+ aria-label="Delete period"
+ className="p-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-err transition-colors"
  >
- <TrashIcon size={14} />
+ <TrashIcon size={18} />
  </button>
  )}
  </td>
@@ -346,6 +404,11 @@ export default function PaymentPeriodsPage() {
  </div>
  </div>
  </>
+ )}
+ </section>
+ );
+ })}
+ </div>
  )}
 
  <BulkGenerateDialog open={showBulk} onClose={() => setShowBulk(false)} />

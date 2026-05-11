@@ -10,6 +10,7 @@ import { ListItemCard } from '@/components/ui/list-item-card';
 import { TableSkeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ReceiptPlaceholder } from '@/components/ui/receipt-placeholder';
+import { useUrlParam } from '@/hooks/useUrlParam';
 import { DRow, DDivider } from '@/components/ui/d-row';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Lightbox } from '@/components/ui/lightbox';
@@ -50,7 +51,9 @@ export default function RecordingsPage() {
     currentUser?.id ? { teacherId: currentUser.id } : undefined,
   );
 
-  const [filter, setFilter] = useState<FilterKey>('all');
+  const [filterRaw, setFilterRaw] = useUrlParam('filter', { defaultValue: 'all' });
+  const filter = filterRaw as FilterKey;
+  const setFilter = (v: FilterKey) => setFilterRaw(v);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reply, setReply] = useState('');
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);

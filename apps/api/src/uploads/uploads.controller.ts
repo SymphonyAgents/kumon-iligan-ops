@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req, UseGuards, ForbiddenException } from '@nestjs/common';
+import { Controller, Post, Get, Query, Body, Req, UseGuards, ForbiddenException } from '@nestjs/common';
 import { AuthGuard } from '../auth/auth.guard';
 import type { AuthedRequest } from '../auth/auth.types';
 import { UploadsService } from './uploads.service';
@@ -11,6 +11,15 @@ export class UploadsController {
     private readonly uploadsService: UploadsService,
     private readonly usersService: UsersService,
   ) {}
+
+  @UseGuards(AuthGuard)
+  @Get('receipt')
+  async getReceiptUploadUrl(
+    @Query('fileName') fileName: string,
+    @Query('fileType') fileType: string,
+  ) {
+    return this.uploadsService.createReceiptPresignedUrl(fileName, fileType);
+  }
 
   @UseGuards(AuthGuard)
   @Post('presigned-url')

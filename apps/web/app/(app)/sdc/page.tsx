@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FilterChip } from '@/components/ui/filter-chip';
 import { useStudentsQuery } from '@/hooks/useStudentsQuery';
+import { useUrlParam } from '@/hooks/useUrlParam';
 import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 import { PERIOD_STATUS, MONTHS, STUDENT_STATUS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
@@ -127,8 +128,8 @@ const FILTER_TABS = [
 ];
 
 export default function SDCPage() {
- const [search, setSearch] = useState('');
- const [statusFilter, setFilter] = useState('');
+ const [search, setSearch] = useUrlParam('q', { history: 'replace' });
+ const [statusFilter, setFilter] = useUrlParam('status');
 
  const { data: currentUser } = useCurrentUserQuery();
  const now = new Date();

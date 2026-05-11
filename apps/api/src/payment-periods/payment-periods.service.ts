@@ -21,6 +21,8 @@ import {
   paymentPeriods,
   students,
   payments,
+  studentTeacherAssignments,
+  users,
 } from '../db/schema.js';
 import {
   USER_TYPE,
@@ -84,9 +86,19 @@ export class PaymentPeriodsService {
         ...getTableColumns(paymentPeriods),
         studentFirstName: students.firstName,
         studentLastName: students.lastName,
+        teacherId: studentTeacherAssignments.teacherId,
+        teacherName: users.fullName,
       })
       .from(paymentPeriods)
       .innerJoin(students, eq(paymentPeriods.studentId, students.id))
+      .leftJoin(
+        studentTeacherAssignments,
+        and(
+          eq(studentTeacherAssignments.studentId, students.id),
+          eq(studentTeacherAssignments.isActive, true),
+        ),
+      )
+      .leftJoin(users, eq(studentTeacherAssignments.teacherId, users.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(paymentPeriods.periodYear), desc(paymentPeriods.periodMonth), asc(students.firstName));
 

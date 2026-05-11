@@ -14,6 +14,7 @@ import { useBranchesQuery } from '@/hooks/useBranchesQuery';
 import { toTitleCase } from '@/utils/text';
 import { USER_TYPE, USER_TYPE_LABELS, USER_TYPE_STYLES } from '@/lib/constants';
 import type { DataCardProps } from '@/components/ui/data-card-list';
+import { useUrlParam } from '@/hooks/useUrlParam';
 import { UserRoleConfirmDialog, type PendingRoleChange } from '@/components/users/UserRoleConfirmDialog';
 import { UserBranchConfirmDialog, type PendingBranchChange } from '@/components/users/UserBranchConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -34,7 +35,9 @@ export default function StaffPage() {
  const approveMut = useApproveUserMutation(() => setApproveTarget(null));
  const rejectMut = useRejectUserMutation(() => setRejectTarget(null));
 
- const [tab, setTab] = useState<Tab>('approved');
+ const [tabRaw, setTabRaw] = useUrlParam('tab', { defaultValue: 'approved' });
+ const tab = tabRaw as Tab;
+ const setTab = (v: Tab) => setTabRaw(v);
  const [pendingRoleChange, setPendingRoleChange] = useState<PendingRoleChange | null>(null);
  const [pendingBranchChange, setPendingBranchChange] = useState<PendingBranchChange | null>(null);
  const [deleteTarget, setDeleteTarget] = useState<AppUser | null>(null);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -12,6 +12,7 @@ import { Combobox } from '@/components/ui/combobox';
 import { DatePicker } from '@/components/ui/date-picker';
 import { StudentImportDialog } from '@/components/students/StudentImportDialog';
 import { DataCardList } from '@/components/ui/data-card-list';
+import { useUrlParam } from '@/hooks/useUrlParam';
 import { toTitleCase, fullName } from '@/utils/text';
 import { UploadSimpleIcon } from '@phosphor-icons/react';
 import { useStudentsQuery, useEnrollStudentMutation, useChangeStudentStatusMutation, useAssignTeacherMutation, useDeleteStudentMutation } from '@/hooks/useStudentsQuery';
@@ -117,11 +118,27 @@ function EnrollStudentDialog({ open, onClose }: { open: boolean; onClose: () => 
 function AssignTeacherDialog({ open, student, onClose }: { open: boolean; student: Student | null; onClose: () => void }) {
  const [teacherId, setTeacherId] = useState('');
  const { data: teachers = [] } = useAssignableUsersQuery(student?.branchId);
+ const { data: allStudents = [] } = useStudentsQuery({ status: 'active' });
  const assignMut = useAssignTeacherMutation(onClose);
+
+ // Pre-fill with the student's current teacher when the dialog opens / target changes.
+ useEffect(() => {
+ setTeacherId(student?.teacherId ?? '');
+ }, [student?.id, student?.teacherId]);
+
+ const studentsByTeacher = useMemo(() => {
+ const map = new Map<string, number>();
+ for (const s of allStudents) {
+ if (!s.teacherId) continue;
+ map.set(s.teacherId, (map.get(s.teacherId) ?? 0) + 1);
+ }
+ return map;
+ }, [allStudents]);
 
  function handleSubmit(e: React.FormEvent) {
  e.preventDefault();
  if (!student || !teacherId) return;
+ if (teacherId === student.teacherId) { onClose(); return; }
  assignMut.mutate({ studentId: student.id, teacherId });
  }
 
@@ -137,12 +154,17 @@ function AssignTeacherDialog({ open, student, onClose }: { open: boolean; studen
           <Combobox
             options={teachers
               .filter((t) => t.userType === USER_TYPE.TEACHER)
-              .map((t) => ({
-                value: t.id,
-                label: toTitleCase(t.fullName ?? t.nickname ?? '') || t.email,
-                description: t.email,
-                keywords: `${t.fullName ?? ''} ${t.nickname ?? ''} ${t.email}`,
-              }))}
+              .map((t) => {
+                const count = studentsByTeacher.get(t.id) ?? 0;
+                const isCurrent = student?.teacherId === t.id;
+                return {
+                  value: t.id,
+                  label: toTitleCase(t.fullName ?? t.nickname ?? '') || t.email,
+                  description: isCurrent ? 'currently assigned' : undefined,
+                  trailing: `${count} student${count === 1 ? '' : 's'}`,
+                  keywords: `${t.fullName ?? ''} ${t.nickname ?? ''} ${t.email}`,
+                };
+              })}
             value={teacherId}
             onChange={setTeacherId}
             placeholder="Select teacher…"
@@ -163,8 +185,8 @@ function AssignTeacherDialog({ open, student, onClose }: { open: boolean; studen
 }
 
 export default function StudentsPage() {
- const [statusFilter, setStatusFilter] = useState('active');
- const [search, setSearch] = useState('');
+ const [statusFilter, setStatusFilter] = useUrlParam('status', { defaultValue: 'active' });
+ const [search, setSearch] = useUrlParam('q', { history: 'replace' });
  const [showEnroll, setShowEnroll] = useState(false);
  const [showImport, setShowImport] = useState(false);
  const [assignTarget, setAssignTarget] = useState<Student | null>(null);
@@ -318,6 +340,7 @@ export default function StudentsPage() {
  <table className="w-full text-sm">
  <thead>
  <tr className="border-b border-border bg-secondary/40">
+ <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground w-12">#</th>
  <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">Student</th>
  <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground hidden sm:table-cell">Level</th>
  <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground hidden md:table-cell">Teacher</th>
@@ -326,8 +349,11 @@ export default function StudentsPage() {
  </tr>
  </thead>
  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
- {filtered.map(s => (
+ {filtered.map((s, i) => (
  <tr key={s.id}  className="bg-card hover:bg-secondary/40 transition-colors">
+                    <td className="px-4 py-3 text-muted-foreground font-mono text-xs tabular-nums">
+                      {i + 1}
+                    </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-foreground">{fullName(s.firstName, s.lastName)}</p>
                       <p className="text-xs text-muted-foreground">{toTitleCase(s.guardianName ?? '')}</p>
@@ -341,19 +367,20 @@ export default function StudentsPage() {
  <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
  {isAdmin && (
  <td className="px-4 py-3">
- <div className="flex items-center justify-end gap-1">
+ <div className="flex items-center justify-end gap-2">
  <button
  onClick={() => setAssignTarget(s)}
  title="Assign teacher"
- className="p-1.5 rounded-md text-muted-foreground hover:bg-secondary hover:text-primary transition-colors"
+ aria-label="Assign teacher"
+ className="p-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-primary transition-colors"
  >
- <ArrowsClockwiseIcon size={14} />
+ <ArrowsClockwiseIcon size={18} />
  </button>
  {s.status === STUDENT_STATUS.ACTIVE && (
  <button
  onClick={() => changeStatusMut.mutate({ id: s.id, data: { status: STUDENT_STATUS.INACTIVE } })}
  title="Mark inactive"
- className="px-2 py-1 rounded text-xs text-warn hover:bg-warn-soft dark:hover:bg-amber-950 transition-colors"
+ className="px-3 py-1.5 rounded-md text-xs font-medium text-warn hover:bg-warn-soft dark:hover:bg-amber-950 transition-colors"
  >
  Deactivate
  </button>
@@ -362,7 +389,7 @@ export default function StudentsPage() {
  <button
  onClick={() => changeStatusMut.mutate({ id: s.id, data: { status: STUDENT_STATUS.ACTIVE } })}
  title="Mark active"
- className="px-2 py-1 rounded text-xs text-status-paid-fg hover:bg-emerald-50 dark:hover:bg-emerald-950 transition-colors"
+ className="px-3 py-1.5 rounded-md text-xs font-medium text-status-paid-fg hover:bg-emerald-50 dark:hover:bg-emerald-950 transition-colors"
  >
  Activate
  </button>
@@ -370,9 +397,10 @@ export default function StudentsPage() {
  {isSuperadmin && (
  <button
  onClick={() => setDeleteTarget(s)}
- className="p-1.5 rounded-md text-muted-foreground hover:bg-secondary hover:text-err transition-colors"
+ aria-label="Remove student"
+ className="p-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-err transition-colors"
  >
- <TrashIcon size={14} />
+ <TrashIcon size={18} />
  </button>
  )}
  </div>

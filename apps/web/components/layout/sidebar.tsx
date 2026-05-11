@@ -3,11 +3,13 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { ListIcon, XIcon, SignOutIcon } from '@phosphor-icons/react';
 import { signOut as nextAuthSignOut } from 'next-auth/react';
 import { cn } from '@/lib/utils';
-import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
+import { api } from '@/lib/api';
 import { ROUTES } from '@/lib/routes';
+import { useCurrentUserQuery } from '@/hooks/useCurrentUserQuery';
 import { USER_TYPE, USER_TYPE_LABELS } from '@/lib/constants';
 import { Spinner } from '@/components/ui/spinner';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
@@ -91,6 +93,16 @@ export function Sidebar() {
   const isSuperadmin = currentUser?.userType === USER_TYPE.SUPERADMIN;
   const isTeacher = currentUser?.userType === USER_TYPE.TEACHER;
 
+  // Teacher's flagged-needs-reply count for the My Recordings nav badge.
+  const teacherId = currentUser?.id;
+  const { data: needsReplyPayments = [] } = useQuery({
+    queryKey: ['payments', 'needs-reply', teacherId],
+    queryFn: () => api.payments.list({ teacherId: teacherId!, status: 'flagged' }),
+    enabled: isTeacher && !!teacherId,
+    refetchInterval: 30_000,
+  });
+  const needsReplyCount = needsReplyPayments.filter((p) => !p.teacherReply).length;
+
   function filterItem(item: NavItem) {
     if (item.superadminOnly) return isSuperadmin;
     if (item.adminOnly) return isAdmin;
@@ -141,8 +153,11 @@ export function Sidebar() {
                 {group.label}
               </p>
             )}
-            {visibleItems.map(({ href, label, count, urgent }) => {
+            {visibleItems.map(({ href, label, count: staticCount, urgent: staticUrgent }) => {
               const active = href === '/' ? pathname === '/' : pathname.startsWith(href);
+              const isRecordings = href === ROUTES.RECORDINGS;
+              const count = isRecordings && needsReplyCount > 0 ? needsReplyCount : staticCount;
+              const urgent = isRecordings && needsReplyCount > 0 ? true : staticUrgent;
               return (
                 <Link
                   key={href}
