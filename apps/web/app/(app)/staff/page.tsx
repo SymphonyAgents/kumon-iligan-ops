@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useMemo, useState }, Suspense } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LockSimpleIcon } from '@phosphor-icons/react';
 import { toast } from 'sonner';

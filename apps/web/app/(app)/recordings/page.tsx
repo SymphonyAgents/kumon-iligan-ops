@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useMemo, useState }, Suspense } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Kicker, DisplayHeading } from '@/components/ui/typography';
 import { Button } from '@/components/ui/button';
