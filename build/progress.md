@@ -17,3 +17,9 @@
 [2026-05-11 07:29:00] 🏷️ Tagged release v0.1.3, payment detail page, mobile data-card layout, fix money double-scaling
 [2026-05-11 07:30:00] 🚀 Deployed v0.1.3, revision kumon-iligan-frontend-00013-btp, build 780f456a
 [2026-05-11 07:30:00] ✅ Smoke test passed, login page loads correctly, no regressions
+[2026-05-11 08:31:00] 🏷️ Tagged release v0.1.4, URL-synced filters, sidebar needs-reply badge, receipt uploads
+[2026-05-11 08:31:00] ❌ Build 9d69edaa FAILED, useUrlParam pages missing Suspense boundary
+[2026-05-11 08:37:00] ❌ Build 151dfe48 FAILED, script bug: double Suspense import in recordings/sdc/staff pages
+[2026-05-11 08:40:00] 🔧 Fixed: malformed imports corrected in recordings, sdc, staff pages
+[2026-05-11 08:42:00] 🚀 Deployed v0.1.4, revision kumon-iligan-frontend-00014-g97, build b0021f46
+[2026-05-11 08:42:00] ✅ Smoke test passed, login page loads correctly, no regressions

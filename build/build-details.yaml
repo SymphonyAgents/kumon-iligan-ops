@@ -39,9 +39,9 @@ tech_stack:
   node_version: 22
 
 latest_deploy:
-  production_tag: v0.1.3
-  latest_revision: kumon-iligan-frontend-00013-btp
-  deployed_at: "2026-05-11 07:30 PHT"
+  production_tag: v0.1.4
+  latest_revision: kumon-iligan-frontend-00014-g97
+  deployed_at: "2026-05-11 08:42 PHT"
   deployed_by: Aria (on behalf of Vins)
   build_method: cloudbuild
-  build_id: 780f456a-558d-4496-a23b-17e8152d0777
+  build_id: b0021f46-63d9-4c20-ace1-8e791b806c58
